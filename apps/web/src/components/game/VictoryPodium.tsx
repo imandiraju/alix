@@ -76,7 +76,9 @@ export const VictoryPodium: React.FC<VictoryPodiumProps> = ({
           <div className="flex flex-col items-center mb-3">
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-slate-400 to-slate-200 flex items-center justify-center shadow-lg border-2 border-slate-300 relative p-1.5">
               <RenderAvatarSvg avatarId={second.avatarId || 'bot'} size={56} />
-              <span className="absolute -top-2.5 -right-2 text-base">🥈</span>
+              <div className="absolute -top-2.5 -right-2 w-6 h-6 rounded-full bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center font-heading font-black text-[11px] text-slate-800">
+                2
+              </div>
             </div>
             <div className="font-heading font-bold text-sm sm:text-base text-white mt-2 truncate max-w-[110px] text-center">
               {second.name}
@@ -103,7 +105,9 @@ export const VictoryPodium: React.FC<VictoryPodiumProps> = ({
             <Crown className="w-8 h-8 text-amber-400 animate-bounce absolute -top-8" />
             <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center shadow-alix-glow ring-4 ring-amber-400/80 border-2 border-white relative p-1.5">
               <RenderAvatarSvg avatarId={first.avatarId || 'fox'} size={68} />
-              <span className="absolute -top-2 -right-2 text-lg">🥇</span>
+              <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-amber-400 border-2 border-white shadow-md flex items-center justify-center font-heading font-black text-xs text-amber-950">
+                1
+              </div>
             </div>
             <div className="font-heading font-black text-base sm:text-lg text-amber-300 mt-2 truncate max-w-[130px] text-center">
               {first.name}
@@ -129,7 +133,9 @@ export const VictoryPodium: React.FC<VictoryPodiumProps> = ({
           <div className="flex flex-col items-center mb-3">
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-amber-700 to-orange-400 flex items-center justify-center shadow-lg border-2 border-amber-600 relative p-1.5">
               <RenderAvatarSvg avatarId={third.avatarId || 'owl'} size={56} />
-              <span className="absolute -top-2.5 -right-2 text-base">🥉</span>
+              <div className="absolute -top-2.5 -right-2 w-6 h-6 rounded-full bg-amber-600 border-2 border-white shadow-sm flex items-center justify-center font-heading font-black text-[11px] text-amber-100">
+                3
+              </div>
             </div>
             <div className="font-heading font-bold text-sm sm:text-base text-white mt-2 truncate max-w-[110px] text-center">
               {third.name}

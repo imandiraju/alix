@@ -11,6 +11,7 @@ import {
   Sparkles,
   CheckCircle,
   HelpCircle,
+  Lightbulb,
 } from 'lucide-react';
 
 export const InsightsPage: React.FC = () => {
@@ -131,8 +132,9 @@ export const InsightsPage: React.FC = () => {
                   <p className="text-xs text-orange-900 font-medium">
                     {item.misconception}
                   </p>
-                  <div className="text-xs text-alix-indigo font-semibold bg-white p-2.5 rounded-lg border border-orange-200/50">
-                    💡 <strong>Pedagogy Advice:</strong> {item.recommendation}
+                  <div className="text-xs text-alix-indigo font-semibold bg-white p-2.5 rounded-lg border border-orange-200/50 flex items-center gap-1.5">
+                    <Lightbulb className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span><strong>Pedagogy Advice:</strong> {item.recommendation}</span>
                   </div>
                 </div>
               ))}

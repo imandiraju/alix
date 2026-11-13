@@ -25,20 +25,20 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
     switch (rank) {
       case 1:
         return (
-          <div className="w-8 h-8 rounded-full bg-amber-400 text-amber-950 flex items-center justify-center font-black text-sm shadow-sm ring-2 ring-amber-300">
-            🥇
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 text-amber-950 flex items-center justify-center font-black text-xs shadow-md ring-2 ring-amber-300">
+            <Trophy className="w-4 h-4 text-amber-950 fill-current" />
           </div>
         );
       case 2:
         return (
-          <div className="w-8 h-8 rounded-full bg-slate-300 text-slate-800 flex items-center justify-center font-black text-sm shadow-sm ring-2 ring-slate-200">
-            🥈
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-300 to-slate-100 text-slate-800 flex items-center justify-center font-black text-xs shadow-sm ring-2 ring-slate-300">
+            <span className="font-heading font-black text-xs">2</span>
           </div>
         );
       case 3:
         return (
-          <div className="w-8 h-8 rounded-full bg-amber-600 text-amber-100 flex items-center justify-center font-black text-sm shadow-sm ring-2 ring-amber-500">
-            🥉
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-700 to-amber-500 text-amber-100 flex items-center justify-center font-black text-xs shadow-sm ring-2 ring-amber-500">
+            <span className="font-heading font-black text-xs">3</span>
           </div>
         );
       default:

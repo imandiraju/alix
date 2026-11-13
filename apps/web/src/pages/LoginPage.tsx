@@ -274,12 +274,6 @@ export const LoginPage: React.FC = () => {
                     <p className="text-alix-slate-600 text-[11px]">
                       Enter the 6-digit code sent to <strong className="text-alix-indigo">{email}</strong>.
                     </p>
-                    {dispatchedOtp && (
-                      <div className="pt-1 font-mono font-bold text-alix-indigo flex items-center justify-between text-xs bg-white/80 p-1.5 rounded-lg border border-alix-violet-200">
-                        <span>Verification Code:</span>
-                        <span className="text-alix-violet-700 text-sm tracking-wider">{dispatchedOtp}</span>
-                      </div>
-                    )}
                   </div>
 
                   {/* 6-Digit OTP Boxes */}

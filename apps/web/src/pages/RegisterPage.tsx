@@ -287,12 +287,6 @@ export const RegisterPage: React.FC = () => {
                 <p className="text-[11px] text-alix-slate-600">
                   Please enter the 6-digit confirmation code dispatched to <strong>{formData.email}</strong>.
                 </p>
-                {dispatchedOtp && (
-                  <div className="pt-1 font-mono font-bold text-alix-indigo flex items-center justify-between text-xs bg-white/80 p-1.5 rounded-lg border border-alix-violet-200">
-                    <span>Verification Code:</span>
-                    <span className="text-alix-violet-700 text-sm tracking-wider">{dispatchedOtp}</span>
-                  </div>
-                )}
               </div>
 
               {/* 6 Digit Input Boxes */}
