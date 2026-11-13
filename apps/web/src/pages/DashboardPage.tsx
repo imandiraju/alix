@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import Navbar from '../components/layout/Navbar';
 import Sidebar from '../components/layout/Sidebar';
 import Footer from '../components/layout/Footer';
@@ -25,6 +26,8 @@ import {
   UploadCloud,
   FileSpreadsheet,
   GraduationCap,
+  FolderOpen,
+  FileText,
 } from 'lucide-react';
 
 interface QuizItem {
@@ -52,9 +55,17 @@ interface SessionStats {
   avgParticipation: number;
 }
 
+interface ParsedStudent {
+  rollNo: string;
+  name: string;
+  email: string;
+  section?: string;
+}
+
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [quizzes, setQuizzes] = useState<QuizItem[]>([]);
   const [rosters, setRosters] = useState<RosterItem[]>([]);
@@ -74,6 +85,9 @@ export const DashboardPage: React.FC = () => {
   const [courseName, setCourseName] = useState('');
   const [section, setSection] = useState('Section A');
   const [rawRosterText, setRawRosterText] = useState('');
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [uploadMode, setUploadMode] = useState<'file' | 'paste'>('file');
+  const [isDragging, setIsDragging] = useState(false);
   const [isSavingRoster, setIsSavingRoster] = useState(false);
   const [rosterMessage, setRosterMessage] = useState<string | null>(null);
 
@@ -149,6 +163,57 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
+  // Process chosen or dropped file (.xlsx, .xls, .csv, .tsv, .txt)
+  const processFile = (file: File) => {
+    setRosterMessage(null);
+    setUploadedFileName(file.name);
+
+    // Auto-detect course code from filename if empty
+    const cleanName = file.name.replace(/\.[^/.]+$/, '');
+    if (!courseCode) {
+      const matchCode = cleanName.match(/([A-Z]{2,4}\s*\d{3})/i);
+      if (matchCode) setCourseCode(matchCode[1].toUpperCase());
+    }
+
+    const ext = file.name.split('.').pop()?.toLowerCase();
+
+    if (ext === 'xlsx' || ext === 'xls') {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const buffer = e.target?.result as ArrayBuffer;
+          const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const csv = XLSX.utils.sheet_to_csv(worksheet);
+          setRawRosterText(csv);
+        } catch {
+          setRosterMessage('Error parsing Excel spreadsheet. Please ensure it is a valid .xlsx or .xls file.');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      // CSV, TSV, or TXT
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setRawRosterText((e.target?.result as string) || '');
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  };
+
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
+  };
+
   const handleSaveRoster = async (e: React.FormEvent) => {
     e.preventDefault();
     setRosterMessage(null);
@@ -159,7 +224,7 @@ export const DashboardPage: React.FC = () => {
     }
 
     if (!rawRosterText.trim()) {
-      setRosterMessage('Please paste or enter at least one student record (Roll No, Name).');
+      setRosterMessage('Please select a file or paste at least one student record (Roll No, Name).');
       return;
     }
 
@@ -181,6 +246,7 @@ export const DashboardPage: React.FC = () => {
       if (res.ok && data.success) {
         setIsRosterModalOpen(false);
         setRawRosterText('');
+        setUploadedFileName(null);
         setCourseCode('');
         setCourseName('');
         fetchDashboardData();
@@ -204,11 +270,26 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
-  // Preview count of students in text area
-  const parsedStudentCount = rawRosterText
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0 && !/roll\s*(no|number)?/i.test(l)).length;
+  // Parse student records from current raw text
+  const parsedStudents: ParsedStudent[] = React.useMemo(() => {
+    if (!rawRosterText.trim()) return [];
+    const lines = rawRosterText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const result: ParsedStudent[] = [];
+
+    for (const line of lines) {
+      if (/roll\s*(no|number)?/i.test(line) && /name/i.test(line)) continue;
+      const parts = line.split(/[,;\t]+/).map((p) => p.trim());
+      if (parts.length >= 2 && parts[0] && parts[1]) {
+        result.push({
+          rollNo: parts[0].toUpperCase(),
+          name: parts[1],
+          email: parts[2] || `${parts[0].toLowerCase()}@srmap.edu.in`,
+          section: parts[3] || section,
+        });
+      }
+    }
+    return result;
+  }, [rawRosterText, section]);
 
   return (
     <div className="min-h-screen flex flex-col bg-alix-slate-50">
@@ -344,7 +425,7 @@ export const DashboardPage: React.FC = () => {
                 </div>
                 <h3 className="text-lg font-bold font-heading text-alix-indigo">Upload Roster</h3>
                 <p className="text-[11px] text-alix-slate-500">
-                  Bulk upload Roll Nos to whitelist students.
+                  Browse Excel/CSV to whitelist students.
                 </p>
               </div>
               <div className="w-9 h-9 rounded-full bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center transition-colors shrink-0">
@@ -385,14 +466,14 @@ export const DashboardPage: React.FC = () => {
                 <GraduationCap className="w-10 h-10 text-alix-slate-300 mx-auto mb-2" />
                 <p className="text-sm font-semibold text-alix-indigo">No section rosters uploaded yet</p>
                 <p className="text-xs text-alix-slate-400 mt-1 mb-4">
-                  Upload your student Roll Numbers, Names, and Emails to prevent photo-sharing and proxy attendance.
+                  Browse or upload your student Roll Numbers, Names, and Emails to prevent photo-sharing and proxy attendance.
                 </p>
                 <button
                   type="button"
                   onClick={() => setIsRosterModalOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all"
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all cursor-pointer"
                 >
-                  Bulk Upload Roster
+                  Upload Roster File
                 </button>
               </div>
             ) : (
@@ -422,7 +503,7 @@ export const DashboardPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleDeleteRoster(r._id)}
-                      className="p-2 rounded-lg text-alix-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                      className="p-2 rounded-lg text-alix-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                       title="Delete Roster"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -516,7 +597,7 @@ export const DashboardPage: React.FC = () => {
                         to={`/host/${quiz._id}`}
                         className="px-4 py-2 rounded-lg bg-alix-indigo hover:bg-alix-indigo/90 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
                       >
-                        <Play className="w-3 h-3 fill-current text-alix-cyan-400" />
+                        <Play className="w-3.5 h-3.5 fill-current text-alix-cyan-400" />
                         <span>Launch</span>
                       </Link>
 
@@ -538,7 +619,7 @@ export const DashboardPage: React.FC = () => {
         </main>
       </div>
 
-      {/* Modal: Bulk Upload Student Roster */}
+      {/* Modal: Bulk Upload Student Roster with Browse File Option */}
       {isRosterModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-xl bg-white rounded-3xl shadow-alix-xl border border-alix-slate-200 overflow-hidden animate-scale-in">
@@ -547,11 +628,11 @@ export const DashboardPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-5 h-5 text-emerald-600" />
                   <h3 className="text-lg font-heading font-extrabold text-alix-indigo">
-                    Bulk Upload Student Roster
+                    Upload Student Roster
                   </h3>
                 </div>
                 <p className="text-xs text-alix-slate-500 mt-0.5">
-                  Upload your class list so only authorized students can join your sessions.
+                  Browse your Excel or CSV file to whitelist enrolled students and prevent proxy attendance.
                 </p>
               </div>
               <button
@@ -571,6 +652,7 @@ export const DashboardPage: React.FC = () => {
                 </div>
               )}
 
+              {/* Course Meta Inputs */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
@@ -613,44 +695,168 @@ export const DashboardPage: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500">
-                    Paste Student Data (CSV, Excel rows, or Tab-separated)
-                  </label>
-                  {parsedStudentCount > 0 && (
-                    <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                      {parsedStudentCount} students recognized
-                    </span>
-                  )}
-                </div>
-                <textarea
-                  rows={6}
-                  value={rawRosterText}
-                  onChange={(e) => setRawRosterText(e.target.value)}
-                  placeholder={`Roll No, Student Name, Email, Section\nAP21110010001, Aarav Sharma, aarav_s@srmap.edu.in, A\nAP21110010002, Ananya Patel, ananya_p@srmap.edu.in, A\nAP21110010003, Rohan Verma, rohan_v@srmap.edu.in, A`}
-                  className="w-full p-3 rounded-xl border border-alix-slate-300 text-xs font-mono text-alix-indigo outline-none focus:border-emerald-500 leading-relaxed"
-                />
-                <p className="text-[11px] text-alix-slate-400 mt-1">
-                  Format: One student per line (Roll No, Name, Email, Section). You can copy-paste columns directly from Excel or Google Sheets.
-                </p>
+              {/* Upload Mode Tabs */}
+              <div className="flex border-b border-alix-slate-200 gap-4 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setUploadMode('file')}
+                  className={`pb-2 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                    uploadMode === 'file'
+                      ? 'border-b-2 border-emerald-600 text-emerald-700'
+                      : 'text-alix-slate-400 hover:text-alix-indigo'
+                  }`}
+                >
+                  <FolderOpen className="w-3.5 h-3.5" />
+                  <span>Browse Excel / CSV File</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUploadMode('paste')}
+                  className={`pb-2 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                    uploadMode === 'paste'
+                      ? 'border-b-2 border-emerald-600 text-emerald-700'
+                      : 'text-alix-slate-400 hover:text-alix-indigo'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Paste Text Directly</span>
+                </button>
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-3">
+              {/* Mode 1: Browse File Dropzone */}
+              {uploadMode === 'file' ? (
+                <div className="space-y-3">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept=".xlsx,.xls,.csv,.tsv,.txt"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragging(true);
+                    }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={handleFileDrop}
+                    className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+                      isDragging
+                        ? 'border-emerald-500 bg-emerald-50/50'
+                        : uploadedFileName
+                        ? 'border-emerald-400 bg-emerald-50/30'
+                        : 'border-alix-slate-300 hover:border-emerald-500 hover:bg-emerald-50/20 bg-alix-slate-50'
+                    }`}
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-2 shadow-inner">
+                      <FileSpreadsheet className="w-6 h-6" />
+                    </div>
+
+                    {uploadedFileName ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-800">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          <span>{uploadedFileName}</span>
+                        </div>
+                        <p className="text-[11px] text-emerald-600 font-semibold">
+                          {parsedStudents.length} Students parsed successfully! Click to choose a different file.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <p className="text-sm font-bold text-alix-indigo">
+                          Click to Browse File or Drag & Drop Here
+                        </p>
+                        <p className="text-xs text-alix-slate-400">
+                          Supports Excel (.xlsx, .xls) and CSV (.csv, .tsv, .txt) files
+                        </p>
+                        <div className="pt-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              fileInputRef.current?.click();
+                            }}
+                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm inline-flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <FolderOpen className="w-3.5 h-3.5" />
+                            <span>Browse Computer</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Preview Table of first 5 parsed student rows */}
+                  {parsedStudents.length > 0 && (
+                    <div className="rounded-xl border border-alix-slate-200 overflow-hidden text-left bg-white shadow-sm">
+                      <div className="bg-alix-slate-100 px-3 py-1.5 text-[11px] font-bold text-alix-slate-600 flex justify-between items-center">
+                        <span>Preview (Showing 5 of {parsedStudents.length} students)</span>
+                        <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Verified</span>
+                        </span>
+                      </div>
+                      <div className="divide-y divide-alix-slate-100 text-xs">
+                        {parsedStudents.slice(0, 5).map((s, idx) => (
+                          <div key={idx} className="px-3 py-1.5 flex items-center justify-between font-mono text-[11px]">
+                            <span className="font-bold text-alix-indigo">{s.rollNo}</span>
+                            <span className="text-alix-slate-700 font-sans font-medium">{s.name}</span>
+                            <span className="text-alix-slate-400 truncate max-w-[130px]">{s.email}</span>
+                            <span className="text-emerald-600 font-sans font-semibold">{s.section || section}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Mode 2: Paste Raw Text Area */
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500">
+                      Paste Rows (Roll No, Name, Email, Section)
+                    </label>
+                    {parsedStudents.length > 0 && (
+                      <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {parsedStudents.length} students recognized
+                      </span>
+                    )}
+                  </div>
+                  <textarea
+                    rows={6}
+                    value={rawRosterText}
+                    onChange={(e) => setRawRosterText(e.target.value)}
+                    placeholder={`Roll No, Student Name, Email, Section\nAP21110010001, Aarav Sharma, aarav_s@srmap.edu.in, A\nAP21110010002, Ananya Patel, ananya_p@srmap.edu.in, A\nAP21110010003, Rohan Verma, rohan_v@srmap.edu.in, A`}
+                    className="w-full p-3 rounded-xl border border-alix-slate-300 text-xs font-mono text-alix-indigo outline-none focus:border-emerald-500 leading-relaxed"
+                  />
+                  <p className="text-[11px] text-alix-slate-400 mt-1">
+                    Format: One student per line. You can copy-paste columns directly from Excel or Google Sheets.
+                  </p>
+                </div>
+              )}
+
+              <div className="pt-2 flex items-center justify-end gap-3 border-t border-alix-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsRosterModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-alix-slate-300 text-alix-slate-600 text-xs font-bold hover:bg-alix-slate-50"
+                  className="px-4 py-2 rounded-xl border border-alix-slate-300 text-alix-slate-600 text-xs font-bold hover:bg-alix-slate-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isSavingRoster}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  disabled={isSavingRoster || parsedStudents.length === 0}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <ShieldCheck className="w-4 h-4" />
-                  <span>{isSavingRoster ? 'Saving Roster...' : 'Save & Whitelist Students'}</span>
+                  <span>
+                    {isSavingRoster
+                      ? 'Saving Roster...'
+                      : `Save & Whitelist ${parsedStudents.length > 0 ? `${parsedStudents.length} Students` : ''}`}
+                  </span>
                 </button>
               </div>
             </form>

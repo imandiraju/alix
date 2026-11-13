@@ -12,6 +12,8 @@ import {
   LogOut,
   GraduationCap,
   ChevronDown,
+  ShieldCheck,
+  BookOpen,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -19,11 +21,19 @@ export const Navbar: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const navLinks = [
-    { name: 'Join Room', path: '/join', icon: Gamepad2 },
-    { name: 'My Activities', path: '/create', icon: PlusCircle },
-    { name: 'ALIX Insights', path: '/insights', icon: LineChart },
+  // Instructor links when logged in as Faculty
+  const teacherNavLinks = [
+    { name: 'My Activities', path: '/create', icon: BookOpen },
+    { name: 'Class Rosters', path: '/dashboard', icon: ShieldCheck },
+    { name: 'Classroom Insights', path: '/insights', icon: LineChart },
   ];
+
+  // Guest/Student links when not logged in
+  const guestNavLinks = [
+    { name: 'Join Classroom', path: '/join', icon: Gamepad2 },
+  ];
+
+  const currentNavLinks = isAuthenticated ? teacherNavLinks : guestNavLinks;
 
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-white/85 border-b border-alix-slate-200 shadow-sm transition-all select-none">
@@ -36,17 +46,20 @@ export const Navbar: React.FC = () => {
 
           {/* Desktop Nav Links */}
           <nav className="hidden md:flex items-center space-x-1">
-            <Link
-              to="/dashboard"
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                location.pathname === '/dashboard'
-                  ? 'text-alix-violet-700 bg-alix-violet-50 font-semibold'
-                  : 'text-alix-slate-600 hover:text-alix-indigo hover:bg-alix-slate-100'
-              }`}
-            >
-              Dashboard
-            </Link>
-            {navLinks.map((link) => {
+            {isAuthenticated && (
+              <Link
+                to="/dashboard"
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  location.pathname === '/dashboard'
+                    ? 'text-alix-violet-700 bg-alix-violet-50 font-semibold'
+                    : 'text-alix-slate-600 hover:text-alix-indigo hover:bg-alix-slate-100'
+                }`}
+              >
+                Dashboard
+              </Link>
+            )}
+
+            {currentNavLinks.map((link) => {
               const Icon = link.icon;
               const isActive = location.pathname.startsWith(link.path);
               return (
@@ -69,23 +82,37 @@ export const Navbar: React.FC = () => {
 
         {/* Right: Quick Action CTAs & Auth Controls */}
         <div className="flex items-center gap-2.5 sm:gap-3">
-          {/* Join ALIX PIN Button */}
-          <Link
-            to="/join"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-alix-slate-300 text-alix-indigo font-semibold text-xs sm:text-sm hover:border-alix-violet-400 hover:bg-alix-violet-50 transition-all shadow-sm"
-          >
-            <UserCheck className="w-4 h-4 text-alix-cyan-600" />
-            <span>Join PIN</span>
-          </Link>
+          {/* If NOT logged in: Show Join PIN button for students */}
+          {!isAuthenticated && (
+            <Link
+              to="/join"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-alix-slate-300 text-alix-indigo font-semibold text-xs sm:text-sm hover:border-alix-violet-400 hover:bg-alix-violet-50 transition-all shadow-sm"
+            >
+              <UserCheck className="w-4 h-4 text-alix-cyan-600" />
+              <span>Join PIN</span>
+            </Link>
+          )}
 
-          {/* Host / Projector View Button */}
-          <Link
-            to="/dashboard"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-alix-indigo text-white font-medium text-xs sm:text-sm hover:bg-alix-indigo/90 shadow-sm transition-all"
-          >
-            <Play className="w-3.5 h-3.5 fill-current text-alix-cyan-300" />
-            <span>ALIX Live</span>
-          </Link>
+          {/* Faculty Quick Action Buttons */}
+          {isAuthenticated && (
+            <>
+              <Link
+                to="/create"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-alix-slate-300 hover:border-alix-violet-400 text-alix-indigo font-semibold text-xs transition-all shadow-sm"
+              >
+                <PlusCircle className="w-3.5 h-3.5 text-alix-violet-600" />
+                <span>+ Create</span>
+              </Link>
+
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-alix-indigo text-white font-medium text-xs sm:text-sm hover:bg-alix-indigo/90 shadow-sm transition-all"
+              >
+                <Play className="w-3.5 h-3.5 fill-current text-alix-cyan-300" />
+                <span>ALIX Live</span>
+              </Link>
+            </>
+          )}
 
           {/* Auth State: Profile or Sign In */}
           {isAuthenticated && user ? (
@@ -128,6 +155,13 @@ export const Navbar: React.FC = () => {
                       Question Banks & Creator
                     </Link>
                     <Link
+                      to="/dashboard"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="block px-2 py-1.5 text-xs text-alix-slate-700 hover:bg-alix-slate-50 rounded-lg font-medium"
+                    >
+                      Class Rosters & Anti-Proxy
+                    </Link>
+                    <Link
                       to="/insights"
                       onClick={() => setIsDropdownOpen(false)}
                       className="block px-2 py-1.5 text-xs text-alix-slate-700 hover:bg-alix-slate-50 rounded-lg font-medium"
@@ -162,10 +196,9 @@ export const Navbar: React.FC = () => {
               </Link>
               <Link
                 to="/register"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-alix-violet-600 hover:bg-alix-violet-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-all"
+                className="px-3.5 py-1.5 rounded-lg bg-alix-violet-600 text-white font-semibold text-xs sm:text-sm hover:bg-alix-violet-700 transition-all shadow-sm"
               >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Register</span>
+                Faculty Register
               </Link>
             </div>
           )}

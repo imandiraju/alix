@@ -11,6 +11,7 @@ import {
   Settings,
   HelpCircle,
   Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -20,12 +21,12 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {
   const modules = [
     {
-      name: 'Join Room',
-      subtitle: 'Student Live Play',
-      path: '/join',
-      icon: Gamepad2,
-      badge: 'Live',
-      badgeColor: 'bg-alix-violet-100 text-alix-violet-700',
+      name: 'Class Rosters',
+      subtitle: 'Anti-Proxy Whitelist',
+      path: '/dashboard',
+      icon: ShieldCheck,
+      badge: 'Protected',
+      badgeColor: 'bg-emerald-100 text-emerald-700',
     },
     {
       name: 'ALIX Poll',
