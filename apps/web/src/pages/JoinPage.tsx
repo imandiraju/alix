@@ -16,6 +16,9 @@ import {
   CheckCircle2,
   Globe,
   Radio,
+  Compass,
+  Play,
+  PenTool,
 } from 'lucide-react';
 
 export const JoinPage: React.FC = () => {
@@ -168,17 +171,66 @@ export const JoinPage: React.FC = () => {
       <div className="absolute -bottom-40 -right-40 w-[700px] h-[700px] bg-alix-violet-500/[0.12] rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-1/3 -right-20 w-[400px] h-[400px] bg-alix-cyan-400/[0.08] rounded-full blur-3xl pointer-events-none" />
 
-      {/* Sleek Top Navigation Pill Bar */}
-      <header className="p-3 sm:p-4 flex items-center justify-between max-w-6xl mx-auto w-full z-20">
-        {/* Left: Brand Tag */}
-        <div className="flex items-center gap-2">
+      {/* Sleek Kahoot-style Top Navigation Bar */}
+      <header className="p-3 sm:p-4 flex items-center justify-between max-w-7xl mx-auto w-full z-20">
+        {/* Left: Brand Tag (Kahoot! GO style) */}
+        <div className="flex items-center gap-3">
           <Link
             to="/"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 text-xs font-black text-white tracking-wide transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 text-xs font-black text-white tracking-wide transition-all shadow-sm group"
           >
-            <Radio className="w-3.5 h-3.5 text-alix-cyan-400 animate-pulse" />
-            <span>ALIX LIVE</span>
+            <span className="font-heading font-black text-sm">ALIX!</span>
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-alix-cyan-400 text-slate-900 tracking-wider">
+              GO
+            </span>
           </Link>
+
+          {/* Mode Switcher Pills (Kahoot! top menu) */}
+          <nav className="hidden md:flex items-center gap-2">
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black bg-[#26890C]/85 hover:bg-[#26890C] text-white transition-all shadow-sm active:scale-95"
+            >
+              <Compass className="w-3.5 h-3.5" />
+              <span>Activities</span>
+            </Link>
+
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black bg-[#A35200]/90 hover:bg-[#A35200] text-white transition-all shadow-sm active:scale-95"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-200" />
+              <span>Rosters</span>
+            </Link>
+
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black bg-[#1368CE]/90 hover:bg-[#1368CE] text-white transition-all shadow-sm active:scale-95"
+            >
+              <Play className="w-3 h-3 fill-current" />
+              <span>Present</span>
+            </Link>
+
+            <Link
+              to="/create"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black bg-[#E21B3C]/90 hover:bg-[#E21B3C] text-white transition-all shadow-sm active:scale-95"
+            >
+              <PenTool className="w-3.5 h-3.5" />
+              <span>Make</span>
+            </Link>
+
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black bg-[#46178F] ring-2 ring-white/50 text-white shadow-md"
+            >
+              <span className="flex items-center gap-0.5 text-[10px] font-mono">
+                <span className="text-rose-400">▲</span>
+                <span className="text-cyan-400">◆</span>
+                <span className="text-amber-400">●</span>
+                <span className="text-emerald-400">■</span>
+              </span>
+              <span>Join</span>
+            </div>
+          </nav>
         </div>
 
         {/* Right: Quick shortcuts */}
@@ -195,7 +247,7 @@ export const JoinPage: React.FC = () => {
 
           <Link
             to="/login"
-            className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-white transition-all"
+            className="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-white transition-all"
           >
             Teacher Login
           </Link>
@@ -210,13 +262,13 @@ export const JoinPage: React.FC = () => {
             <span>ALIX</span>
             <span className="text-alix-cyan-400 animate-bounce">!</span>
           </h1>
-          <p className="text-xs sm:text-sm text-alix-slate-200/90 font-semibold tracking-wider mt-1 uppercase">
+          <p className="text-xs sm:text-sm text-white/80 font-semibold tracking-wider mt-1 uppercase">
             Active Learning & Interactive Experience
           </p>
         </div>
 
         {/* Floating White Card */}
-        <div className="w-full max-w-[360px] sm:max-w-[390px] bg-white text-alix-slate-900 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] p-6 sm:p-7 relative border border-white/20 animate-scale-in">
+        <div className="w-full max-w-[360px] sm:max-w-[390px] bg-white text-slate-900 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] p-6 sm:p-7 relative border border-white/20 animate-scale-in">
           {/* Locked Alert */}
           {isLocked && (
             <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
@@ -244,8 +296,11 @@ export const JoinPage: React.FC = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Unified Game PIN Input */}
+            {/* Unified Game PIN Input with Kahoot PIN Header */}
             <div>
+              <div className="text-center text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">
+                PIN
+              </div>
               <input
                 id="game-pin-input"
                 type="text"
@@ -256,8 +311,8 @@ export const JoinPage: React.FC = () => {
                 maxLength={6}
                 value={pinValue}
                 onChange={(e) => handlePinInput(e.target.value)}
-                placeholder="Game PIN"
-                className="w-full py-3.5 px-4 text-center text-xl sm:text-2xl font-mono font-black text-alix-indigo placeholder-alix-slate-400 bg-white border-2 border-alix-slate-300 rounded-xl focus:border-alix-indigo focus:ring-2 focus:ring-alix-violet-200 outline-none transition-all shadow-inner tracking-widest"
+                placeholder="Enter PIN"
+                className="w-full py-3.5 px-4 text-center text-xl sm:text-2xl font-mono font-black text-slate-900 placeholder-slate-400 bg-white border-2 border-slate-300 rounded-xl focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all shadow-inner tracking-widest"
               />
             </div>
 
@@ -335,38 +390,45 @@ export const JoinPage: React.FC = () => {
               </div>
             )}
 
-            {/* Tactile Kahoot-style Enter Button */}
+            {/* Tactile Kahoot-style Join Button */}
             <button
               type="submit"
               disabled={isSubmitting || isLocked || pinValue.length < 6}
-              className="w-full py-3.5 px-4 bg-[#333333] hover:bg-[#1E1B4B] disabled:bg-alix-slate-300 text-white font-black text-base uppercase tracking-wider rounded-xl shadow-md active:translate-y-0.5 active:shadow-sm transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+              className="w-full py-3.5 px-4 bg-[#333333] hover:bg-[#222222] border-b-4 border-[#1c1c1c] active:border-b-0 active:translate-y-1 disabled:bg-slate-300 disabled:border-none disabled:translate-y-0 text-white font-black text-base uppercase tracking-wider rounded-xl shadow-md transition-all duration-100 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
             >
-              <span>{isSubmitting ? 'Entering Room...' : 'Enter'}</span>
+              <span>{isSubmitting ? 'Entering Room...' : 'Join'}</span>
               {!isSubmitting && <ArrowRight className="w-4 h-4 stroke-[3]" />}
             </button>
           </form>
 
           {/* Camera Scan Link */}
-          <div className="mt-4 pt-3 border-t border-alix-slate-100 text-center">
+          <div className="mt-4 pt-3 border-t border-slate-100 text-center">
             <button
               type="button"
               onClick={() => setIsScannerOpen(true)}
-              className="text-xs font-bold text-alix-indigo hover:text-alix-violet-700 inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+              className="text-xs font-bold text-slate-700 hover:text-indigo-600 inline-flex items-center gap-1.5 cursor-pointer transition-colors"
             >
-              <Camera className="w-3.5 h-3.5 text-alix-cyan-600" />
+              <Camera className="w-3.5 h-3.5 text-indigo-600" />
               <span>Scan Classroom Projector QR Code</span>
             </button>
           </div>
         </div>
 
-        {/* Get Started Disclaimer */}
-        <div className="mt-6 text-center text-xs text-white/70">
+        {/* Kahoot-style Disclaimer */}
+        <div className="mt-6 text-center text-xs text-white/80 space-y-2">
           <p>
-            Instructors: Host your classroom interactive session at{' '}
+            Get started for FREE at{' '}
             <Link to="/login" className="text-white font-bold underline underline-offset-4 hover:text-alix-cyan-300">
               alix.edu
             </Link>
           </p>
+          <div className="flex items-center justify-center gap-2 text-[11px] text-white/60">
+            <Link to="/" className="hover:text-white transition-colors">Terms</Link>
+            <span>|</span>
+            <Link to="/" className="hover:text-white transition-colors">Privacy</Link>
+            <span>|</span>
+            <Link to="/" className="hover:text-white transition-colors">University Notice</Link>
+          </div>
         </div>
       </main>
 

@@ -8,26 +8,26 @@ import { useAuth } from '../context/AuthContext';
 import { REALTIME_URL } from '../services/socket';
 import {
   Play,
-  PlusCircle,
-  BarChart2,
+  Plus,
   Users,
-  Award,
-  Clock,
-  ArrowUpRight,
   Sparkles,
   BookOpen,
   Trash2,
-  FileQuestion,
-  HelpCircle,
   CheckCircle2,
   AlertCircle,
   X,
   ShieldCheck,
-  UploadCloud,
   FileSpreadsheet,
   GraduationCap,
   FolderOpen,
   FileText,
+  Radio,
+  ArrowRight,
+  Edit3,
+  Layers,
+  Code,
+  Cpu,
+  Compass,
 } from 'lucide-react';
 
 interface QuizItem {
@@ -79,6 +79,7 @@ export const DashboardPage: React.FC = () => {
   const [isLaunchModalOpen, setIsLaunchModalOpen] = useState(false);
   const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState('All');
 
   // Roster Bulk Upload Form
   const [courseCode, setCourseCode] = useState('');
@@ -90,6 +91,15 @@ export const DashboardPage: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isSavingRoster, setIsSavingRoster] = useState(false);
   const [rosterMessage, setRosterMessage] = useState<string | null>(null);
+
+  const filterTags = [
+    { label: 'All Activities', value: 'All' },
+    { label: 'Computer Science', value: 'CSE' },
+    { label: 'Mathematics', value: 'Math' },
+    { label: 'Engineering', value: 'Eng' },
+    { label: 'Anti-Proxy Rosters', value: 'Rosters' },
+    { label: 'Interactive Polls', value: 'Polls' },
+  ];
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -103,23 +113,21 @@ export const DashboardPage: React.FC = () => {
         setQuizzes(quizData.quizzes || []);
       }
 
-      // 2. Fetch rosters from MongoDB
+      // 2. Fetch real rosters from MongoDB
       const rosterRes = await fetch(`${REALTIME_URL}/api/rosters${teacherParam}`);
       if (rosterRes.ok) {
         const rosterData = await rosterRes.json();
         setRosters(rosterData.rosters || []);
       }
 
-      // 3. Fetch real session stats from MongoDB
+      // 3. Fetch real classroom stats
       const statsRes = await fetch(`${REALTIME_URL}/api/sessions/stats${teacherParam}`);
       if (statsRes.ok) {
         const statsData = await statsRes.json();
-        if (statsData.stats) {
-          setStats(statsData.stats);
-        }
+        if (statsData.stats) setStats(statsData.stats);
       }
     } catch (err) {
-      console.warn('[Dashboard] Could not fetch data:', err);
+      console.warn('Dashboard fetch error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -130,10 +138,7 @@ export const DashboardPage: React.FC = () => {
   }, [user]);
 
   const handleDeleteQuiz = async (quizId: string) => {
-    if (!window.confirm('Are you sure you want to delete this activity? This cannot be undone.')) {
-      return;
-    }
-
+    if (!window.confirm('Are you sure you want to delete this activity?')) return;
     setDeletingId(quizId);
     try {
       const res = await fetch(`${REALTIME_URL}/api/quizzes/${quizId}`, {
@@ -143,14 +148,14 @@ export const DashboardPage: React.FC = () => {
         setQuizzes((prev) => prev.filter((q) => q._id !== quizId));
       }
     } catch (err) {
-      console.error('Failed to delete quiz:', err);
+      console.error('Delete quiz failed:', err);
     } finally {
       setDeletingId(null);
     }
   };
 
   const handleDeleteRoster = async (rosterId: string) => {
-    if (!window.confirm('Delete this student roster?')) return;
+    if (!window.confirm('Delete this enrolled roster? Students in this section will no longer be whitelisted.')) return;
     try {
       const res = await fetch(`${REALTIME_URL}/api/rosters/${rosterId}`, {
         method: 'DELETE',
@@ -159,7 +164,7 @@ export const DashboardPage: React.FC = () => {
         setRosters((prev) => prev.filter((r) => r._id !== rosterId));
       }
     } catch (err) {
-      console.error('Failed to delete roster:', err);
+      console.error('Delete roster failed:', err);
     }
   };
 
@@ -193,7 +198,6 @@ export const DashboardPage: React.FC = () => {
       };
       reader.readAsArrayBuffer(file);
     } else {
-      // CSV, TSV, or TXT
       const reader = new FileReader();
       reader.onload = (e) => {
         setRawRosterText((e.target?.result as string) || '');
@@ -218,8 +222,8 @@ export const DashboardPage: React.FC = () => {
     e.preventDefault();
     setRosterMessage(null);
 
-    if (!courseCode.trim() || !courseName.trim() || !section.trim()) {
-      setRosterMessage('Please fill Course Code, Course Name, and Section.');
+    if (!courseCode.trim() || !courseName.trim()) {
+      setRosterMessage('Course Code and Course Name are required.');
       return;
     }
 
@@ -229,16 +233,17 @@ export const DashboardPage: React.FC = () => {
     }
 
     setIsSavingRoster(true);
+
     try {
       const res = await fetch(`${REALTIME_URL}/api/rosters`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           teacherId: user?.id,
-          courseCode: courseCode.trim(),
+          courseCode: courseCode.trim().toUpperCase(),
           courseName: courseName.trim(),
-          section: section.trim(),
-          rawCsv: rawRosterText,
+          section: section.trim() || 'Section A',
+          rawText: rawRosterText,
         }),
       });
 
@@ -254,7 +259,7 @@ export const DashboardPage: React.FC = () => {
         setRosterMessage(data.error || 'Failed to save roster.');
       }
     } catch (err: any) {
-      setRosterMessage(err.message || 'Network error.');
+      setRosterMessage(err.message || 'Network error saving roster.');
     } finally {
       setIsSavingRoster(false);
     }
@@ -275,7 +280,6 @@ export const DashboardPage: React.FC = () => {
     if (!rawRosterText.trim()) return [];
     const lines = rawRosterText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     const result: ParsedStudent[] = [];
-
     for (const line of lines) {
       if (/roll\s*(no|number)?/i.test(line) && /name/i.test(line)) continue;
       const parts = line.split(/[,;\t]+/).map((p) => p.trim());
@@ -291,326 +295,319 @@ export const DashboardPage: React.FC = () => {
     return result;
   }, [rawRosterText, section]);
 
+  // Filter quizzes based on active tab
+  const displayedQuizzes = React.useMemo(() => {
+    if (activeFilter === 'All') return quizzes;
+    return quizzes.filter((q) => {
+      const matchSub = (q.subject || '').toLowerCase().includes(activeFilter.toLowerCase());
+      const matchCode = (q.courseCode || '').toLowerCase().includes(activeFilter.toLowerCase());
+      return matchSub || matchCode;
+    });
+  }, [quizzes, activeFilter]);
+
   return (
-    <div className="min-h-screen flex flex-col bg-alix-slate-50">
+    <div className="min-h-screen flex flex-col bg-[#F2F2F2]">
+      {/* 1. Signature Kahoot-style Royal Purple Top Bar */}
       <Navbar />
 
-      <div className="flex-1 flex max-w-7xl w-full mx-auto">
-        <Sidebar className="hidden lg:flex" />
+      {/* 2. Secondary Filter Pills Bar (Mirroring Kahoot Discover Tags Bar) */}
+      <div className="bg-white border-b border-slate-200 px-4 sm:px-8 py-2.5 overflow-x-auto scrollbar-none sticky top-16 z-30 shadow-xs">
+        <div className="max-w-[1440px] mx-auto flex items-center gap-2">
+          {filterTags.map((tag) => (
+            <button
+              key={tag.value}
+              type="button"
+              onClick={() => setActiveFilter(tag.value)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                activeFilter === tag.value
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+            >
+              {tag.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <main className="flex-1 p-6 sm:p-8 lg:p-10 max-w-5xl">
-          {/* Welcome Banner */}
+      <div className="flex-1 flex max-w-[1440px] w-full mx-auto">
+        {/* Left Sidebar */}
+        <Sidebar className="hidden lg:flex shrink-0" />
+
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 max-w-6xl">
+          {/* Section: "Create your own: quick tools to get started" (Kahoot exact 3-card block) */}
           <div className="mb-8">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-alix-violet-700 mb-1">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Instructor Portal</span>
+            <h2 className="text-base sm:text-lg font-heading font-black text-slate-800 mb-3 tracking-tight">
+              Create your own: quick tools to get started
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Card 1: Orange Content From Scratch */}
+              <div className="bg-[#E25C1D] text-white p-5 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between min-h-[140px] group relative overflow-hidden">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center shrink-0 shadow-inner">
+                    <Plus className="w-6 h-6 stroke-[3] text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-heading font-black text-base leading-snug">
+                      Create activity from scratch
+                    </h3>
+                    <p className="text-xs text-white/80 mt-1">
+                      Draft questions, concept checks, and polls.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-4 flex justify-end">
+                  <Link
+                    to="/create"
+                    className="px-4 py-2 bg-white text-[#E25C1D] font-black text-xs rounded-xl shadow-sm hover:bg-white/95 active:scale-95 transition-all"
+                  >
+                    Create new
+                  </Link>
+                </div>
+              </div>
+
+              {/* Card 2: Purple AI Assisted Question Creator */}
+              <div className="bg-[#864CBF] text-white p-5 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between min-h-[140px] group relative overflow-hidden">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center shrink-0 shadow-inner">
+                    <Sparkles className="w-5 h-5 text-alix-cyan-300" />
+                  </div>
+                  <div>
+                    <div className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-alix-cyan-300 mb-0.5">
+                      <span>⚡ AI Assisted</span>
+                    </div>
+                    <h3 className="font-heading font-black text-base leading-snug">
+                      Save time! Create with AI Studio
+                    </h3>
+                    <p className="text-xs text-white/80 mt-0.5">
+                      Instant curriculum-aligned questions.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-4 flex justify-end">
+                  <Link
+                    to="/create"
+                    className="px-4 py-2 bg-white text-[#864CBF] font-black text-xs rounded-xl shadow-sm hover:bg-white/95 active:scale-95 transition-all"
+                  >
+                    Start creating
+                  </Link>
+                </div>
+              </div>
+
+              {/* Card 3: Crimson Upload Rosters */}
+              <div className="bg-[#E21B3C] text-white p-5 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between min-h-[140px] group relative overflow-hidden">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center shrink-0 shadow-inner">
+                    <FileSpreadsheet className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <div className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-white/90 mb-0.5">
+                      <ShieldCheck className="w-3 h-3 text-emerald-300" />
+                      <span>Anti-Proxy Protection</span>
+                    </div>
+                    <h3 className="font-heading font-black text-base leading-snug">
+                      Upload student roster file
+                    </h3>
+                    <p className="text-xs text-white/80 mt-0.5">
+                      Excel / CSV student roll numbers whitelist.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-4 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsRosterModalOpen(true)}
+                    className="px-4 py-2 bg-white text-[#E21B3C] font-black text-xs rounded-xl shadow-sm hover:bg-white/95 active:scale-95 transition-all cursor-pointer"
+                  >
+                    Upload file
+                  </button>
+                </div>
+              </div>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-heading font-extrabold text-alix-indigo">
-              Welcome{user?.name ? `, ${user.name}` : ' to ALIX'}
-            </h1>
-            <p className="text-alix-slate-600 mt-1 text-sm sm:text-base">
-              Manage your interactive classroom activities, student rosters, launch live sessions, and track learning metrics.
-            </p>
           </div>
 
-          {/* Real Metrics Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            {/* Total Activities */}
-            <div className="p-5 rounded-2xl bg-white border border-alix-slate-200 shadow-sm flex items-center justify-between">
+          {/* Section: My ALIX Activities Grid */}
+          <section className="mb-8">
+            <div className="flex items-center justify-between mb-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-alix-slate-400">
-                  Total Activities
-                </p>
-                <h3 className="text-2xl font-heading font-extrabold text-alix-indigo mt-1">
-                  {quizzes.length}
-                </h3>
-                <span className="text-xs font-semibold text-emerald-600 inline-flex items-center mt-1">
-                  {quizzes.length > 0
-                    ? `${quizzes.reduce((acc, q) => acc + (q.questions?.length || 0), 0)} questions drafted`
-                    : 'Ready to draft'}
-                </span>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-alix-violet-50 text-alix-violet-600 flex items-center justify-center font-bold">
-                <BookOpen className="w-6 h-6" />
-              </div>
-            </div>
-
-            {/* Enrolled Students / Rosters */}
-            <div className="p-5 rounded-2xl bg-white border border-alix-slate-200 shadow-sm flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-alix-slate-400">
-                  Enrolled Students (Rosters)
-                </p>
-                <h3 className="text-2xl font-heading font-extrabold text-alix-indigo mt-1">
-                  {rosters.reduce((acc, r) => acc + (r.studentCount || 0), 0)}
-                </h3>
-                <span className="text-xs font-semibold text-alix-cyan-600 inline-flex items-center mt-1">
-                  {rosters.length > 0 ? `${rosters.length} sections registered` : 'No rosters uploaded'}
-                </span>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-alix-cyan-50 text-alix-cyan-600 flex items-center justify-center font-bold">
-                <ShieldCheck className="w-6 h-6" />
-              </div>
-            </div>
-
-            {/* Active Sessions Held */}
-            <div className="p-5 rounded-2xl bg-white border border-alix-slate-200 shadow-sm flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-alix-slate-400">
-                  Active Sessions Held
-                </p>
-                <h3 className="text-2xl font-heading font-extrabold text-alix-indigo mt-1">
-                  {stats.totalSessions}
-                </h3>
-                <span className="text-xs font-semibold text-emerald-600 inline-flex items-center mt-1">
-                  {stats.totalLearners} attendances logged
-                </span>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                <Users className="w-6 h-6" />
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <button
-              type="button"
-              onClick={handleStartLiveClick}
-              className="p-5 rounded-2xl bg-gradient-to-r from-alix-indigo to-alix-violet-900 text-white shadow-alix-md hover:shadow-alix-glow transition-all flex items-center justify-between group text-left cursor-pointer"
-            >
-              <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-semibold text-alix-cyan-300">
-                  <Play className="w-3 h-3 fill-current" />
-                  <span>ALIX Live</span>
-                </div>
-                <h3 className="text-lg font-bold font-heading">Start Session</h3>
-                <p className="text-[11px] text-alix-slate-200">
-                  Project live questions to classroom.
-                </p>
-              </div>
-              <div className="w-9 h-9 rounded-full bg-white/10 group-hover:bg-white/20 flex items-center justify-center transition-colors shrink-0">
-                <ArrowUpRight className="w-4 h-4 text-white" />
-              </div>
-            </button>
-
-            <Link
-              to="/create"
-              className="p-5 rounded-2xl bg-white border border-alix-slate-200 hover:border-alix-violet-400 shadow-sm transition-all flex items-center justify-between group"
-            >
-              <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-alix-violet-100 text-[10px] font-semibold text-alix-violet-700">
-                  <PlusCircle className="w-3 h-3" />
-                  <span>ALIX Create</span>
-                </div>
-                <h3 className="text-lg font-bold font-heading text-alix-indigo">Create Activity</h3>
-                <p className="text-[11px] text-alix-slate-500">
-                  Draft questions and concept checks.
-                </p>
-              </div>
-              <div className="w-9 h-9 rounded-full bg-alix-slate-100 group-hover:bg-alix-violet-100 flex items-center justify-center transition-colors shrink-0">
-                <ArrowUpRight className="w-4 h-4 text-alix-violet-600" />
-              </div>
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => setIsRosterModalOpen(true)}
-              className="p-5 rounded-2xl bg-white border border-alix-slate-200 hover:border-emerald-400 shadow-sm transition-all flex items-center justify-between group text-left cursor-pointer"
-            >
-              <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-[10px] font-semibold text-emerald-700 border border-emerald-200">
-                  <ShieldCheck className="w-3 h-3" />
-                  <span>Anti-Proxy Protection</span>
-                </div>
-                <h3 className="text-lg font-bold font-heading text-alix-indigo">Upload Roster</h3>
-                <p className="text-[11px] text-alix-slate-500">
-                  Browse Excel/CSV to whitelist students.
-                </p>
-              </div>
-              <div className="w-9 h-9 rounded-full bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center transition-colors shrink-0">
-                <UploadCloud className="w-4 h-4 text-emerald-600" />
-              </div>
-            </button>
-          </div>
-
-          {/* Section: Class Rosters (Anti-Cheating Whitelist) */}
-          <section className="bg-white rounded-2xl border border-alix-slate-200 shadow-sm overflow-hidden mb-8">
-            <div className="p-6 border-b border-alix-slate-100 flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-heading font-bold text-alix-indigo">
-                    Enrolled Class Rosters
-                  </h2>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                    Anti-Proxy Enabled
-                  </span>
-                </div>
-                <p className="text-xs text-alix-slate-500 mt-0.5">
-                  Only students with verified Roll Numbers in these rosters can join your sessions.
+                <h2 className="text-base sm:text-lg font-heading font-black text-slate-800 tracking-tight">
+                  My Classroom Activities ({displayedQuizzes.length})
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Ready to launch live on your lecture hall projector screen.
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setIsRosterModalOpen(true)}
-                className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
+              <Link
+                to="/create"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#1368CE] hover:bg-[#105AB3] text-white font-black text-xs shadow-sm transition-all"
               >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>+ Upload Section Roster</span>
-              </button>
+                <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                <span>New Activity</span>
+              </Link>
             </div>
 
-            {rosters.length === 0 ? (
-              <div className="p-8 text-center text-alix-slate-500">
-                <GraduationCap className="w-10 h-10 text-alix-slate-300 mx-auto mb-2" />
-                <p className="text-sm font-semibold text-alix-indigo">No section rosters uploaded yet</p>
-                <p className="text-xs text-alix-slate-400 mt-1 mb-4">
-                  Browse or upload your student Roll Numbers, Names, and Emails to prevent photo-sharing and proxy attendance.
+            {isLoading ? (
+              <div className="bg-white rounded-2xl p-12 text-center text-slate-400 border border-slate-200">
+                <div className="w-6 h-6 border-2 border-alix-violet-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                <span className="text-xs font-bold">Loading activities from database...</span>
+              </div>
+            ) : displayedQuizzes.length === 0 ? (
+              <div className="bg-white rounded-2xl p-10 text-center border border-slate-200 shadow-sm">
+                <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                  <BookOpen className="w-7 h-7" />
+                </div>
+                <h3 className="font-heading font-bold text-slate-800 text-base">
+                  No activities in this category
+                </h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
+                  Create your first quiz or concept check to launch interactive live sessions.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setIsRosterModalOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all cursor-pointer"
+                <Link
+                  to="/create"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#26890C] hover:bg-[#20740A] text-white font-black text-xs shadow-sm transition-all"
                 >
-                  Upload Roster File
-                </button>
+                  <Plus className="w-4 h-4 stroke-[3]" />
+                  <span>Create Activity</span>
+                </Link>
               </div>
             ) : (
-              <div className="divide-y divide-alix-slate-100">
-                {rosters.map((r) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {displayedQuizzes.map((quiz) => (
                   <div
-                    key={r._id}
-                    className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-alix-slate-50/70 transition-colors"
+                    key={quiz._id}
+                    className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
                   >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-alix-indigo text-white font-mono">
-                          {r.courseCode}
+                    <div>
+                      {/* Subject and Course Code tags */}
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-alix-violet-50 text-alix-violet-800 border border-alix-violet-200">
+                          {quiz.subject || 'Activity'}
                         </span>
-                        <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          {r.section}
-                        </span>
-                        <span className="text-xs text-alix-slate-400">
-                          {r.studentCount} Verified Students
-                        </span>
+                        {quiz.courseCode && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-black bg-alix-cyan-50 text-alix-cyan-900 border border-alix-cyan-200 font-mono">
+                            {quiz.courseCode}
+                          </span>
+                        )}
                       </div>
-                      <h4 className="text-sm font-bold text-alix-indigo">
-                        {r.courseName}
-                      </h4>
+
+                      <h3 className="font-heading font-black text-base text-slate-900 group-hover:text-alix-indigo transition-colors line-clamp-2">
+                        {quiz.title}
+                      </h3>
+
+                      <p className="text-xs text-slate-500 mt-1">
+                        {quiz.questions?.length || 0} Questions • Created{' '}
+                        {new Date(quiz.createdAt).toLocaleDateString()}
+                      </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteRoster(r._id)}
-                      className="p-2 rounded-lg text-alix-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                      title="Delete Roster"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {/* Action Buttons */}
+                    <div className="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between">
+                      <Link
+                        to={`/host/${quiz._id}`}
+                        className="px-4 py-2 rounded-xl bg-[#1368CE] hover:bg-[#105AB3] text-white font-black text-xs shadow-sm flex items-center gap-1.5 active:scale-95 transition-all"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span>Host Live</span>
+                      </Link>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteQuiz(quiz._id)}
+                          disabled={deletingId === quiz._id}
+                          className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                          title="Delete Activity"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
           </section>
 
-          {/* Section: Activity Library */}
-          <section className="bg-white rounded-2xl border border-alix-slate-200 shadow-sm overflow-hidden mb-8">
-            <div className="p-6 border-b border-alix-slate-100 flex items-center justify-between">
+          {/* Section: Enrolled Class Rosters (Anti-Proxy Whitelist) */}
+          <section className="mb-8">
+            <div className="flex items-center justify-between mb-3">
               <div>
-                <h2 className="text-lg font-heading font-bold text-alix-indigo">
-                  My ALIX Activities
-                </h2>
-                <p className="text-xs text-alix-slate-500">
-                  Your prepared quizzes, polls, and interactive lecture modules.
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-heading font-black text-slate-800 tracking-tight">
+                    Enrolled Class Rosters ({rosters.length})
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                    Anti-Proxy Active
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Only students with verified Roll Numbers in these rosters can enter your live rooms.
                 </p>
               </div>
 
-              <Link
-                to="/create"
-                className="px-3.5 py-1.5 rounded-lg bg-alix-violet-600 hover:bg-alix-violet-700 text-white text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-sm"
+              <button
+                type="button"
+                onClick={() => setIsRosterModalOpen(true)}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#26890C] hover:bg-[#20740A] text-white font-black text-xs shadow-sm transition-all cursor-pointer"
               >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>New Activity</span>
-              </Link>
+                <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                <span>+ Upload Section Roster</span>
+              </button>
             </div>
 
-            {/* List or Clean Empty State */}
-            {isLoading ? (
-              <div className="p-12 text-center text-alix-slate-400 text-sm">
-                <div className="w-6 h-6 border-2 border-alix-violet-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                <span>Loading your activities from database...</span>
-              </div>
-            ) : quizzes.length === 0 ? (
-              <div className="p-10 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-alix-violet-50 text-alix-violet-600 flex items-center justify-center mx-auto mb-3 shadow-inner">
-                  <BookOpen className="w-7 h-7" />
-                </div>
-                <h3 className="text-lg font-heading font-bold text-alix-indigo">
-                  No activities created yet
-                </h3>
-                <p className="text-xs text-alix-slate-500 max-w-md mx-auto mt-1 mb-5">
-                  Welcome, {user?.name || 'Instructor'}! Draft your first interactive quiz or concept check to launch live classroom sessions.
+            {rosters.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 text-center border border-slate-200 shadow-sm">
+                <GraduationCap className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                <p className="text-xs font-bold text-slate-700">No rosters uploaded yet</p>
+                <p className="text-xs text-slate-400 mt-1 mb-3">
+                  Upload an Excel or CSV file of Roll Numbers to protect against photo-sharing and proxy attendance.
                 </p>
-                <Link
-                  to="/create"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-alix-violet-600 hover:bg-alix-violet-700 text-white font-bold text-xs shadow-alix-md hover:shadow-alix-glow transition-all"
+                <button
+                  type="button"
+                  onClick={() => setIsRosterModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-[#26890C] hover:bg-[#20740A] text-white text-xs font-black transition-all cursor-pointer"
                 >
-                  <PlusCircle className="w-4 h-4" />
-                  <span>Create Your First Activity</span>
-                </Link>
+                  Browse Roster File
+                </button>
               </div>
             ) : (
-              <div className="divide-y divide-alix-slate-100">
-                {quizzes.map((quiz) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {rosters.map((r) => (
                   <div
-                    key={quiz._id}
-                    className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-alix-slate-50/70 transition-colors"
+                    key={r._id}
+                    className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-all flex items-center justify-between"
                   >
-                    <div className="space-y-1.5 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-alix-violet-50 text-alix-violet-700 border border-alix-violet-200">
-                          {quiz.subject || 'Interactive Module'}
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[11px] font-black bg-slate-900 text-white font-mono">
+                          {r.courseCode}
                         </span>
-                        {quiz.courseCode && (
-                          <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-alix-cyan-50 text-alix-cyan-800 border border-alix-cyan-200 font-mono">
-                            {quiz.courseCode}
-                          </span>
-                        )}
-                        <span className="text-xs text-alix-slate-400">
-                          {quiz.questions?.length || 0} Questions • Created{' '}
-                          {new Date(quiz.createdAt).toLocaleDateString()}
+                        <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          {r.section}
                         </span>
                       </div>
-                      <h4 className="text-base font-bold text-alix-indigo truncate">
-                        {quiz.title}
+                      <h4 className="text-sm font-bold text-slate-900 truncate">
+                        {r.courseName}
                       </h4>
-                      {quiz.description && (
-                        <p className="text-xs text-alix-slate-500 line-clamp-1">
-                          {quiz.description}
-                        </p>
-                      )}
+                      <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>{r.studentCount} Verified Students</span>
+                      </p>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Link
-                        to={`/host/${quiz._id}`}
-                        className="px-4 py-2 rounded-lg bg-alix-indigo hover:bg-alix-indigo/90 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
-                      >
-                        <Play className="w-3.5 h-3.5 fill-current text-alix-cyan-400" />
-                        <span>Launch</span>
-                      </Link>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteQuiz(quiz._id)}
-                        disabled={deletingId === quiz._id}
-                        className="p-2 rounded-lg text-alix-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                        title="Delete Activity"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteRoster(r._id)}
+                      className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+                      title="Delete Roster"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -622,23 +619,23 @@ export const DashboardPage: React.FC = () => {
       {/* Modal: Bulk Upload Student Roster with Browse File Option */}
       {isRosterModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-xl bg-white rounded-3xl shadow-alix-xl border border-alix-slate-200 overflow-hidden animate-scale-in">
-            <div className="p-6 border-b border-alix-slate-100 flex items-center justify-between">
+          <div className="w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-scale-in">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                  <h3 className="text-lg font-heading font-extrabold text-alix-indigo">
-                    Upload Student Roster
+                  <h3 className="text-lg font-heading font-black text-slate-900">
+                    Bulk Upload Student Roster
                   </h3>
                 </div>
-                <p className="text-xs text-alix-slate-500 mt-0.5">
-                  Browse your Excel or CSV file to whitelist enrolled students and prevent proxy attendance.
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Browse Excel or CSV file so only enrolled students can join your live sessions.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsRosterModalOpen(false)}
-                className="p-1.5 rounded-lg text-alix-slate-400 hover:text-alix-indigo hover:bg-alix-slate-100 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -652,23 +649,22 @@ export const DashboardPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Course Meta Inputs */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
                     Course Code *
                   </label>
                   <input
                     type="text"
                     required
                     value={courseCode}
-                    onChange={(e) => setCourseCode(e.target.value)}
+                    onChange={(e) => setCourseCode(e.target.value.toUpperCase())}
                     placeholder="e.g. CS 301"
-                    className="w-full p-2.5 rounded-xl border border-alix-slate-300 text-sm font-bold text-alix-indigo outline-none uppercase"
+                    className="w-full p-2.5 rounded-xl border border-slate-300 text-sm font-bold text-slate-900 outline-none uppercase font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
                     Course Name *
                   </label>
                   <input
@@ -677,11 +673,11 @@ export const DashboardPage: React.FC = () => {
                     value={courseName}
                     onChange={(e) => setCourseName(e.target.value)}
                     placeholder="Distributed Systems"
-                    className="w-full p-2.5 rounded-xl border border-alix-slate-300 text-sm font-semibold text-alix-indigo outline-none"
+                    className="w-full p-2.5 rounded-xl border border-slate-300 text-sm font-bold text-slate-900 outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
                     Section / Batch *
                   </label>
                   <input
@@ -690,20 +686,20 @@ export const DashboardPage: React.FC = () => {
                     value={section}
                     onChange={(e) => setSection(e.target.value)}
                     placeholder="Section A"
-                    className="w-full p-2.5 rounded-xl border border-alix-slate-300 text-sm font-semibold text-alix-indigo outline-none"
+                    className="w-full p-2.5 rounded-xl border border-slate-300 text-sm font-bold text-slate-900 outline-none"
                   />
                 </div>
               </div>
 
               {/* Upload Mode Tabs */}
-              <div className="flex border-b border-alix-slate-200 gap-4 pt-1">
+              <div className="flex border-b border-slate-200 gap-4 pt-1">
                 <button
                   type="button"
                   onClick={() => setUploadMode('file')}
                   className={`pb-2 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
                     uploadMode === 'file'
-                      ? 'border-b-2 border-emerald-600 text-emerald-700'
-                      : 'text-alix-slate-400 hover:text-alix-indigo'
+                      ? 'border-b-2 border-emerald-600 text-emerald-700 font-black'
+                      : 'text-slate-400 hover:text-slate-700'
                   }`}
                 >
                   <FolderOpen className="w-3.5 h-3.5" />
@@ -714,8 +710,8 @@ export const DashboardPage: React.FC = () => {
                   onClick={() => setUploadMode('paste')}
                   className={`pb-2 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
                     uploadMode === 'paste'
-                      ? 'border-b-2 border-emerald-600 text-emerald-700'
-                      : 'text-alix-slate-400 hover:text-alix-indigo'
+                      ? 'border-b-2 border-emerald-600 text-emerald-700 font-black'
+                      : 'text-slate-400 hover:text-slate-700'
                   }`}
                 >
                   <FileText className="w-3.5 h-3.5" />
@@ -747,7 +743,7 @@ export const DashboardPage: React.FC = () => {
                         ? 'border-emerald-500 bg-emerald-50/50'
                         : uploadedFileName
                         ? 'border-emerald-400 bg-emerald-50/30'
-                        : 'border-alix-slate-300 hover:border-emerald-500 hover:bg-emerald-50/20 bg-alix-slate-50'
+                        : 'border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/20 bg-slate-50'
                     }`}
                   >
                     <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-2 shadow-inner">
@@ -761,15 +757,15 @@ export const DashboardPage: React.FC = () => {
                           <span>{uploadedFileName}</span>
                         </div>
                         <p className="text-[11px] text-emerald-600 font-semibold">
-                          {parsedStudents.length} Students parsed successfully! Click to choose a different file.
+                          {parsedStudents.length} Students recognized! Click to choose a different file.
                         </p>
                       </div>
                     ) : (
                       <div className="space-y-1">
-                        <p className="text-sm font-bold text-alix-indigo">
+                        <p className="text-sm font-bold text-slate-800">
                           Click to Browse File or Drag & Drop Here
                         </p>
-                        <p className="text-xs text-alix-slate-400">
+                        <p className="text-xs text-slate-400">
                           Supports Excel (.xlsx, .xls) and CSV (.csv, .tsv, .txt) files
                         </p>
                         <div className="pt-2">
@@ -791,20 +787,20 @@ export const DashboardPage: React.FC = () => {
 
                   {/* Preview Table of first 5 parsed student rows */}
                   {parsedStudents.length > 0 && (
-                    <div className="rounded-xl border border-alix-slate-200 overflow-hidden text-left bg-white shadow-sm">
-                      <div className="bg-alix-slate-100 px-3 py-1.5 text-[11px] font-bold text-alix-slate-600 flex justify-between items-center">
+                    <div className="rounded-xl border border-slate-200 overflow-hidden text-left bg-white shadow-sm">
+                      <div className="bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-slate-600 flex justify-between items-center">
                         <span>Preview (Showing 5 of {parsedStudents.length} students)</span>
                         <span className="text-emerald-700 font-semibold flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                           <span>Verified</span>
                         </span>
                       </div>
-                      <div className="divide-y divide-alix-slate-100 text-xs">
+                      <div className="divide-y divide-slate-100 text-xs">
                         {parsedStudents.slice(0, 5).map((s, idx) => (
                           <div key={idx} className="px-3 py-1.5 flex items-center justify-between font-mono text-[11px]">
-                            <span className="font-bold text-alix-indigo">{s.rollNo}</span>
-                            <span className="text-alix-slate-700 font-sans font-medium">{s.name}</span>
-                            <span className="text-alix-slate-400 truncate max-w-[130px]">{s.email}</span>
+                            <span className="font-bold text-slate-800">{s.rollNo}</span>
+                            <span className="text-slate-700 font-sans font-medium">{s.name}</span>
+                            <span className="text-slate-400 truncate max-w-[130px]">{s.email}</span>
                             <span className="text-emerald-600 font-sans font-semibold">{s.section || section}</span>
                           </div>
                         ))}
@@ -816,7 +812,7 @@ export const DashboardPage: React.FC = () => {
                 /* Mode 2: Paste Raw Text Area */
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                       Paste Rows (Roll No, Name, Email, Section)
                     </label>
                     {parsedStudents.length > 0 && (
@@ -830,19 +826,19 @@ export const DashboardPage: React.FC = () => {
                     value={rawRosterText}
                     onChange={(e) => setRawRosterText(e.target.value)}
                     placeholder={`Roll No, Student Name, Email, Section\nAP21110010001, Aarav Sharma, aarav_s@srmap.edu.in, A\nAP21110010002, Ananya Patel, ananya_p@srmap.edu.in, A\nAP21110010003, Rohan Verma, rohan_v@srmap.edu.in, A`}
-                    className="w-full p-3 rounded-xl border border-alix-slate-300 text-xs font-mono text-alix-indigo outline-none focus:border-emerald-500 leading-relaxed"
+                    className="w-full p-3 rounded-xl border border-slate-300 text-xs font-mono text-slate-800 outline-none focus:border-emerald-500 leading-relaxed"
                   />
-                  <p className="text-[11px] text-alix-slate-400 mt-1">
+                  <p className="text-[11px] text-slate-400 mt-1">
                     Format: One student per line. You can copy-paste columns directly from Excel or Google Sheets.
                   </p>
                 </div>
               )}
 
-              <div className="pt-2 flex items-center justify-end gap-3 border-t border-alix-slate-100">
+              <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsRosterModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-alix-slate-300 text-alix-slate-600 text-xs font-bold hover:bg-alix-slate-50 cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-slate-300 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -864,72 +860,48 @@ export const DashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* Select Activity Modal to Start Live Session */}
+      {/* Modal: Choose which activity to host live */}
       {isLaunchModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white rounded-3xl shadow-alix-xl border border-alix-slate-200 overflow-hidden animate-scale-in">
-            <div className="p-6 border-b border-alix-slate-100 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-heading font-extrabold text-alix-indigo">
-                  Select Activity to Launch
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 animate-scale-in">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Play className="w-5 h-5 text-alix-violet-600 fill-current" />
+                <h3 className="text-lg font-heading font-black text-slate-900">
+                  Select Activity to Host
                 </h3>
-                <p className="text-xs text-alix-slate-500">
-                  Choose which prepared quiz or module to project live to students.
-                </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsLaunchModalOpen(false)}
-                className="p-1.5 rounded-lg text-alix-slate-400 hover:text-alix-indigo hover:bg-alix-slate-100 transition-colors cursor-pointer"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-900"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 max-h-[60vh] overflow-y-auto space-y-3">
-              {quizzes.map((quiz) => (
+            <div className="py-4 space-y-2 max-h-80 overflow-y-auto">
+              {quizzes.map((q) => (
                 <button
-                  key={quiz._id}
+                  key={q._id}
                   type="button"
                   onClick={() => {
                     setIsLaunchModalOpen(false);
-                    navigate(`/host/${quiz._id}`);
+                    navigate(`/host/${q._id}`);
                   }}
-                  className="w-full p-4 rounded-xl border border-alix-slate-200 hover:border-alix-violet-500 hover:bg-alix-violet-50/50 transition-all flex items-center justify-between text-left group cursor-pointer"
+                  className="w-full p-3.5 rounded-xl border border-slate-200 hover:border-alix-violet-500 hover:bg-alix-violet-50 text-left transition-all flex items-center justify-between group cursor-pointer"
                 >
-                  <div className="space-y-1 min-w-0 pr-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-alix-violet-100 text-alix-violet-700">
-                        {quiz.subject}
-                      </span>
-                      {quiz.courseCode && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-alix-slate-100 text-alix-slate-600 font-mono">
-                          {quiz.courseCode}
-                        </span>
-                      )}
-                    </div>
-                    <div className="font-bold text-sm text-alix-indigo group-hover:text-alix-violet-700 truncate">
-                      {quiz.title}
-                    </div>
-                    <div className="text-[11px] text-alix-slate-400">
-                      {quiz.questions?.length || 0} Questions
-                    </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 group-hover:text-alix-indigo">
+                      {q.title}
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      {q.subject} • {q.questions?.length || 0} Questions
+                    </p>
                   </div>
-                  <div className="w-8 h-8 rounded-lg bg-alix-slate-100 group-hover:bg-alix-violet-600 group-hover:text-white flex items-center justify-center transition-colors shrink-0">
-                    <Play className="w-4 h-4 fill-current" />
-                  </div>
+                  <Play className="w-4 h-4 text-alix-violet-600 fill-current opacity-0 group-hover:opacity-100 transition-opacity" />
                 </button>
               ))}
-            </div>
-
-            <div className="p-4 bg-alix-slate-50 border-t border-alix-slate-100 flex items-center justify-between text-xs">
-              <span className="text-alix-slate-500">Want to create a different quiz?</span>
-              <Link
-                to="/create"
-                className="font-bold text-alix-violet-600 hover:text-alix-violet-800"
-              >
-                + Create New Activity
-              </Link>
             </div>
           </div>
         </div>
