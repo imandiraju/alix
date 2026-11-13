@@ -9,11 +9,12 @@ import Leaderboard from '../components/game/Leaderboard';
 import ReactionStream from '../components/game/ReactionStream';
 import { getAvatarById } from '../components/game/AlixAvatars';
 import { RenderAvatarSvg } from '../components/game/AlixSvgAvatars';
+import { getSocket } from '../services/socket';
 import {
   triggerCorrectAnswerConfetti,
   triggerStreakBurst,
 } from '../components/game/CelebrationEffects';
-import { Trophy, Flame, User, LogOut, CheckCircle2, Clock } from 'lucide-react';
+import { Trophy, Flame, User, LogOut, CheckCircle2, Clock, Wifi } from 'lucide-react';
 
 export const PlayPage: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -28,6 +29,31 @@ export const PlayPage: React.FC = () => {
   const [secondsRemaining, setSecondsRemaining] = useState(25);
   const [score, setScore] = useState(1840);
   const [streak, setStreak] = useState(3);
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
+
+  useEffect(() => {
+    try {
+      const socket = getSocket();
+      const onConnect = () => setIsSocketConnected(true);
+      const onDisconnect = () => setIsSocketConnected(false);
+
+      socket.on('connect', onConnect);
+      socket.on('disconnect', onDisconnect);
+      if (socket.connected) setIsSocketConnected(true);
+
+      socket.emit('join-session', {
+        code: sessionId || '842915',
+        playerName: studentName,
+      });
+
+      return () => {
+        socket.off('connect', onConnect);
+        socket.off('disconnect', onDisconnect);
+      };
+    } catch {
+      // fallback
+    }
+  }, [sessionId, studentName]);
 
   const sampleQuestion = {
     index: 3,
@@ -59,6 +85,18 @@ export const PlayPage: React.FC = () => {
     if (selectedIndex !== null || phase !== 'answering') return;
     setSelectedIndex(idx);
     setPhase('submitted');
+
+    try {
+      const socket = getSocket();
+      socket.emit('submit-answer', {
+        sessionId: sessionId || '842915',
+        questionId: 'q-03',
+        answer: idx.toString(),
+        timeMs: Math.max(100, (25 - secondsRemaining) * 1000),
+      });
+    } catch {
+      // fallback
+    }
 
     // Simulate host closing question after 2 seconds
     setTimeout(() => {
@@ -112,8 +150,9 @@ export const PlayPage: React.FC = () => {
                 <span className="font-heading font-black text-sm text-alix-indigo leading-tight truncate max-w-[120px]">
                   {studentName}
                 </span>
-                <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-alix-violet-100 text-alix-violet-700">
-                  {sessionId || '842915'}
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-alix-violet-100 text-alix-violet-700 inline-flex items-center gap-1">
+                  <span className={`w-1.5 h-1.5 rounded-full ${isSocketConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
+                  <span>{sessionId || '842915'}</span>
                 </span>
               </div>
               <div className="text-[10px] text-alix-slate-400 font-medium">

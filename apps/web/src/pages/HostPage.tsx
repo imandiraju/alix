@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AlixLogo from '../components/common/AlixLogo';
 import Countdown from '../components/game/Countdown';
@@ -7,6 +7,7 @@ import AlixQRCode from '../components/common/AlixQRCode';
 import ProjectorQRModal from '../components/common/ProjectorQRModal';
 import VictoryPodium from '../components/game/VictoryPodium';
 import ReactionStream from '../components/game/ReactionStream';
+import { getSocket } from '../services/socket';
 import {
   Users,
   Trophy,
@@ -17,6 +18,7 @@ import {
   Flame,
   CheckCircle2,
   Share2,
+  Wifi,
 } from 'lucide-react';
 
 export const HostPage: React.FC = () => {
@@ -30,9 +32,42 @@ export const HostPage: React.FC = () => {
   // Host Stage: 'question' | 'chart' | 'leaderboard' | 'victory'
   const [stage, setStage] = useState<'question' | 'chart' | 'leaderboard' | 'victory'>('question');
   const [timer] = useState(20);
-  const [answersSubmitted] = useState(64);
-  const totalLearners = 72;
+  const [answersSubmitted, setAnswersSubmitted] = useState(64);
+  const [totalLearners, setTotalLearners] = useState(72);
   const [isQRExpanded, setIsQRExpanded] = useState(false);
+  const [isRealtimeActive, setIsRealtimeActive] = useState(false);
+
+  useEffect(() => {
+    try {
+      const socket = getSocket();
+      
+      const onConnect = () => setIsRealtimeActive(true);
+      const onDisconnect = () => setIsRealtimeActive(false);
+
+      socket.on('connect', onConnect);
+      socket.on('disconnect', onDisconnect);
+      if (socket.connected) setIsRealtimeActive(true);
+
+      socket.emit('create-session', {
+        quizId: 'quiz-01',
+        hostId: 'teacher-host',
+      });
+
+      socket.on('player-joined', (data) => {
+        if (data.playerCount) {
+          setTotalLearners(data.playerCount);
+        }
+      });
+
+      return () => {
+        socket.off('connect', onConnect);
+        socket.off('disconnect', onDisconnect);
+        socket.off('player-joined');
+      };
+    } catch {
+      // fallback
+    }
+  }, []);
 
   const currentQuestion = {
     index: 3,
@@ -72,8 +107,8 @@ export const HostPage: React.FC = () => {
         <div className="flex items-center gap-4 sm:gap-6">
           <AlixLogo variant="white" size="md" />
           <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-xs font-semibold text-alix-cyan-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>ALIX Live Session</span>
+            <span className={`w-2 h-2 rounded-full ${isRealtimeActive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            <span>{isRealtimeActive ? 'Real-Time Engine Online' : 'Connecting Real-Time...'}</span>
           </div>
         </div>
 

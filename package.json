@@ -8,6 +8,8 @@
     "dev:realtime": "pnpm --filter alix-realtime dev",
     "build": "pnpm -r build",
     "build:web": "pnpm --filter alix-web build",
+    "build:realtime": "pnpm --filter @alix/shared build && pnpm --filter @alix/game-engine build && pnpm --filter alix-realtime build",
+    "start:realtime": "node apps/realtime/dist/index.js",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "clean": "pnpm -r clean"

@@ -10,7 +10,7 @@ import { registerSessionHandlers } from './handlers/session.js';
 
 dotenv.config();
 
-const PORT = process.env.ALIX_PORT_REALTIME || 3001;
+const PORT = Number(process.env.PORT || process.env.ALIX_PORT_REALTIME || 3001);
 
 const app = express();
 const httpServer = createServer(app);
@@ -19,7 +19,7 @@ const httpServer = createServer(app);
 
 app.use(
   cors({
-    origin: process.env.ALIX_WEB_ORIGIN || 'http://localhost:3000',
+    origin: '*',
     credentials: true,
   }),
 );
@@ -29,7 +29,7 @@ app.use(express.json());
 
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
   cors: {
-    origin: process.env.ALIX_WEB_ORIGIN || 'http://localhost:3000',
+    origin: '*',
     methods: ['GET', 'POST'],
     credentials: true,
   },
