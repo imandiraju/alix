@@ -8,7 +8,7 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import type { ClientToServerEvents, ServerToClientEvents } from '@alix/shared';
 import { registerSessionHandlers } from './handlers/session.js';
-import { connectDatabase } from './db.js';
+import { connectDatabase, lastDbError } from './db.js';
 import authRouter from './routes/auth.js';
 import quizRouter from './routes/quizzes.js';
 
@@ -53,12 +53,21 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
 // ─── Health Check ───────────────────────────────────────────────────────────
 
 app.get('/health', (_req, res) => {
+  const isDbConnected = mongoose.connection.readyState === 1;
   res.json({
     status: 'ok',
     service: 'alix-realtime',
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    database: {
+      status: isDbConnected ? 'connected' : 'disconnected',
+      readyState: mongoose.connection.readyState,
+      isConfigured: !!process.env.MONGODB_URI,
+      lastError: lastDbError,
+    },
+    googleAppsScript: {
+      isConfigured: !!process.env.GOOGLE_APPSCRIPT_URL,
+    },
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
+    uptime: Math.floor(process.uptime()),
   });
 });
 
