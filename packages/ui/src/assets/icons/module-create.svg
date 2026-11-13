@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Create / Plus + Pencil concept -->
+  <!-- Document / page -->
+  <path d="M14 2 L6 2 Q4 2 4 4 L4 20 Q4 22 6 22 L18 22 Q20 22 20 20 L20 8 Z"/>
+  <polyline points="14 2 14 8 20 8"/>
+  <!-- Plus sign in center -->
+  <line x1="9" y1="15" x2="15" y2="15"/>
+  <line x1="12" y1="12" x2="12" y2="18"/>
+</svg>

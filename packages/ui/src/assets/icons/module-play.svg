@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Gamepad / Play icon -->
+  <!-- Play triangle -->
+  <polygon points="10,5 17,9.5 10,14" fill="none"/>
+  <!-- Gamepad body outline -->
+  <path d="M4 8 Q4 4 8 4 L16 4 Q20 4 20 8 L20 12 Q20 16 17 18 L15 20 Q14 21 13 20 L12 18 L12 18 L11 20 Q10 21 9 20 L7 18 Q4 16 4 12 Z"/>
+  <!-- D-pad left controller detail -->
+  <line x1="6" y1="10" x2="8" y2="10"/>
+  <line x1="7" y1="9" x2="7" y2="11"/>
+</svg>

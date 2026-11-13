@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes pulse1 {
+      0%, 100% { opacity: 0.3; transform: scale(0.85); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes pulse2 {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(0.85); }
+    }
+    .ring { animation: spin 2s linear infinite; transform-origin: 40px 40px; }
+    .tri1 { animation: pulse1 1.4s ease-in-out infinite; transform-origin: 40px 40px; }
+    .tri2 { animation: pulse2 1.4s ease-in-out infinite; transform-origin: 40px 40px; }
+  </style>
+  <!-- Outer rotating ring -->
+  <circle class="ring" cx="40" cy="40" r="34" stroke="#7C3AED" stroke-width="3" stroke-dasharray="60 154" stroke-linecap="round" fill="none"/>
+  <!-- Inner geometric triangles pulsing -->
+  <polygon class="tri1" points="40,18 55,48 25,48" stroke="#1E1B4B" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+  <polygon class="tri2" points="40,52 25,28 55,28" stroke="#06B6D4" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+  <!-- Center dot -->
+  <circle cx="40" cy="38" r="3" fill="#7C3AED" opacity="0.8"/>
+</svg>

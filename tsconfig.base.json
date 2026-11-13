@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "jsx": "react-jsx",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@alix/shared": ["./packages/shared/src"],
+      "@alix/shared/*": ["./packages/shared/src/*"],
+      "@alix/ui": ["./packages/ui/src"],
+      "@alix/ui/*": ["./packages/ui/src/*"],
+      "@alix/game-engine": ["./packages/game-engine/src"],
+      "@alix/game-engine/*": ["./packages/game-engine/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "build", ".turbo"]
+}

@@ -1,0 +1,693 @@
+/* ============================================================================
+ * ALIX Animations
+ * Brand animation keyframes, utility classes, and motion system
+ * ============================================================================ */
+
+/* ==========================================================================
+ * KEYFRAMES — Entrance Animations
+ * ========================================================================== */
+
+/* Fade In — Simple opacity transition */
+@keyframes alix-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Fade Out */
+@keyframes alix-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Fade Up — Translate from below + opacity */
+@keyframes alix-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade Down — Translate from above + opacity */
+@keyframes alix-fade-down {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide In from Right */
+@keyframes alix-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Slide In from Left */
+@keyframes alix-slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Scale In — Subtle scale + opacity */
+@keyframes alix-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Scale Out */
+@keyframes alix-scale-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* Bounce In — Overshoot with bounce */
+@keyframes alix-bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Pop In — Quick elastic scale */
+@keyframes alix-pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  70% {
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ==========================================================================
+ * KEYFRAMES — Looping / State Animations
+ * ========================================================================== */
+
+/* Pulse — Gentle scale pulse */
+@keyframes alix-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.02);
+  }
+}
+
+/* Shimmer — Skeleton loading effect */
+@keyframes alix-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Spin — Loading spinner */
+@keyframes alix-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Ping — Notification indicator */
+@keyframes alix-ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* Breathing — Subtle scale for live indicators */
+@keyframes alix-breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+ * KEYFRAMES — Game / Quiz Specific
+ * ========================================================================== */
+
+/* Countdown Tick — Scale pulse for timer numbers */
+@keyframes alix-countdown-tick {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  15% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+}
+
+/* Countdown Pulse — Urgency pulse at low time */
+@keyframes alix-countdown-pulse {
+  0%, 100% {
+    color: var(--color-error-500);
+    transform: scale(1);
+  }
+  50% {
+    color: var(--color-error-600);
+    transform: scale(1.1);
+  }
+}
+
+/* Score Reveal — Animated score popup */
+@keyframes alix-score-reveal {
+  0% {
+    opacity: 0;
+    transform: scale(0) translateY(20px);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.3) translateY(-10px);
+  }
+  60% {
+    transform: scale(0.9) translateY(0);
+  }
+  80% {
+    transform: scale(1.05) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Score Count Up — For number counter effect */
+@keyframes alix-score-glow {
+  0% {
+    text-shadow: 0 0 0 transparent;
+  }
+  50% {
+    text-shadow:
+      0 0 20px var(--color-violet-400),
+      0 0 40px var(--color-violet-300);
+  }
+  100% {
+    text-shadow: 0 0 0 transparent;
+  }
+}
+
+/* Confetti — Celebration particle trajectory */
+@keyframes alix-confetti {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotateZ(0deg) scale(1);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-500px) rotateZ(720deg) scale(0.2);
+  }
+}
+
+/* Confetti Fall — Falling confetti variant */
+@keyframes alix-confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translateY(-100px) rotateX(0deg) rotateZ(0deg);
+  }
+  25% {
+    transform: translateY(25vh) rotateX(180deg) rotateZ(90deg) translateX(20px);
+  }
+  50% {
+    transform: translateY(50vh) rotateX(360deg) rotateZ(180deg) translateX(-10px);
+  }
+  75% {
+    transform: translateY(75vh) rotateX(540deg) rotateZ(270deg) translateX(15px);
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100vh) rotateX(720deg) rotateZ(360deg) translateX(0);
+  }
+}
+
+/* Progress Fill — Progress bar fill animation */
+@keyframes alix-progress-fill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: var(--progress-value, 100%);
+  }
+}
+
+/* Progress Stripe — Moving stripe pattern */
+@keyframes alix-progress-stripe {
+  from {
+    background-position: 1rem 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+/* Wave — Waiting room wave / dot animation */
+@keyframes alix-wave {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-12px);
+  }
+}
+
+/* Wave Ripple — Expanding ring */
+@keyframes alix-wave-ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* Shake — Error shake */
+@keyframes alix-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 50%, 90% {
+    transform: translateX(-4px);
+  }
+  30%, 70% {
+    transform: translateX(4px);
+  }
+}
+
+/* Correct answer highlight */
+@keyframes alix-correct {
+  0% {
+    background-color: var(--color-success-50);
+    border-color: var(--color-success-300);
+  }
+  50% {
+    background-color: var(--color-success-100);
+    border-color: var(--color-success-500);
+    box-shadow: 0 0 20px var(--color-success-300);
+  }
+  100% {
+    background-color: var(--color-success-50);
+    border-color: var(--color-success-500);
+    box-shadow: none;
+  }
+}
+
+/* Wrong answer highlight */
+@keyframes alix-incorrect {
+  0%, 100% {
+    transform: translateX(0);
+    background-color: var(--color-error-50);
+    border-color: var(--color-error-500);
+  }
+  20%, 60% {
+    transform: translateX(-3px);
+  }
+  40%, 80% {
+    transform: translateX(3px);
+  }
+}
+
+/* Rank change — Leaderboard position shift */
+@keyframes alix-rank-up {
+  0% {
+    background-color: var(--color-success-50);
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.02);
+  }
+  100% {
+    background-color: transparent;
+    transform: scale(1);
+  }
+}
+
+@keyframes alix-rank-down {
+  0% {
+    background-color: var(--color-error-50);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+/* Slide In from Bottom — Modal / Sheet */
+@keyframes alix-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Overlay Fade */
+@keyframes alix-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Number flip — For score counters */
+@keyframes alix-number-flip {
+  0% {
+    transform: translateY(0) rotateX(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-50%) rotateX(90deg);
+    opacity: 0;
+  }
+  51% {
+    transform: translateY(50%) rotateX(-90deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) rotateX(0);
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+ * UTILITY CLASSES — Apply Animations
+ * ========================================================================== */
+
+/* Entrance Animations */
+.animate-fade-in {
+  animation: alix-fade-in var(--duration-slow) var(--ease-out) both;
+}
+
+.animate-fade-out {
+  animation: alix-fade-out var(--duration-slow) var(--ease-in) both;
+}
+
+.animate-fade-up {
+  animation: alix-fade-up var(--duration-slow) var(--ease-out) both;
+}
+
+.animate-fade-down {
+  animation: alix-fade-down var(--duration-slow) var(--ease-out) both;
+}
+
+.animate-slide-in-right {
+  animation: alix-slide-in-right var(--duration-slow) var(--ease-out) both;
+}
+
+.animate-slide-in-left {
+  animation: alix-slide-in-left var(--duration-slow) var(--ease-out) both;
+}
+
+.animate-scale-in {
+  animation: alix-scale-in var(--duration-normal) var(--ease-out) both;
+}
+
+.animate-scale-out {
+  animation: alix-scale-out var(--duration-normal) var(--ease-in) both;
+}
+
+.animate-bounce-in {
+  animation: alix-bounce-in var(--duration-very-slow) var(--ease-spring) both;
+}
+
+.animate-pop-in {
+  animation: alix-pop-in var(--duration-slow) var(--ease-spring) both;
+}
+
+.animate-slide-up {
+  animation: alix-slide-up var(--duration-slow) var(--ease-out) both;
+}
+
+/* Loop Animations */
+.animate-pulse {
+  animation: alix-pulse 2s var(--ease-in-out) infinite;
+}
+
+.animate-spin {
+  animation: alix-spin 1s var(--ease-linear) infinite;
+}
+
+.animate-ping {
+  animation: alix-ping 1s var(--ease-in-out) infinite;
+}
+
+.animate-breathe {
+  animation: alix-breathe 3s var(--ease-in-out) infinite;
+}
+
+.animate-shimmer {
+  animation: alix-shimmer 2s var(--ease-linear) infinite;
+}
+
+/* Game Animations */
+.animate-countdown-tick {
+  animation: alix-countdown-tick 1s var(--ease-out) both;
+}
+
+.animate-countdown-pulse {
+  animation: alix-countdown-pulse 0.5s var(--ease-in-out) infinite;
+}
+
+.animate-score-reveal {
+  animation: alix-score-reveal 0.8s var(--ease-spring) both;
+}
+
+.animate-score-glow {
+  animation: alix-score-glow 1.5s var(--ease-in-out) both;
+}
+
+.animate-confetti {
+  animation: alix-confetti 1.5s var(--ease-out) both;
+}
+
+.animate-confetti-fall {
+  animation: alix-confetti-fall 3s var(--ease-smooth) both;
+}
+
+.animate-progress-fill {
+  animation: alix-progress-fill 1s var(--ease-out) both;
+}
+
+.animate-wave {
+  animation: alix-wave 1.2s var(--ease-in-out) infinite;
+}
+
+.animate-shake {
+  animation: alix-shake 0.5s var(--ease-out) both;
+}
+
+.animate-correct {
+  animation: alix-correct 0.8s var(--ease-out) both;
+}
+
+.animate-incorrect {
+  animation: alix-incorrect 0.5s var(--ease-out) both;
+}
+
+.animate-rank-up {
+  animation: alix-rank-up 1s var(--ease-out) both;
+}
+
+.animate-rank-down {
+  animation: alix-rank-down 1s var(--ease-out) both;
+}
+
+.animate-number-flip {
+  animation: alix-number-flip 0.6s var(--ease-in-out) both;
+}
+
+/* ==========================================================================
+ * STAGGER DELAY UTILITIES
+ * Use on children within a container for cascade-in effects
+ * ========================================================================== */
+.delay-0  { animation-delay: 0ms; }
+.delay-1  { animation-delay: 50ms; }
+.delay-2  { animation-delay: 100ms; }
+.delay-3  { animation-delay: 150ms; }
+.delay-4  { animation-delay: 200ms; }
+.delay-5  { animation-delay: 250ms; }
+.delay-6  { animation-delay: 300ms; }
+.delay-7  { animation-delay: 350ms; }
+.delay-8  { animation-delay: 400ms; }
+.delay-9  { animation-delay: 450ms; }
+.delay-10 { animation-delay: 500ms; }
+.delay-15 { animation-delay: 750ms; }
+.delay-20 { animation-delay: 1000ms; }
+
+/* Duration overrides */
+.duration-fast      { animation-duration: var(--duration-fast); }
+.duration-normal    { animation-duration: var(--duration-normal); }
+.duration-slow      { animation-duration: var(--duration-slow); }
+.duration-very-slow { animation-duration: var(--duration-very-slow); }
+
+/* Fill mode utilities */
+.fill-forwards  { animation-fill-mode: forwards; }
+.fill-backwards { animation-fill-mode: backwards; }
+.fill-both      { animation-fill-mode: both; }
+
+/* Iteration utilities */
+.iterate-once     { animation-iteration-count: 1; }
+.iterate-infinite { animation-iteration-count: infinite; }
+
+/* ==========================================================================
+ * WAVE DOT GROUP — For waiting room "..." animation
+ * ========================================================================== */
+.wave-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.wave-dots .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-violet-500);
+  animation: alix-wave 1.2s var(--ease-in-out) infinite;
+}
+
+.wave-dots .dot:nth-child(1) { animation-delay: 0ms; }
+.wave-dots .dot:nth-child(2) { animation-delay: 150ms; }
+.wave-dots .dot:nth-child(3) { animation-delay: 300ms; }
+
+/* ==========================================================================
+ * REDUCED MOTION — Disable all non-essential motion
+ * ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-fade-out,
+  .animate-fade-up,
+  .animate-fade-down,
+  .animate-slide-in-right,
+  .animate-slide-in-left,
+  .animate-scale-in,
+  .animate-scale-out,
+  .animate-bounce-in,
+  .animate-pop-in,
+  .animate-slide-up,
+  .animate-pulse,
+  .animate-spin,
+  .animate-ping,
+  .animate-breathe,
+  .animate-shimmer,
+  .animate-countdown-tick,
+  .animate-countdown-pulse,
+  .animate-score-reveal,
+  .animate-score-glow,
+  .animate-confetti,
+  .animate-confetti-fall,
+  .animate-progress-fill,
+  .animate-wave,
+  .animate-shake,
+  .animate-correct,
+  .animate-incorrect,
+  .animate-rank-up,
+  .animate-rank-down,
+  .animate-number-flip {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Still allow opacity changes for essential state feedback */
+  .animate-fade-in,
+  .animate-scale-in,
+  .animate-bounce-in,
+  .animate-pop-in {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .animate-fade-out,
+  .animate-scale-out {
+    opacity: 0 !important;
+    transform: none !important;
+  }
+
+  .wave-dots .dot {
+    animation: none !important;
+  }
+}

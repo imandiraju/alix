@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 78" fill="none">
+  <defs>
+    <linearGradient id="aGradTag" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#4F46E5"/>
+    </linearGradient>
+  </defs>
+  <!-- Stylized A -->
+  <g transform="translate(8, 4)">
+    <path d="M18 44 L28 8 L33 8 L43 44" stroke="url(#aGradTag)" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M22 44 L32 12 L37 12 L47 44" stroke="url(#aGradTag)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+    <path d="M21 32 L44 32" stroke="url(#aGradTag)" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="33" cy="14" r="2.5" fill="url(#aGradTag)"/>
+  </g>
+  <!-- L -->
+  <path d="M68 12 L68 48 L84 48" stroke="#1E1B4B" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- I -->
+  <path d="M96 12 L96 48" stroke="#1E1B4B" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <circle cx="96" cy="6" r="2.8" fill="#7C3AED"/>
+  <!-- X -->
+  <path d="M112 12 L132 48 M132 12 L112 48" stroke="#1E1B4B" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <!-- Tagline -->
+  <text x="100" y="66" text-anchor="middle" fill="#64748B" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="7" font-weight="400" letter-spacing="1.8">ACTIVE LEARNING &amp; INTERACTIVE EXPERIENCE</text>
+</svg>

@@ -1,0 +1,19 @@
+{
+  "name": "alix",
+  "private": true,
+  "description": "ALIX – Active Learning & Interactive Experience",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:web": "pnpm --filter alix-web dev",
+    "dev:realtime": "pnpm --filter alix-realtime dev",
+    "build": "pnpm -r build",
+    "build:web": "pnpm --filter alix-web build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "clean": "pnpm -r clean"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

@@ -1,0 +1,18 @@
+@import '../../../packages/ui/src/styles/tokens.css';
+@import '../../../packages/ui/src/styles/animations.css';
+@import '../../../packages/ui/src/styles/components.css';
+@import '../../../packages/ui/src/styles/layouts.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: var(--color-bg-light, #F8FAFC);
+    color: var(--color-text-primary, #0F172A);
+    font-family: var(--font-family-sans, 'Inter', sans-serif);
+    margin: 0;
+    padding: 0;
+  }
+}

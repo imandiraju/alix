@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Insights / Analytics icon -->
+  <!-- Chart area with trend line -->
+  <polyline points="3 20 3 4"/>
+  <polyline points="3 20 21 20"/>
+  <!-- Trend line going up -->
+  <polyline points="6 16 10 12 14 14 20 6"/>
+  <!-- Arrow at end of trend -->
+  <polyline points="17 6 20 6 20 9"/>
+  <!-- Data dots -->
+  <circle cx="6" cy="16" r="1.5" fill="currentColor" stroke="none"/>
+  <circle cx="10" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+  <circle cx="14" cy="14" r="1.5" fill="currentColor" stroke="none"/>
+</svg>

@@ -1,0 +1,86 @@
+// ─── ALIX Realtime Server ────────────────────────────────────────────────────
+
+import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import type { ClientToServerEvents, ServerToClientEvents } from '@alix/shared';
+import { registerSessionHandlers } from './handlers/session.js';
+
+dotenv.config();
+
+const PORT = process.env.ALIX_PORT_REALTIME || 3001;
+
+const app = express();
+const httpServer = createServer(app);
+
+// ─── CORS ───────────────────────────────────────────────────────────────────
+
+app.use(
+  cors({
+    origin: process.env.ALIX_WEB_ORIGIN || 'http://localhost:3000',
+    credentials: true,
+  }),
+);
+app.use(express.json());
+
+// ─── Socket.IO ──────────────────────────────────────────────────────────────
+
+const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
+  cors: {
+    origin: process.env.ALIX_WEB_ORIGIN || 'http://localhost:3000',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+  pingTimeout: 60000,
+  pingInterval: 25000,
+});
+
+// ─── Health Check ───────────────────────────────────────────────────────────
+
+app.get('/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'alix-realtime',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
+});
+
+app.get('/', (_req, res) => {
+  res.json({
+    name: 'ALIX Realtime Server',
+    version: '0.1.0',
+    description: 'Active Learning & Interactive Experience — Realtime Engine',
+  });
+});
+
+// ─── Socket Connections ─────────────────────────────────────────────────────
+
+io.on('connection', (socket) => {
+  console.log(`[ALIX] Client connected: ${socket.id}`);
+
+  registerSessionHandlers(io, socket);
+
+  socket.on('disconnect', (reason) => {
+    console.log(`[ALIX] Client disconnected: ${socket.id} (${reason})`);
+  });
+});
+
+// ─── Start Server ───────────────────────────────────────────────────────────
+
+httpServer.listen(PORT, () => {
+  console.log('');
+  console.log('  ╔══════════════════════════════════════════════╗');
+  console.log('  ║                                              ║');
+  console.log('  ║   🎓  ALIX Realtime Server                  ║');
+  console.log('  ║   Active Learning & Interactive Experience   ║');
+  console.log('  ║                                              ║');
+  console.log(`  ║   🚀  Running on port ${PORT}                  ║`);
+  console.log('  ║                                              ║');
+  console.log('  ╚══════════════════════════════════════════════╝');
+  console.log('');
+});
+
+export { io, app };

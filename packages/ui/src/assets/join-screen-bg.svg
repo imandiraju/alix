@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" fill="none">
+  <defs>
+    <linearGradient id="joinGrad1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Large subtle geometric shapes -->
+  <!-- Top-right large circle -->
+  <circle cx="700" cy="80" r="250" fill="none" stroke="#7C3AED" stroke-width="1.5" opacity="0.04"/>
+  <circle cx="700" cy="80" r="200" fill="none" stroke="#7C3AED" stroke-width="1" opacity="0.03"/>
+
+  <!-- Bottom-left large circle -->
+  <circle cx="100" cy="520" r="280" fill="none" stroke="#06B6D4" stroke-width="1.5" opacity="0.04"/>
+  <circle cx="100" cy="520" r="220" fill="none" stroke="#06B6D4" stroke-width="1" opacity="0.03"/>
+
+  <!-- Large triangle top-left -->
+  <polygon points="50,50 250,50 150,220" fill="none" stroke="#1E1B4B" stroke-width="1" opacity="0.03"/>
+
+  <!-- Large diamond center-right -->
+  <polygon points="650,300 720,400 650,500 580,400" fill="none" stroke="#7C3AED" stroke-width="1" opacity="0.03"/>
+
+  <!-- Scattered hexagons -->
+  <polygon points="120,150 145,138 170,150 170,175 145,188 120,175" fill="#7C3AED" opacity="0.02" stroke="#7C3AED" stroke-width="0.5" />
+  <polygon points="600,100 625,88 650,100 650,125 625,138 600,125" fill="#06B6D4" opacity="0.02" stroke="#06B6D4" stroke-width="0.5"/>
+  <polygon points="680,450 705,438 730,450 730,475 705,488 680,475" fill="#1E1B4B" opacity="0.02" stroke="#1E1B4B" stroke-width="0.5"/>
+
+  <!-- Subtle dot grid -->
+  <g opacity="0.03" fill="#1E1B4B">
+    <circle cx="100" cy="100" r="2"/><circle cx="200" cy="100" r="2"/><circle cx="300" cy="100" r="2"/>
+    <circle cx="500" cy="100" r="2"/><circle cx="600" cy="100" r="2"/>
+    <circle cx="100" cy="200" r="2"/><circle cx="200" cy="200" r="2"/><circle cx="300" cy="200" r="2"/>
+    <circle cx="500" cy="200" r="2"/><circle cx="600" cy="200" r="2"/><circle cx="700" cy="200" r="2"/>
+    <circle cx="100" cy="300" r="2"/><circle cx="200" cy="300" r="2"/><circle cx="300" cy="300" r="2"/>
+    <circle cx="500" cy="300" r="2"/><circle cx="600" cy="300" r="2"/><circle cx="700" cy="300" r="2"/>
+    <circle cx="100" cy="400" r="2"/><circle cx="200" cy="400" r="2"/><circle cx="300" cy="400" r="2"/>
+    <circle cx="500" cy="400" r="2"/><circle cx="600" cy="400" r="2"/><circle cx="700" cy="400" r="2"/>
+    <circle cx="200" cy="500" r="2"/><circle cx="300" cy="500" r="2"/>
+    <circle cx="500" cy="500" r="2"/><circle cx="600" cy="500" r="2"/>
+  </g>
+
+  <!-- Subtle connection lines between some dots -->
+  <g stroke="#7C3AED" stroke-width="0.5" opacity="0.03">
+    <line x1="200" y1="200" x2="300" y2="200"/>
+    <line x1="500" y1="300" x2="600" y2="300"/>
+    <line x1="600" y1="200" x2="700" y2="200"/>
+    <line x1="200" y1="400" x2="300" y2="400"/>
+  </g>
+
+  <!-- Large soft blob shapes -->
+  <ellipse cx="400" cy="550" rx="350" ry="120" fill="#7C3AED" opacity="0.015"/>
+  <ellipse cx="400" cy="50" rx="300" ry="100" fill="#06B6D4" opacity="0.015"/>
+</svg>

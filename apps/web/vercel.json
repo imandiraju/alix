@@ -1,0 +1,11 @@
+{
+  "framework": "vite",
+  "buildCommand": "pnpm --filter alix-web build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

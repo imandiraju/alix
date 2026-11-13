@@ -1,0 +1,10 @@
+/**
+ * ALIX Design System — Main Stylesheet Entry Point
+ * Active Learning & Interactive Experience
+ */
+
+@import './tokens.css';
+@import './base.css';
+@import './animations.css';
+@import './layouts.css';
+@import './components.css';

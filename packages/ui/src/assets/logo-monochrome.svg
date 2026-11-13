@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" fill="none">
+  <!-- Stylized A: Two overlapping triangular shapes -->
+  <g transform="translate(8, 6)">
+    <path d="M18 44 L28 8 L33 8 L43 44" stroke="#1E1B4B" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M22 44 L32 12 L37 12 L47 44" stroke="#1E1B4B" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
+    <path d="M21 32 L44 32" stroke="#1E1B4B" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="33" cy="14" r="2.5" fill="#1E1B4B"/>
+  </g>
+  <!-- L -->
+  <path d="M68 14 L68 46 L84 46" stroke="#1E1B4B" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- I -->
+  <path d="M96 14 L96 46" stroke="#1E1B4B" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <circle cx="96" cy="8" r="2.8" fill="#1E1B4B"/>
+  <!-- X -->
+  <path d="M112 14 L132 46 M132 14 L112 46" stroke="#1E1B4B" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+</svg>
