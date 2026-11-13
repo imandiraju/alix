@@ -18,7 +18,10 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@alix/shared": ["../../packages/shared/src/index.ts"],
+      "@alix/game-engine": ["../../packages/game-engine/src/index.ts"],
+      "@alix/ui": ["../../packages/ui/src/index.ts"]
     }
   },
   "include": ["src"]

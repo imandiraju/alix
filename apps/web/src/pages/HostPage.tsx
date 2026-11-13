@@ -53,7 +53,7 @@ export const HostPage: React.FC = () => {
         hostId: 'teacher-host',
       });
 
-      socket.on('player-joined', (data) => {
+      socket.on('player-joined', (data: any) => {
         if (data.playerCount) {
           setTotalLearners(data.playerCount);
         }
