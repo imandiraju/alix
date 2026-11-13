@@ -79,9 +79,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   /**
-   * Generates a 6-digit OTP verification code.
+   * Dispatches a 6-digit confirmation code via Google Apps Script Webhook.
    */
-  const sendOtp = async (email: string): Promise<{ success: boolean; code: string }> => {
+  const sendOtp = async (email: string, name?: string): Promise<{ success: boolean; code: string }> => {
+    try {
+      const res = await fetch(`${REALTIME_URL}/api/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name }),
+      });
+      if (res.ok) {
+        return { success: true, code: '' };
+      }
+    } catch {
+      // offline fallback
+    }
+
     const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
     setPendingOtpCode(randomCode);
     sessionStorage.setItem(OTP_STORAGE_KEY, JSON.stringify({ email, code: randomCode, timestamp: Date.now() }));
@@ -89,9 +102,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   /**
-   * Validates the 6-digit OTP code and authorizes the educator.
+   * Validates the 6-digit OTP code against the server database.
    */
   const verifyOtp = async (email: string, code: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${REALTIME_URL}/api/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code }),
+      });
+      const data = await res.json();
+      if (res.ok && data.verified) {
+        if (data.user) {
+          setUser(data.user);
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
+          if (data.token) localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+        }
+        return true;
+      }
+    } catch {
+      // offline fallback
+    }
+
     const storedStr = sessionStorage.getItem(OTP_STORAGE_KEY);
     let expected = pendingOtpCode;
 

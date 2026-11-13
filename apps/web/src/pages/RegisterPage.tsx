@@ -327,7 +327,7 @@ export const RegisterPage: React.FC = () => {
                 <CheckCircle2 className="w-4 h-4" />
               </button>
 
-              <div className="flex items-center justify-between text-xs pt-2">
+              <div className="flex items-center justify-center text-xs pt-2">
                 <button
                   type="button"
                   onClick={() => sendOtp(formData.email)}
@@ -335,14 +335,6 @@ export const RegisterPage: React.FC = () => {
                 >
                   <RotateCcw className="w-3 h-3" />
                   <span>Resend Code</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setOtpDigits((dispatchedOtp || '742109').split(''))}
-                  className="text-alix-cyan-700 hover:text-alix-cyan-900 font-semibold underline cursor-pointer"
-                >
-                  Auto-Fill ({dispatchedOtp || '742109'})
                 </button>
               </div>
             </form>
