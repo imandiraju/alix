@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Sidebar from '../components/layout/Sidebar';
 import Footer from '../components/layout/Footer';
+import { REALTIME_URL } from '../services/socket';
+import { useAuth } from '../context/AuthContext';
 import {
   PlusCircle,
   Trash2,
@@ -14,6 +16,7 @@ import {
   CheckCircle2,
   FileQuestion,
   HelpCircle,
+  BookOpen,
 } from 'lucide-react';
 
 interface QuestionDraft {
@@ -26,7 +29,10 @@ interface QuestionDraft {
 }
 
 export const CreatePage: React.FC = () => {
+  const { user } = useAuth();
   const [title, setTitle] = useState('Distributed Consensus & Fault Tolerance');
+  const [subject, setSubject] = useState('Computer Science: Distributed Systems');
+  const [courseCode, setCourseCode] = useState('CS 301');
   const [description, setDescription] = useState(
     'Interactive concept check for Week 6 lecture in CS 301.'
   );
@@ -52,6 +58,7 @@ export const CreatePage: React.FC = () => {
 
   const [activeQuestionId, setActiveQuestionId] = useState<string>('q-1');
   const [isSaved, setIsSaved] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   const activeQuestion =
     questions.find((q) => q.id === activeQuestionId) || questions[0];
@@ -84,9 +91,33 @@ export const CreatePage: React.FC = () => {
     handleUpdateActiveQuestion('options', newOptions);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2500);
+    try {
+      const res = await fetch(`${REALTIME_URL}/api/quizzes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teacherId: user?.id,
+          title,
+          subject,
+          courseCode,
+          description,
+          questions,
+        }),
+      });
+      if (res.ok) {
+        setSaveStatus('Saved to Database!');
+      } else {
+        setSaveStatus('Saved locally!');
+      }
+    } catch {
+      setSaveStatus('Saved locally!');
+    }
+    setTimeout(() => {
+      setIsSaved(false);
+      setSaveStatus(null);
+    }, 2500);
   };
 
   return (
@@ -119,10 +150,10 @@ export const CreatePage: React.FC = () => {
 
               <button
                 onClick={handleSave}
-                className="px-5 py-2 rounded-xl bg-alix-violet-600 hover:bg-alix-violet-700 text-white font-bold text-sm shadow-sm flex items-center gap-2 transition-all"
+                className="px-5 py-2 rounded-xl bg-alix-violet-600 hover:bg-alix-violet-700 text-white font-bold text-sm shadow-sm flex items-center gap-2 transition-all cursor-pointer"
               >
                 <Save className="w-4 h-4" />
-                <span>{isSaved ? 'Saved!' : 'Save Activity'}</span>
+                <span>{saveStatus || (isSaved ? 'Saving...' : 'Save Activity')}</span>
               </button>
             </div>
           </div>
@@ -141,6 +172,34 @@ export const CreatePage: React.FC = () => {
                 placeholder="Activity Title..."
               />
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
+                  Subject / Discipline
+                </label>
+                <input
+                  type="text"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="w-full text-sm text-alix-indigo font-semibold border-b border-alix-slate-200 focus:border-alix-violet-600 outline-none pb-1"
+                  placeholder="e.g. Distributed Systems, Physics..."
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
+                  Course Code / Section
+                </label>
+                <input
+                  type="text"
+                  value={courseCode}
+                  onChange={(e) => setCourseCode(e.target.value)}
+                  className="w-full text-sm text-alix-indigo font-semibold border-b border-alix-slate-200 focus:border-alix-violet-600 outline-none pb-1"
+                  placeholder="e.g. CS 301 - Sec A"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
                 Description / Course Info

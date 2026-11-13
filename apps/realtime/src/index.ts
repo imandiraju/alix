@@ -5,8 +5,12 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 import type { ClientToServerEvents, ServerToClientEvents } from '@alix/shared';
 import { registerSessionHandlers } from './handlers/session.js';
+import { connectDatabase } from './db.js';
+import authRouter from './routes/auth.js';
+import quizRouter from './routes/quizzes.js';
 
 dotenv.config();
 
@@ -15,7 +19,11 @@ const PORT = Number(process.env.PORT || process.env.ALIX_PORT_REALTIME || 3001);
 const app = express();
 const httpServer = createServer(app);
 
-// ─── CORS ───────────────────────────────────────────────────────────────────
+// ─── Database ───────────────────────────────────────────────────────────────
+
+connectDatabase();
+
+// ─── CORS & Body Parsers ────────────────────────────────────────────────────
 
 app.use(
   cors({
@@ -24,6 +32,11 @@ app.use(
   }),
 );
 app.use(express.json());
+
+// ─── REST API Routes ────────────────────────────────────────────────────────
+
+app.use('/api/auth', authRouter);
+app.use('/api/quizzes', quizRouter);
 
 // ─── Socket.IO ──────────────────────────────────────────────────────────────
 
@@ -43,6 +56,7 @@ app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'alix-realtime',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
   });

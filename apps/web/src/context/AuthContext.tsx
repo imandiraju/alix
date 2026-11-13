@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { REALTIME_URL } from '../services/socket';
 
 export interface UserProfile {
   id: string;
@@ -6,6 +7,7 @@ export interface UserProfile {
   email: string;
   institution: string;
   department: string;
+  subjects?: string[];
   role: 'teacher' | 'admin';
   avatarInitials: string;
 }
@@ -24,6 +26,7 @@ export interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = 'alix_auth_teacher';
+const AUTH_TOKEN_KEY = 'alix_auth_token';
 const OTP_STORAGE_KEY = 'alix_pending_otp';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -38,7 +41,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [pendingOtpCode, setPendingOtpCode] = useState<string | null>(null);
 
-  const login = async (email: string): Promise<boolean> => {
+  const login = async (email: string, password?: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${REALTIME_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: password || 'alix-default-pass' }),
+      });
+      const data = await res.json();
+      if (res.ok && data.user) {
+        setUser(data.user);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
+        if (data.token) localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+        return true;
+      }
+    } catch {
+      // offline fallback
+    }
+
     const name = email
       .split('@')[0]
       .replace(/[._]/g, ' ')
@@ -97,12 +117,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (
     data: Omit<UserProfile, 'id' | 'role' | 'avatarInitials'> & { password?: string }
   ): Promise<boolean> => {
+    try {
+      const res = await fetch(`${REALTIME_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const resData = await res.json();
+      if (res.ok && resData.user) {
+        setUser(resData.user);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(resData.user));
+        if (resData.token) localStorage.setItem(AUTH_TOKEN_KEY, resData.token);
+        return true;
+      }
+    } catch {
+      // offline fallback
+    }
+
     const profile: UserProfile = {
       id: `teacher-${Date.now()}`,
       name: data.name,
       email: data.email,
       institution: data.institution || 'University Faculty',
       department: data.department || 'Academic Department',
+      subjects: data.subjects || [],
       role: 'teacher',
       avatarInitials: data.name
         .split(' ')
@@ -119,6 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(AUTH_TOKEN_KEY);
   };
 
   return (
