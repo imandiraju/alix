@@ -20,13 +20,13 @@ export const RegisterPage: React.FC = () => {
   const { register, sendOtp, verifyOtp } = useAuth();
 
   const [formData, setFormData] = useState({
-    name: 'Dr. Marcus Vance',
-    email: 'm.vance@mit.edu',
-    institution: 'Massachusetts Institute of Technology',
-    department: 'Electrical Engineering & Computer Science',
-    password: 'password123',
+    name: '',
+    email: '',
+    institution: '',
+    department: '',
+    password: '',
   });
-  const [agreeTerms, setAgreeTerms] = useState(true);
+  const [agreeTerms, setAgreeTerms] = useState(false);
 
   // Registration Stage: 'details' | 'otp_verify'
   const [stage, setStage] = useState<'details' | 'otp_verify'>('details');
@@ -156,6 +156,7 @@ export const RegisterPage: React.FC = () => {
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="e.g. Dr. Jane Smith"
                       required
                       className="w-full pl-9 pr-3 py-2 rounded-xl border border-alix-slate-300 text-sm text-alix-indigo font-medium outline-none focus:border-alix-violet-600"
                     />
@@ -174,6 +175,7 @@ export const RegisterPage: React.FC = () => {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="professor@university.edu"
                       required
                       className="w-full pl-9 pr-3 py-2 rounded-xl border border-alix-slate-300 text-sm text-alix-indigo font-medium outline-none focus:border-alix-violet-600"
                     />
@@ -193,6 +195,7 @@ export const RegisterPage: React.FC = () => {
                     type="text"
                     value={formData.institution}
                     onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
+                    placeholder="e.g. Stanford University"
                     required
                     className="w-full pl-9 pr-3 py-2 rounded-xl border border-alix-slate-300 text-sm text-alix-indigo font-medium outline-none focus:border-alix-violet-600"
                   />
@@ -208,6 +211,7 @@ export const RegisterPage: React.FC = () => {
                     type="text"
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                    placeholder="e.g. Computer Science"
                     required
                     className="w-full px-3 py-2 rounded-xl border border-alix-slate-300 text-sm text-alix-indigo font-medium outline-none focus:border-alix-violet-600"
                   />
@@ -225,6 +229,7 @@ export const RegisterPage: React.FC = () => {
                       type="password"
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder="••••••••••••"
                       required
                       className="w-full pl-9 pr-3 py-2 rounded-xl border border-alix-slate-300 text-sm text-alix-indigo font-medium outline-none focus:border-alix-violet-600"
                     />
@@ -284,7 +289,7 @@ export const RegisterPage: React.FC = () => {
                 </p>
                 {dispatchedOtp && (
                   <div className="pt-1 font-mono font-bold text-alix-indigo flex items-center justify-between text-xs bg-white/80 p-1.5 rounded-lg border border-alix-violet-200">
-                    <span>Demo Institutional Code:</span>
+                    <span>Verification Code:</span>
                     <span className="text-alix-violet-700 text-sm tracking-wider">{dispatchedOtp}</span>
                   </div>
                 )}

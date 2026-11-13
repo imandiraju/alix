@@ -7,7 +7,6 @@ import {
   Lock,
   Mail,
   ArrowRight,
-  Sparkles,
   CheckCircle2,
   AlertCircle,
   KeyRound,
@@ -32,8 +31,8 @@ export const LoginPage: React.FC = () => {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   // Form Fields
-  const [email, setEmail] = useState('e.vance@university.edu');
-  const [password, setPassword] = useState('••••••••••••');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -133,17 +132,6 @@ export const LoginPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleQuickDemoLogin = async () => {
-    setIsLoading(true);
-    await login('dr.elena@alix.edu');
-    navigate(redirectPath);
-  };
-
-  const autoFillDemoOtp = () => {
-    const code = dispatchedOtp || '742109';
-    setOtpDigits(code.split(''));
   };
 
   return (
@@ -288,7 +276,7 @@ export const LoginPage: React.FC = () => {
                     </p>
                     {dispatchedOtp && (
                       <div className="pt-1 font-mono font-bold text-alix-indigo flex items-center justify-between text-xs bg-white/80 p-1.5 rounded-lg border border-alix-violet-200">
-                        <span>Demo Mailbox Code:</span>
+                        <span>Verification Code:</span>
                         <span className="text-alix-violet-700 text-sm tracking-wider">{dispatchedOtp}</span>
                       </div>
                     )}
@@ -333,8 +321,8 @@ export const LoginPage: React.FC = () => {
                     <CheckCircle2 className="w-4 h-4" />
                   </button>
 
-                  {/* Resend & Demo helper */}
-                  <div className="flex items-center justify-between text-xs pt-2">
+                  {/* Resend helper */}
+                  <div className="flex items-center justify-center text-xs pt-2">
                     <button
                       type="button"
                       disabled={resendCooldown > 0}
@@ -343,14 +331,6 @@ export const LoginPage: React.FC = () => {
                     >
                       <RotateCcw className="w-3 h-3" />
                       <span>{resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend Code'}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={autoFillDemoOtp}
-                      className="text-alix-cyan-700 hover:text-alix-cyan-900 font-semibold underline cursor-pointer"
-                    >
-                      Auto-Fill ({dispatchedOtp || '742109'})
                     </button>
                   </div>
                 </form>
@@ -424,18 +404,6 @@ export const LoginPage: React.FC = () => {
               </button>
             </form>
           )}
-
-          {/* Quick Demo One-Click Login */}
-          <div className="mt-5 pt-4 border-t border-alix-slate-100">
-            <button
-              type="button"
-              onClick={handleQuickDemoLogin}
-              className="w-full py-2.5 px-4 rounded-xl bg-alix-violet-50 hover:bg-alix-violet-100 border border-alix-violet-200 text-alix-violet-800 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-alix-cyan-600" />
-              <span>1-Click Demo Login (Dr. Elena Vance)</span>
-            </button>
-          </div>
 
           {/* Register Link */}
           <div className="mt-5 text-center text-xs text-alix-slate-500">

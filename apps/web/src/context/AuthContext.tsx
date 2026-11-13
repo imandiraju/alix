@@ -21,16 +21,6 @@ export interface AuthContextType {
   logout: () => void;
 }
 
-const DEFAULT_DEMO_TEACHER: UserProfile = {
-  id: 'teacher-01',
-  name: 'Dr. Elena Vance',
-  email: 'e.vance@university.edu',
-  institution: 'Faculty of Engineering & Computer Science',
-  department: 'Distributed Systems Laboratory',
-  role: 'teacher',
-  avatarInitials: 'EV',
-};
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = 'alix_auth_teacher';
@@ -40,20 +30,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<UserProfile | null>(() => {
     try {
       const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : DEFAULT_DEMO_TEACHER;
+      return stored ? JSON.parse(stored) : null;
     } catch {
-      return DEFAULT_DEMO_TEACHER;
+      return null;
     }
   });
 
   const [pendingOtpCode, setPendingOtpCode] = useState<string | null>(null);
 
   const login = async (email: string): Promise<boolean> => {
+    const name = email
+      .split('@')[0]
+      .replace(/[._]/g, ' ')
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+
     const profile: UserProfile = {
-      ...DEFAULT_DEMO_TEACHER,
+      id: `teacher-${Date.now()}`,
       email,
-      name: email.split('@')[0].replace('.', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-      avatarInitials: email.slice(0, 2).toUpperCase(),
+      name: name || 'Faculty Member',
+      institution: 'Academic Institution',
+      department: 'Faculty Department',
+      role: 'teacher',
+      avatarInitials: (name || email).slice(0, 2).toUpperCase(),
     };
     setUser(profile);
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(profile));
@@ -61,17 +59,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   /**
-   * Generates a 6-digit OTP verification code and simulates institutional email dispatch.
+   * Generates a 6-digit OTP verification code.
    */
   const sendOtp = async (email: string): Promise<{ success: boolean; code: string }> => {
-    // Generate secure 6-digit OTP (for demo predictability, 742109 or pseudo-random)
     const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const code = email.toLowerCase().includes('demo') || email.toLowerCase().includes('elena') ? '742109' : randomCode;
-
-    setPendingOtpCode(code);
-    sessionStorage.setItem(OTP_STORAGE_KEY, JSON.stringify({ email, code, timestamp: Date.now() }));
-
-    return { success: true, code };
+    setPendingOtpCode(randomCode);
+    sessionStorage.setItem(OTP_STORAGE_KEY, JSON.stringify({ email, code: randomCode, timestamp: Date.now() }));
+    return { success: true, code: randomCode };
   };
 
   /**
@@ -79,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const verifyOtp = async (email: string, code: string): Promise<boolean> => {
     const storedStr = sessionStorage.getItem(OTP_STORAGE_KEY);
-    let expected = pendingOtpCode || '742109';
+    let expected = pendingOtpCode;
 
     if (storedStr) {
       try {
@@ -90,8 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    // Accept match or universal demo code 742109
-    if (code.trim() === expected || code.trim() === '742109') {
+    if (expected && code.trim() === expected.trim()) {
       await login(email);
       setPendingOtpCode(null);
       sessionStorage.removeItem(OTP_STORAGE_KEY);
