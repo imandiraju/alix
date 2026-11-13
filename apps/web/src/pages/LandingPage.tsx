@@ -156,10 +156,10 @@ export const LandingPage: React.FC = () => {
                 </p>
                 <div className="pt-2 flex flex-wrap gap-4">
                   <Link
-                    to="/host/session-demo"
+                    to="/dashboard"
                     className="px-5 py-2.5 rounded-lg bg-alix-cyan-500 hover:bg-alix-cyan-400 text-alix-indigo font-bold text-sm transition-colors shadow-sm"
                   >
-                    Launch Live Projector Demo →
+                    Experience Live Projector →
                   </Link>
                 </div>
               </div>

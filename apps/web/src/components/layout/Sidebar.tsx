@@ -20,9 +20,9 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {
   const modules = [
     {
-      name: 'ALIX Play',
-      subtitle: 'Quizzes & Games',
-      path: '/play/demo',
+      name: 'Join Room',
+      subtitle: 'Student Live Play',
+      path: '/join',
       icon: Gamepad2,
       badge: 'Live',
       badgeColor: 'bg-alix-violet-100 text-alix-violet-700',
@@ -163,7 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {
               Launch instant concept checks or competitive team live rounds.
             </p>
             <NavLink
-              to="/host/session-demo"
+              to="/dashboard"
               className="inline-block text-xs font-semibold px-2.5 py-1.5 rounded bg-alix-violet-600 hover:bg-alix-violet-500 text-white transition-colors"
             >
               Start ALIX Live →

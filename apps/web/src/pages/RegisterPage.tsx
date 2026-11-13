@@ -94,7 +94,7 @@ export const RegisterPage: React.FC = () => {
         await register(formData);
         navigate('/dashboard');
       } else {
-        setError('Invalid or expired code. Please retry or auto-fill demo code.');
+        setError('Invalid or expired confirmation code. Please check your institutional email and retry.');
       }
     } catch {
       setError('Verification failed.');

@@ -1,6 +1,7 @@
 // ─── Socket.IO Session Handlers ─────────────────────────────────────────────
 
 import type { Server, Socket } from 'socket.io';
+import mongoose from 'mongoose';
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -10,37 +11,100 @@ import type {
   NextQuestionPayload,
   SubmitAnswerPayload,
   EndGamePayload,
+  Quiz as SharedQuiz,
 } from '@alix/shared';
-import { SessionStatus } from '@alix/shared';
+import { SessionStatus, QuestionType, DEFAULT_QUIZ_SETTINGS } from '@alix/shared';
 import { GameSessionManager } from '../engine/GameSession.js';
 import { calculateScore } from '../engine/ScoreCalculator.js';
+import { Quiz } from '../models/Quiz.js';
+import { GameSessionModel } from '../models/GameSession.js';
 
 type IOServer = Server<ClientToServerEvents, ServerToClientEvents>;
 type IOSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 
-const sessionManager = new GameSessionManager();
+export const sessionManager = new GameSessionManager();
 
 export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
   // ─── Create Session ───────────────────────────────────────────────────
 
-  socket.on('create-session', (payload: CreateSessionPayload) => {
+  socket.on('create-session', async (payload: CreateSessionPayload) => {
     const session = sessionManager.createSession(payload.quizId, payload.hostId);
 
     socket.join(session.id);
     socket.data.sessionId = session.id;
     socket.data.role = 'host';
 
+    let quizTitle = 'Interactive Classroom Quiz';
+    let totalQuestions = 0;
+
+    // Load Quiz from MongoDB if valid ObjectId
+    try {
+      if (payload.quizId && mongoose.isValidObjectId(payload.quizId)) {
+        const dbQuiz = await Quiz.findById(payload.quizId);
+        if (dbQuiz) {
+          quizTitle = dbQuiz.title;
+          totalQuestions = dbQuiz.questions.length;
+
+          const adaptedQuiz: SharedQuiz = {
+            id: dbQuiz._id.toString(),
+            title: dbQuiz.title,
+            description: dbQuiz.description || '',
+            questions: dbQuiz.questions.map((q: any, idx: number) => ({
+              id: q.id || `q-${idx + 1}`,
+              text: q.text,
+              type: QuestionType.MULTIPLE_CHOICE,
+              options: q.options.map((optText: string, optIdx: number) => ({
+                id: optIdx.toString(),
+                text: optText,
+                isCorrect: optIdx === q.correctIndex,
+              })),
+              correctAnswer: q.correctIndex.toString(),
+              timeLimit: q.timeLimit || 30,
+              points: q.points || 1000,
+            })),
+            createdBy: dbQuiz.teacherId?.toString() || payload.hostId,
+            createdAt: dbQuiz.createdAt?.toISOString() || new Date().toISOString(),
+            updatedAt: dbQuiz.updatedAt?.toISOString() || new Date().toISOString(),
+            tags: [dbQuiz.subject, dbQuiz.courseCode].filter(Boolean),
+            settings: DEFAULT_QUIZ_SETTINGS,
+          };
+
+          sessionManager.setQuiz(session.id, adaptedQuiz);
+        }
+      }
+    } catch (err) {
+      console.warn('[ALIX Realtime] Could not fetch quiz from DB for session:', err);
+    }
+
+    // Persist session to MongoDB GameSessionModel
+    try {
+      await GameSessionModel.findOneAndUpdate(
+        { pin: session.code },
+        {
+          pin: session.code,
+          quizId: mongoose.isValidObjectId(payload.quizId) ? payload.quizId : undefined,
+          teacherId: mongoose.isValidObjectId(payload.hostId) ? payload.hostId : undefined,
+          status: 'waiting',
+          participants: [],
+          responses: [],
+        },
+        { upsert: true, new: true }
+      );
+    } catch (err) {
+      console.warn('[ALIX Realtime] Could not persist session doc:', err);
+    }
+
     socket.emit('session-created', {
       sessionId: session.id,
       code: session.code,
     });
 
-    console.log(`[ALIX] Session created: ${session.code} (${session.id})`);
+    console.log(`[ALIX] Session created: ${session.code} (${session.id}) for quiz "${quizTitle}" (${totalQuestions} Qs)`);
   });
 
   // ─── Join Session ─────────────────────────────────────────────────────
 
-  socket.on('join-session', (payload: JoinSessionPayload) => {
+  socket.on('join-session', async (payload: JoinSessionPayload) => {
     const session = sessionManager.findByCode(payload.code);
 
     if (!session) {
@@ -69,6 +133,27 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     socket.data.sessionId = session.id;
     socket.data.role = 'player';
     socket.data.playerId = player.id;
+
+    // Record participant in MongoDB
+    try {
+      await GameSessionModel.findOneAndUpdate(
+        { pin: payload.code.toUpperCase() },
+        {
+          $push: {
+            participants: {
+              socketId: socket.id,
+              name: payload.playerName,
+              avatarId: (payload as any).avatarId || 'fox',
+              score: 0,
+              streak: 0,
+              joinedAt: new Date(),
+            },
+          },
+        }
+      );
+    } catch (err) {
+      console.warn('[ALIX Realtime] Could not save participant to DB:', err);
+    }
 
     io.to(session.id).emit('player-joined', {
       player,
@@ -111,7 +196,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
 
   // ─── Submit Answer ────────────────────────────────────────────────────
 
-  socket.on('submit-answer', (payload: SubmitAnswerPayload) => {
+  socket.on('submit-answer', async (payload: SubmitAnswerPayload) => {
     const session = sessionManager.getSession(payload.sessionId);
 
     if (!session) {
@@ -144,6 +229,27 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
 
     const player = session.players.find((p) => p.id === socket.id);
 
+    try {
+      await GameSessionModel.findOneAndUpdate(
+        { pin: session.code },
+        {
+          $push: {
+            responses: {
+              questionId: payload.questionId,
+              playerName: player?.name || 'Anonymous',
+              answer: payload.answer,
+              isCorrect: correct,
+              timeMs: payload.timeMs,
+              pointsAwarded: points,
+              submittedAt: new Date(),
+            },
+          },
+        }
+      );
+    } catch (err) {
+      // quiet
+    }
+
     socket.emit('answer-result', {
       correct,
       points,
@@ -155,7 +261,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
 
   // ─── End Game ─────────────────────────────────────────────────────────
 
-  socket.on('end-game', (payload: EndGamePayload) => {
+  socket.on('end-game', async (payload: EndGamePayload) => {
     const session = sessionManager.getSession(payload.sessionId);
 
     if (!session || socket.data.role !== 'host') {
@@ -164,6 +270,15 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     }
 
     sessionManager.endGame(session.id);
+
+    try {
+      await GameSessionModel.findOneAndUpdate(
+        { pin: session.code },
+        { status: 'completed' }
+      );
+    } catch (err) {
+      // quiet
+    }
 
     const leaderboard = sessionManager.getLeaderboard(session.id);
     const players = session.players;

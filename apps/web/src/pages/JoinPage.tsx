@@ -258,18 +258,9 @@ export const JoinPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Quick Demo Shortcuts */}
+          {/* QR Camera Shortcut */}
           <div className="mt-5 pt-4 border-t border-alix-slate-100 flex items-center justify-between text-xs">
-            <button
-              type="button"
-              onClick={() => {
-                applyPin('842915');
-                setNickname('Alex Rivera');
-              }}
-              className="text-alix-violet-600 hover:text-alix-violet-800 font-semibold underline underline-offset-4 cursor-pointer"
-            >
-              Quick Demo PIN (842915)
-            </button>
+            <span className="text-alix-slate-400">Projector in room?</span>
 
             <button
               type="button"
@@ -277,7 +268,7 @@ export const JoinPage: React.FC = () => {
               className="text-alix-cyan-700 hover:text-alix-cyan-900 font-semibold inline-flex items-center gap-1 cursor-pointer"
             >
               <QrCode className="w-3.5 h-3.5" />
-              <span>Camera Scan</span>
+              <span>Scan QR Code</span>
             </button>
           </div>
         </div>

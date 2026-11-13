@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Sidebar from '../components/layout/Sidebar';
 import Footer from '../components/layout/Footer';
@@ -14,9 +14,10 @@ import {
   Zap,
   ArrowLeft,
   CheckCircle2,
-  FileQuestion,
+  Play,
+  LayoutDashboard,
+  AlertCircle,
   HelpCircle,
-  BookOpen,
 } from 'lucide-react';
 
 interface QuestionDraft {
@@ -29,36 +30,30 @@ interface QuestionDraft {
 }
 
 export const CreatePage: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const [title, setTitle] = useState('Distributed Consensus & Fault Tolerance');
-  const [subject, setSubject] = useState('Computer Science: Distributed Systems');
-  const [courseCode, setCourseCode] = useState('CS 301');
-  const [description, setDescription] = useState(
-    'Interactive concept check for Week 6 lecture in CS 301.'
-  );
+
+  const [title, setTitle] = useState('');
+  const [subject, setSubject] = useState(user?.department || '');
+  const [courseCode, setCourseCode] = useState('');
+  const [description, setDescription] = useState('');
 
   const [questions, setQuestions] = useState<QuestionDraft[]>([
     {
       id: 'q-1',
-      text: 'In distributed consensus protocols (e.g., Raft), what is the minimum number of nodes required to tolerate 2 node crash failures?',
+      text: '',
       timeLimit: 30,
       points: 1000,
-      options: ['3 nodes', '5 nodes', '7 nodes', '4 nodes'],
-      correctIndex: 1,
-    },
-    {
-      id: 'q-2',
-      text: 'Which CAP theorem property must a distributed system sacrifice during a network partition if it prioritizes availability?',
-      timeLimit: 20,
-      points: 1000,
-      options: ['Consistency', 'Partition Tolerance', 'Latency', 'Durability'],
+      options: ['', '', '', ''],
       correctIndex: 0,
     },
   ]);
 
   const [activeQuestionId, setActiveQuestionId] = useState<string>('q-1');
-  const [isSaved, setIsSaved] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [createdQuizId, setCreatedQuizId] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const activeQuestion =
     questions.find((q) => q.id === activeQuestionId) || questions[0];
@@ -67,14 +62,26 @@ export const CreatePage: React.FC = () => {
     const newId = `q-${Date.now()}`;
     const newQuestion: QuestionDraft = {
       id: newId,
-      text: 'New question prompt...',
+      text: '',
       timeLimit: 30,
       points: 1000,
-      options: ['Option A', 'Option B', 'Option C', 'Option D'],
+      options: ['', '', '', ''],
       correctIndex: 0,
     };
     setQuestions([...questions, newQuestion]);
     setActiveQuestionId(newId);
+  };
+
+  const handleDeleteQuestion = (qId: string) => {
+    if (questions.length <= 1) {
+      alert('Activity must have at least one question.');
+      return;
+    }
+    const filtered = questions.filter((q) => q.id !== qId);
+    setQuestions(filtered);
+    if (activeQuestionId === qId) {
+      setActiveQuestionId(filtered[0].id);
+    }
   };
 
   const handleUpdateActiveQuestion = (field: keyof QuestionDraft, value: any) => {
@@ -92,32 +99,59 @@ export const CreatePage: React.FC = () => {
   };
 
   const handleSave = async () => {
-    setIsSaved(true);
+    setErrorMessage(null);
+
+    if (!title.trim()) {
+      setErrorMessage('Please enter an Activity Title.');
+      return;
+    }
+
+    if (!subject.trim()) {
+      setErrorMessage('Please specify the Subject or Academic Discipline.');
+      return;
+    }
+
+    // Check that each question has a prompt and at least 2 options filled
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      if (!q.text.trim()) {
+        setErrorMessage(`Question ${i + 1} prompt cannot be empty.`);
+        return;
+      }
+      const validOptions = q.options.filter((o) => o.trim().length > 0);
+      if (validOptions.length < 2) {
+        setErrorMessage(`Question ${i + 1} must have at least 2 non-empty choices.`);
+        return;
+      }
+    }
+
+    setIsSaving(true);
     try {
       const res = await fetch(`${REALTIME_URL}/api/quizzes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           teacherId: user?.id,
-          title,
-          subject,
-          courseCode,
-          description,
+          title: title.trim(),
+          subject: subject.trim(),
+          courseCode: courseCode.trim(),
+          description: description.trim(),
           questions,
         }),
       });
-      if (res.ok) {
-        setSaveStatus('Saved to Database!');
+
+      const data = await res.json();
+      if (res.ok && data.quiz) {
+        setCreatedQuizId(data.quiz._id);
+        setShowSuccessModal(true);
       } else {
-        setSaveStatus('Saved locally!');
+        setErrorMessage(data.error || 'Failed to save activity to database.');
       }
-    } catch {
-      setSaveStatus('Saved locally!');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Network error saving activity.');
+    } finally {
+      setIsSaving(false);
     }
-    setTimeout(() => {
-      setIsSaved(false);
-      setSaveStatus(null);
-    }, 2500);
   };
 
   return (
@@ -136,7 +170,7 @@ export const CreatePage: React.FC = () => {
                 <span>ALIX Create • Authoring Studio</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-heading font-extrabold text-alix-indigo">
-                My ALIX Activities
+                Create Classroom Activity
               </h1>
             </div>
 
@@ -145,50 +179,60 @@ export const CreatePage: React.FC = () => {
                 to="/dashboard"
                 className="px-4 py-2 rounded-xl border border-alix-slate-300 text-alix-slate-600 hover:bg-alix-slate-100 text-sm font-semibold transition-colors"
               >
-                Back to Library
+                Back to Dashboard
               </Link>
 
               <button
+                type="button"
                 onClick={handleSave}
-                className="px-5 py-2 rounded-xl bg-alix-violet-600 hover:bg-alix-violet-700 text-white font-bold text-sm shadow-sm flex items-center gap-2 transition-all cursor-pointer"
+                disabled={isSaving}
+                className="px-5 py-2 rounded-xl bg-alix-violet-600 hover:bg-alix-violet-700 text-white font-bold text-sm shadow-sm flex items-center gap-2 transition-all cursor-pointer disabled:opacity-70"
               >
                 <Save className="w-4 h-4" />
-                <span>{saveStatus || (isSaved ? 'Saving...' : 'Save Activity')}</span>
+                <span>{isSaving ? 'Saving to Database...' : 'Save Activity'}</span>
               </button>
             </div>
           </div>
+
+          {/* Error Banner */}
+          {errorMessage && (
+            <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
 
           {/* Activity Metadata Inputs */}
           <div className="bg-white p-6 rounded-2xl border border-alix-slate-200 shadow-sm mb-6 space-y-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
-                Activity Title
+                Activity Title *
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full text-lg sm:text-xl font-heading font-bold text-alix-indigo border-b-2 border-alix-slate-200 focus:border-alix-violet-600 outline-none pb-1"
-                placeholder="Activity Title..."
+                placeholder="e.g. Distributed Consensus & Fault Tolerance"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
-                  Subject / Discipline
+                  Subject / Discipline *
                 </label>
                 <input
                   type="text"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   className="w-full text-sm text-alix-indigo font-semibold border-b border-alix-slate-200 focus:border-alix-violet-600 outline-none pb-1"
-                  placeholder="e.g. Distributed Systems, Physics..."
+                  placeholder="e.g. Computer Science, Mechanical, Electronics..."
                 />
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
-                  Course Code / Section
+                  Course Code / Section (Optional)
                 </label>
                 <input
                   type="text"
@@ -202,14 +246,14 @@ export const CreatePage: React.FC = () => {
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
-                Description / Course Info
+                Description / Learning Goals (Optional)
               </label>
               <input
                 type="text"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full text-sm text-alix-slate-600 border-b border-alix-slate-200 focus:border-alix-violet-600 outline-none pb-1"
-                placeholder="Course code, week, learning outcomes..."
+                placeholder="Lecture topic, week, or outcomes..."
               />
             </div>
           </div>
@@ -223,8 +267,9 @@ export const CreatePage: React.FC = () => {
                   Questions ({questions.length})
                 </span>
                 <button
+                  type="button"
                   onClick={handleAddQuestion}
-                  className="text-xs font-bold text-alix-violet-700 hover:text-alix-violet-900 inline-flex items-center gap-1"
+                  className="text-xs font-bold text-alix-violet-700 hover:text-alix-violet-900 inline-flex items-center gap-1 cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
                   <span>Add Question</span>
@@ -233,27 +278,43 @@ export const CreatePage: React.FC = () => {
 
               <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                 {questions.map((q, idx) => (
-                  <button
+                  <div
                     key={q.id}
-                    onClick={() => setActiveQuestionId(q.id)}
-                    className={`w-full text-left p-3.5 rounded-xl border-2 transition-all ${
+                    className={`p-3 rounded-xl border-2 transition-all flex items-center justify-between gap-2 ${
                       q.id === activeQuestion.id
                         ? 'bg-alix-violet-50 border-alix-violet-500 shadow-sm'
                         : 'bg-white border-alix-slate-200 hover:border-alix-slate-300'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-alix-indigo">
-                        Q{idx + 1}
-                      </span>
-                      <span className="text-[10px] text-alix-slate-400 font-mono">
-                        {q.timeLimit}s • {q.points}pts
-                      </span>
-                    </div>
-                    <p className="text-xs text-alix-slate-600 truncate font-medium">
-                      {q.text}
-                    </p>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveQuestionId(q.id)}
+                      className="flex-1 text-left min-w-0 cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold text-alix-indigo">
+                          Q{idx + 1}
+                        </span>
+                        <span className="text-[10px] text-alix-slate-400 font-mono">
+                          {q.timeLimit}s • {q.points}pts
+                        </span>
+                      </div>
+                      <p className="text-xs text-alix-slate-600 truncate font-medium">
+                        {q.text || 'Untitled Question Prompt...'}
+                      </p>
+                    </button>
+
+                    {questions.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteQuestion(q.id)}
+                        className="p-1 rounded text-alix-slate-300 hover:text-rose-600 transition-colors"
+                        title="Delete question"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
@@ -263,7 +324,7 @@ export const CreatePage: React.FC = () => {
               {/* Question Text */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-2">
-                  Question Prompt
+                  Question Prompt *
                 </label>
                 <textarea
                   rows={3}
@@ -272,7 +333,7 @@ export const CreatePage: React.FC = () => {
                     handleUpdateActiveQuestion('text', e.target.value)
                   }
                   className="w-full p-3.5 rounded-xl border-2 border-alix-slate-200 focus:border-alix-violet-600 focus:ring-2 focus:ring-alix-violet-100 outline-none text-base text-alix-indigo font-medium"
-                  placeholder="Enter the question prompt here..."
+                  placeholder="Enter the concept question prompt here..."
                 />
               </div>
 
@@ -281,7 +342,7 @@ export const CreatePage: React.FC = () => {
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-2 flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5 text-alix-cyan-600" />
-                    <span>Time Limit (Seconds)</span>
+                    <span>Time Limit</span>
                   </label>
                   <select
                     value={activeQuestion.timeLimit}
@@ -291,7 +352,7 @@ export const CreatePage: React.FC = () => {
                         Number(e.target.value)
                       )
                     }
-                    className="w-full p-2.5 rounded-xl border border-alix-slate-300 text-sm font-semibold text-alix-indigo outline-none"
+                    className="w-full p-2.5 rounded-xl border border-alix-slate-300 text-sm font-semibold text-alix-indigo outline-none cursor-pointer"
                   >
                     <option value={15}>15 Seconds</option>
                     <option value={20}>20 Seconds</option>
@@ -311,7 +372,7 @@ export const CreatePage: React.FC = () => {
                     onChange={(e) =>
                       handleUpdateActiveQuestion('points', Number(e.target.value))
                     }
-                    className="w-full p-2.5 rounded-xl border border-alix-slate-300 text-sm font-semibold text-alix-indigo outline-none"
+                    className="w-full p-2.5 rounded-xl border border-alix-slate-300 text-sm font-semibold text-alix-indigo outline-none cursor-pointer"
                   >
                     <option value={500}>500 Points</option>
                     <option value={1000}>1,000 Points (Standard)</option>
@@ -323,33 +384,43 @@ export const CreatePage: React.FC = () => {
               {/* Answer Choices */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-3">
-                  Answer Options (Select correct option with radio)
+                  Answer Options (Select correct option using the radio button)
                 </label>
                 <div className="space-y-3">
                   {activeQuestion.options.map((opt, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center gap-3 p-2 rounded-xl border border-alix-slate-200"
+                      className={`flex items-center gap-3 p-2 rounded-xl border transition-colors ${
+                        activeQuestion.correctIndex === idx
+                          ? 'border-emerald-300 bg-emerald-50/40'
+                          : 'border-alix-slate-200'
+                      }`}
                     >
                       <input
                         type="radio"
-                        name="correct-option"
+                        name={`correct-option-${activeQuestion.id}`}
                         checked={activeQuestion.correctIndex === idx}
                         onChange={() =>
                           handleUpdateActiveQuestion('correctIndex', idx)
                         }
-                        className="w-5 h-5 text-alix-violet-600 focus:ring-alix-violet-500 cursor-pointer ml-2"
+                        className="w-5 h-5 text-emerald-600 focus:ring-emerald-500 cursor-pointer ml-2"
                         title="Mark as correct answer"
                       />
-                      <span className="font-bold text-xs text-alix-slate-400 w-6 text-center">
+                      <span
+                        className={`font-bold text-xs w-6 text-center ${
+                          activeQuestion.correctIndex === idx
+                            ? 'text-emerald-700'
+                            : 'text-alix-slate-400'
+                        }`}
+                      >
                         {String.fromCharCode(65 + idx)}
                       </span>
                       <input
                         type="text"
                         value={opt}
                         onChange={(e) => handleUpdateOption(idx, e.target.value)}
-                        className="flex-1 px-3 py-1.5 text-sm font-medium text-alix-indigo border-0 focus:ring-0 outline-none"
-                        placeholder={`Option ${String.fromCharCode(65 + idx)}`}
+                        className="flex-1 px-3 py-1.5 text-sm font-medium text-alix-indigo border-0 focus:ring-0 outline-none bg-transparent"
+                        placeholder={`Option ${String.fromCharCode(65 + idx)} text...`}
                       />
                     </div>
                   ))}
@@ -359,6 +430,42 @@ export const CreatePage: React.FC = () => {
           </div>
         </main>
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-alix-xl border border-alix-slate-200 p-6 sm:p-8 text-center animate-scale-in">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+            <h3 className="text-2xl font-heading font-extrabold text-alix-indigo">
+              Activity Saved!
+            </h3>
+            <p className="text-xs sm:text-sm text-alix-slate-500 mt-2 mb-6">
+              <strong className="text-alix-indigo">{title}</strong> has been successfully saved to your MongoDB database with {questions.length} questions.
+            </p>
+
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => navigate(`/host/${createdQuizId}`)}
+                className="w-full py-3.5 px-4 rounded-xl bg-alix-indigo hover:bg-alix-indigo/90 text-white font-bold text-sm shadow-alix-md hover:shadow-alix-glow transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Play className="w-4 h-4 fill-current text-alix-cyan-400" />
+                <span>Launch Live Session Now</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                className="w-full py-3 px-4 rounded-xl border border-alix-slate-300 hover:bg-alix-slate-100 text-alix-slate-700 font-semibold text-sm transition-colors cursor-pointer"
+              >
+                Return to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

@@ -26,8 +26,8 @@ export const Footer: React.FC = () => {
           </h4>
           <ul className="space-y-2 text-sm text-alix-slate-600">
             <li>
-              <Link to="/play/demo" className="hover:text-alix-violet-600 transition-colors">
-                ALIX Play
+              <Link to="/join" className="hover:text-alix-violet-600 transition-colors">
+                Join Classroom Room
               </Link>
             </li>
             <li>
@@ -70,7 +70,7 @@ export const Footer: React.FC = () => {
               </Link>
             </li>
             <li>
-              <Link to="/host/session-demo" className="hover:text-alix-violet-600 transition-colors">
+              <Link to="/dashboard" className="hover:text-alix-violet-600 transition-colors">
                 ALIX Live Projector
               </Link>
             </li>

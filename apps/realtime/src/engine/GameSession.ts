@@ -65,6 +65,17 @@ export class GameSessionManager {
     return this.sessions.get(sessionId);
   }
 
+  setQuiz(sessionId: string, quiz: Quiz): void {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      session.quiz = quiz;
+    }
+  }
+
+  getAllSessions(): InternalSession[] {
+    return Array.from(this.sessions.values());
+  }
+
   findByCode(code: string): InternalSession | undefined {
     const sessionId = this.codeToSession.get(code.toUpperCase());
     return sessionId ? this.sessions.get(sessionId) : undefined;

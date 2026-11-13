@@ -64,7 +64,7 @@ export const App: React.FC = () => {
                 </ProtectedRoute>
               }
             />
-            <Route path="/host" element={<Navigate to="/host/live-demo" replace />} />
+            <Route path="/host" element={<Navigate to="/dashboard" replace />} />
 
             {/* Module Fallbacks */}
             <Route

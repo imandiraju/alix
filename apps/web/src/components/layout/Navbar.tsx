@@ -20,7 +20,7 @@ export const Navbar: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const navLinks = [
-    { name: 'ALIX Play', path: '/play/demo', icon: Gamepad2 },
+    { name: 'Join Room', path: '/join', icon: Gamepad2 },
     { name: 'My Activities', path: '/create', icon: PlusCircle },
     { name: 'ALIX Insights', path: '/insights', icon: LineChart },
   ];
@@ -80,7 +80,7 @@ export const Navbar: React.FC = () => {
 
           {/* Host / Projector View Button */}
           <Link
-            to="/host/session-demo"
+            to="/dashboard"
             className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-alix-indigo text-white font-medium text-xs sm:text-sm hover:bg-alix-indigo/90 shadow-sm transition-all"
           >
             <Play className="w-3.5 h-3.5 fill-current text-alix-cyan-300" />

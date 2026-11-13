@@ -14,7 +14,16 @@ import {
   triggerCorrectAnswerConfetti,
   triggerStreakBurst,
 } from '../components/game/CelebrationEffects';
-import { Trophy, Flame, User, LogOut, CheckCircle2, Clock, Wifi } from 'lucide-react';
+import { Trophy, Flame, User, LogOut, CheckCircle2, Clock, Wifi, Sparkles } from 'lucide-react';
+
+interface ActiveQuestion {
+  id?: string;
+  index: number;
+  total: number;
+  text: string;
+  options: string[];
+  timeLimit: number;
+}
 
 export const PlayPage: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -23,56 +32,123 @@ export const PlayPage: React.FC = () => {
   const avatarId = searchParams.get('avatar') || 'fox';
   const avatar = getAvatarById(avatarId);
 
-  // Game Phases: 'answering' | 'submitted' | 'score' | 'leaderboard'
-  const [phase, setPhase] = useState<'answering' | 'submitted' | 'score' | 'leaderboard'>('answering');
+  // Game Phases: 'waiting' | 'answering' | 'submitted' | 'score' | 'leaderboard'
+  const [phase, setPhase] = useState<'waiting' | 'answering' | 'submitted' | 'score' | 'leaderboard'>('waiting');
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [secondsRemaining, setSecondsRemaining] = useState(25);
-  const [score, setScore] = useState(1840);
-  const [streak, setStreak] = useState(3);
+  const [secondsRemaining, setSecondsRemaining] = useState(30);
+  const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [lastPointsAwarded, setLastPointsAwarded] = useState(0);
+  const [isLastAnswerCorrect, setIsLastAnswerCorrect] = useState(false);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
+
+  const [currentQuestion, setCurrentQuestion] = useState<ActiveQuestion>({
+    index: 1,
+    total: 1,
+    text: 'Waiting for instructor to project question...',
+    options: ['Option A', 'Option B', 'Option C', 'Option D'],
+    timeLimit: 30,
+  });
+
+  const [leaderboardList, setLeaderboardList] = useState<any[]>([]);
 
   useEffect(() => {
     try {
       const socket = getSocket();
-      const onConnect = () => setIsSocketConnected(true);
+      const onConnect = () => {
+        setIsSocketConnected(true);
+        socket.emit('join-session', {
+          code: sessionId || '842915',
+          playerName: studentName,
+        });
+      };
       const onDisconnect = () => setIsSocketConnected(false);
 
       socket.on('connect', onConnect);
       socket.on('disconnect', onDisconnect);
-      if (socket.connected) setIsSocketConnected(true);
+      if (socket.connected) onConnect();
 
-      socket.emit('join-session', {
-        code: sessionId || '842915',
-        playerName: studentName,
+      // Listen for question dispatched by host
+      socket.on('question-started', (data: any) => {
+        if (data.question) {
+          const opts = Array.isArray(data.question.options)
+            ? data.question.options.map((o: any) => (typeof o === 'string' ? o : o.text || ''))
+            : ['Option A', 'Option B', 'Option C', 'Option D'];
+
+          setCurrentQuestion({
+            id: data.question.id,
+            index: (data.questionIndex ?? 0) + 1,
+            total: data.totalQuestions || 1,
+            text: data.question.text,
+            options: opts,
+            timeLimit: data.timeLimit || 30,
+          });
+          setSecondsRemaining(data.timeLimit || 30);
+          setSelectedIndex(null);
+          setPhase('answering');
+        }
+      });
+
+      // Listen for timer ticks
+      socket.on('timer-tick', (data: any) => {
+        if (typeof data.remaining === 'number') {
+          setSecondsRemaining(data.remaining);
+        }
+      });
+
+      // Listen for answer verification
+      socket.on('answer-result', (data: any) => {
+        setPhase('score');
+        setIsLastAnswerCorrect(!!data.correct);
+        setLastPointsAwarded(data.points || 0);
+
+        if (data.correct) {
+          setScore(data.totalScore ?? (score + data.points));
+          const newStreak = (data.streak ?? (streak + 1));
+          setStreak(newStreak);
+          triggerCorrectAnswerConfetti();
+          if (newStreak >= 3) {
+            setTimeout(() => triggerStreakBurst(), 400);
+          }
+        } else {
+          setStreak(0);
+        }
+      });
+
+      // Listen for leaderboard update
+      socket.on('leaderboard-update', (data: any) => {
+        if (data.leaderboard) {
+          setLeaderboardList(data.leaderboard);
+        }
+      });
+
+      // Listen for game end
+      socket.on('game-ended', (data: any) => {
+        if (data.finalLeaderboard) {
+          setLeaderboardList(data.finalLeaderboard);
+        }
+        setPhase('leaderboard');
       });
 
       return () => {
         socket.off('connect', onConnect);
         socket.off('disconnect', onDisconnect);
+        socket.off('question-started');
+        socket.off('timer-tick');
+        socket.off('answer-result');
+        socket.off('leaderboard-update');
+        socket.off('game-ended');
       };
     } catch {
       // fallback
     }
-  }, [sessionId, studentName]);
+  }, [sessionId, studentName, score, streak]);
 
-  const sampleQuestion = {
-    index: 3,
-    total: 10,
-    text: 'In distributed consensus protocols (e.g., Raft), what is the minimum number of nodes required to tolerate 2 node crash failures?',
-    options: [
-      '3 nodes',
-      '5 nodes (2f + 1)',
-      '7 nodes',
-      '4 nodes',
-    ],
-    correctIndex: 1,
-  };
-
-  // Timer countdown simulation
+  // Fallback countdown when answering
   useEffect(() => {
     if (phase !== 'answering') return;
     if (secondsRemaining <= 0) {
-      handleTimeUp();
+      setPhase('score');
       return;
     }
     const interval = setInterval(() => {
@@ -90,45 +166,14 @@ export const PlayPage: React.FC = () => {
       const socket = getSocket();
       socket.emit('submit-answer', {
         sessionId: sessionId || '842915',
-        questionId: 'q-03',
+        questionId: currentQuestion.id || 'q-01',
         answer: idx.toString(),
-        timeMs: Math.max(100, (25 - secondsRemaining) * 1000),
+        timeMs: Math.max(100, ((currentQuestion.timeLimit || 30) - secondsRemaining) * 1000),
       });
     } catch {
-      // fallback
+      // quiet
     }
-
-    // Simulate host closing question after 2 seconds
-    setTimeout(() => {
-      setPhase('score');
-      const isCorrect = idx === sampleQuestion.correctIndex;
-      if (isCorrect) {
-        setScore((prev) => prev + 1280);
-        const newStreak = streak + 1;
-        setStreak(newStreak);
-
-        // Auto trigger festive celebration confetti!
-        triggerCorrectAnswerConfetti();
-        if (newStreak >= 3) {
-          setTimeout(() => triggerStreakBurst(), 400);
-        }
-      } else {
-        setStreak(0);
-      }
-    }, 1800);
   };
-
-  const handleTimeUp = () => {
-    setPhase('score');
-  };
-
-  const sampleLeaderboard = [
-    { rank: 1, id: 'p1', name: 'Zoe Chen', score: 3840, streak: 4, delta: 0 },
-    { rank: 2, id: 'self', name: `${studentName} (You)`, score: score + 1280, streak: streak + 1, delta: 1 },
-    { rank: 3, id: 'p2', name: 'Marcus Taylor', score: 3010, streak: 2, delta: -1 },
-    { rank: 4, id: 'p3', name: 'Priya Sharma', score: 2890, streak: 1, delta: 2 },
-    { rank: 5, id: 'p4', name: 'David Kim', score: 2650, streak: 0, delta: 0 },
-  ];
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-alix-slate-50 select-none relative">
@@ -151,12 +196,16 @@ export const PlayPage: React.FC = () => {
                   {studentName}
                 </span>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-alix-violet-100 text-alix-violet-700 inline-flex items-center gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${isSocketConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
-                  <span>{sessionId || '842915'}</span>
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      isSocketConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'
+                    }`}
+                  />
+                  <span>PIN {sessionId || 'Live'}</span>
                 </span>
               </div>
               <div className="text-[10px] text-alix-slate-400 font-medium">
-                {avatar.name} • {avatar.title}
+                {avatar.name}
               </div>
             </div>
           </div>
@@ -164,7 +213,7 @@ export const PlayPage: React.FC = () => {
 
         {/* Score & Streak counter */}
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-alix-coral-50 border border-alix-coral-200 text-alix-coral-700 text-xs font-bold animate-pulse">
+          <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-alix-coral-50 border border-alix-coral-200 text-alix-coral-700 text-xs font-bold">
             <Flame className="w-3.5 h-3.5 fill-current text-alix-coral-500" />
             <span>{streak}x</span>
           </div>
@@ -185,39 +234,56 @@ export const PlayPage: React.FC = () => {
 
       {/* Main Game Screen */}
       <main className="flex-1 max-w-3xl w-full mx-auto p-4 sm:p-6 flex flex-col justify-center">
+        {/* Phase: Waiting for instructor */}
+        {phase === 'waiting' && (
+          <div className="text-center max-w-md mx-auto space-y-5 animate-fade-in py-12">
+            <div className="w-16 h-16 rounded-2xl bg-alix-violet-100 text-alix-violet-600 flex items-center justify-center mx-auto shadow-inner animate-bounce">
+              <Sparkles className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-heading font-extrabold text-alix-indigo">
+              You are Connected!
+            </h2>
+            <p className="text-xs sm:text-sm text-alix-slate-500 leading-relaxed">
+              Welcome, <strong className="text-alix-indigo">{studentName}</strong>! Keep this window open. Questions will stream to your screen when the instructor starts the session.
+            </p>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <span>Room PIN: {sessionId}</span>
+            </div>
+          </div>
+        )}
+
         {/* Phase: Answering */}
         {phase === 'answering' && (
           <div className="space-y-6 animate-fade-in">
-            {/* Countdown & Status */}
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-alix-slate-400">
-                Active Assessment
+                Question {currentQuestion.index} of {currentQuestion.total}
               </span>
               <Countdown
                 secondsRemaining={secondsRemaining}
-                totalSeconds={30}
+                totalSeconds={currentQuestion.timeLimit}
                 size="md"
               />
             </div>
 
-            {/* Question Card */}
             <QuestionCard
-              questionIndex={sampleQuestion.index}
-              totalQuestions={sampleQuestion.total}
-              questionText={sampleQuestion.text}
-              category="Distributed Consensus"
+              questionIndex={currentQuestion.index}
+              totalQuestions={currentQuestion.total}
+              questionText={currentQuestion.text}
+              category="Classroom Activity"
               points={1000}
-              timeLimit={30}
+              timeLimit={currentQuestion.timeLimit}
             />
 
-            {/* 4 Funky Answer Options */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-2">
-              {sampleQuestion.options.map((opt, idx) => (
+              {currentQuestion.options.map((opt, idx) => (
                 <OptionButton
                   key={idx}
                   index={idx}
                   text={opt}
                   selected={selectedIndex === idx}
+                  disabled={selectedIndex !== null}
                   onClick={() => handleSelectOption(idx)}
                 />
               ))}
@@ -225,67 +291,83 @@ export const PlayPage: React.FC = () => {
           </div>
         )}
 
-        {/* Phase: Submitted Waiting */}
+        {/* Phase: Submitted Answer */}
         {phase === 'submitted' && (
-          <div className="text-center py-12 px-6 bg-white rounded-3xl border border-alix-slate-200 shadow-sm max-w-md mx-auto space-y-4 animate-scale-in">
-            <div className="w-16 h-16 rounded-full bg-alix-violet-100 text-alix-violet-600 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-10 h-10" />
+          <div className="text-center max-w-md mx-auto space-y-4 animate-scale-in py-12">
+            <div className="w-16 h-16 rounded-2xl bg-alix-cyan-100 text-alix-cyan-600 flex items-center justify-center mx-auto shadow-inner">
+              <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h3 className="text-2xl font-heading font-black text-alix-indigo">
-              Response Locked!
-            </h3>
-            <p className="text-sm text-alix-slate-500">
-              Answer recorded with speed timestamp. Waiting for classroom countdown...
+            <h2 className="text-2xl font-heading font-extrabold text-alix-indigo">
+              Answer Submitted!
+            </h2>
+            <p className="text-xs text-alix-slate-500">
+              Response recorded in real time. Look at the auditorium projector for results.
             </p>
-            <div className="w-full bg-alix-slate-100 rounded-full h-2 overflow-hidden">
-              <div className="bg-alix-violet-600 h-full w-2/3 animate-pulse" />
+            <div className="p-4 rounded-xl bg-white border border-alix-slate-200 shadow-sm text-xs text-alix-slate-600">
+              Selected: <strong className="text-alix-indigo">Option {String.fromCharCode(65 + (selectedIndex ?? 0))}</strong>
             </div>
           </div>
         )}
 
-        {/* Phase: Score Result with Celebrations */}
+        {/* Phase: Score Result Screen */}
         {phase === 'score' && (
-          <ScorePopup
-            isCorrect={selectedIndex === sampleQuestion.correctIndex}
-            basePoints={1000}
-            speedBonus={280}
-            streak={streak}
-            rank={2}
-            onNext={() => setPhase('leaderboard')}
-          />
+          <div className="text-center max-w-md mx-auto space-y-5 animate-scale-in py-8">
+            <div
+              className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-inner ${
+                isLastAnswerCorrect
+                  ? 'bg-emerald-100 text-emerald-600'
+                  : 'bg-rose-100 text-rose-600'
+              }`}
+            >
+              {isLastAnswerCorrect ? (
+                <CheckCircle2 className="w-8 h-8" />
+              ) : (
+                <Clock className="w-8 h-8" />
+              )}
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-heading font-extrabold text-alix-indigo">
+              {isLastAnswerCorrect ? 'Correct! Outstanding!' : 'Time Up / Question Closed'}
+            </h2>
+            <p className="text-xs text-alix-slate-500">
+              {isLastAnswerCorrect
+                ? `You earned points for this round! Streak is now ${streak}x.`
+                : 'Review the correct answer on the lecture hall screen.'}
+            </p>
+            <div className="p-4 rounded-2xl bg-white border border-alix-slate-200 shadow-sm">
+              <span className="text-xs font-bold uppercase tracking-wider text-alix-slate-400">
+                Current Total Score
+              </span>
+              <div className="text-3xl font-mono font-black text-alix-indigo mt-1">
+                {score.toLocaleString()} pts
+              </div>
+            </div>
+          </div>
         )}
 
-        {/* Phase: Leaderboard */}
+        {/* Phase: Final Leaderboard */}
         {phase === 'leaderboard' && (
-          <div className="space-y-6 animate-fade-in max-w-xl mx-auto w-full">
-            <Leaderboard
-              entries={sampleLeaderboard}
-              title="Classroom Standings"
-              highlightPlayerId="self"
-            />
-            <div className="text-center">
-              <button
-                onClick={() => {
-                  setPhase('answering');
-                  setSelectedIndex(null);
-                  setSecondsRemaining(30);
-                }}
-                className="py-3 px-6 rounded-xl bg-alix-violet-600 hover:bg-alix-violet-700 text-white font-bold text-sm transition-all shadow-sm cursor-pointer"
-              >
-                Next Question Preview →
-              </button>
+          <div className="text-center max-w-md mx-auto space-y-5 animate-fade-in py-8">
+            <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto shadow-inner">
+              <Trophy className="w-8 h-8" />
             </div>
+            <h2 className="text-2xl sm:text-3xl font-heading font-extrabold text-alix-indigo">
+              Round Complete!
+            </h2>
+            <p className="text-xs text-alix-slate-500">
+              Final score: <strong className="text-alix-indigo font-mono">{score} pts</strong>
+            </p>
+            <Link
+              to="/join"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-alix-violet-600 hover:bg-alix-violet-700 text-white font-bold text-xs shadow-sm transition-all"
+            >
+              <span>Join Another Session</span>
+            </Link>
           </div>
         )}
       </main>
 
-      {/* Live Floating Reaction Dock */}
-      <ReactionStream showBar={true} />
-
-      {/* Bottom status bar */}
-      <footer className="p-3 bg-white border-t border-alix-slate-200 text-center text-xs text-alix-slate-400">
-        ALIX – Where Every Learner Participates.
-      </footer>
+      {/* Floating Reaction Stream */}
+      <ReactionStream />
     </div>
   );
 };
