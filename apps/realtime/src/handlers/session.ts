@@ -36,6 +36,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
 
     let quizTitle = 'Interactive Classroom Quiz';
     let totalQuestions = 0;
+    let attachedRosterId = (payload as any).rosterId;
 
     // Load Quiz from MongoDB if valid ObjectId
     try {
@@ -44,6 +45,9 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
         if (dbQuiz) {
           quizTitle = dbQuiz.title;
           totalQuestions = dbQuiz.questions.length;
+          if (!attachedRosterId && dbQuiz.rosterId) {
+            attachedRosterId = dbQuiz.rosterId;
+          }
 
           const adaptedQuiz: SharedQuiz = {
             id: dbQuiz._id.toString(),
@@ -84,6 +88,9 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
           pin: session.code,
           quizId: mongoose.isValidObjectId(payload.quizId) ? payload.quizId : undefined,
           teacherId: mongoose.isValidObjectId(payload.hostId) ? payload.hostId : undefined,
+          rosterId: mongoose.isValidObjectId(attachedRosterId) ? attachedRosterId : undefined,
+          requireRoster: !!attachedRosterId,
+          isLocked: false,
           status: 'waiting',
           participants: [],
           responses: [],
@@ -112,6 +119,45 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       return;
     }
 
+    const sessionPin = payload.code.toUpperCase();
+    const rollNo = (payload as any).rollNo ? String((payload as any).rollNo).trim().toUpperCase() : '';
+
+    // Anti-Proxy validation against MongoDB session document
+    try {
+      const sessionDoc = await GameSessionModel.findOne({ pin: sessionPin });
+      if (sessionDoc?.isLocked) {
+        socket.emit('error', {
+          message: 'The instructor has locked this session. No new joiners are permitted.',
+          code: 'SESSION_LOCKED',
+        });
+        return;
+      }
+
+      if (sessionDoc?.requireRoster && sessionDoc?.rosterId) {
+        if (!rollNo) {
+          socket.emit('error', {
+            message: 'An institutional Roll Number is required to join this course section.',
+            code: 'ROLL_NO_REQUIRED',
+          });
+          return;
+        }
+
+        // Prevent duplicate login on second device
+        const alreadyInSession = sessionDoc.participants.some(
+          (p: any) => p.rollNo?.toUpperCase() === rollNo
+        );
+        if (alreadyInSession) {
+          socket.emit('error', {
+            message: `Roll Number ${rollNo} is already taking this quiz on another device.`,
+            code: 'DUPLICATE_ROLL_NO',
+          });
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('[ALIX Realtime] Anti-proxy verification check failed:', err);
+    }
+
     if (session.status !== SessionStatus.WAITING && !session.settings.allowLateJoin) {
       socket.emit('error', { message: 'Session already in progress', code: 'SESSION_STARTED' });
       return;
@@ -134,15 +180,16 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     socket.data.role = 'player';
     socket.data.playerId = player.id;
 
-    // Record participant in MongoDB
+    // Record participant with rollNo in MongoDB
     try {
       await GameSessionModel.findOneAndUpdate(
-        { pin: payload.code.toUpperCase() },
+        { pin: sessionPin },
         {
           $push: {
             participants: {
               socketId: socket.id,
               name: payload.playerName,
+              rollNo: rollNo || undefined,
               avatarId: (payload as any).avatarId || 'fox',
               score: 0,
               streak: 0,
@@ -160,7 +207,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       playerCount: session.players.length,
     });
 
-    console.log(`[ALIX] Player "${player.name}" joined session ${session.code}`);
+    console.log(`[ALIX] Player "${player.name}" (${rollNo || 'Guest'}) joined session ${session.code}`);
   });
 
   // ─── Start Game ───────────────────────────────────────────────────────

@@ -11,6 +11,7 @@ export interface IQuestion {
 
 export interface IQuiz extends Document {
   teacherId: mongoose.Types.ObjectId;
+  rosterId?: mongoose.Types.ObjectId;
   title: string;
   subject: string;
   courseCode: string;
@@ -36,6 +37,7 @@ const QuestionSchema = new Schema<IQuestion>(
 const QuizSchema = new Schema<IQuiz>(
   {
     teacherId: { type: Schema.Types.ObjectId, ref: 'Teacher', required: true },
+    rosterId: { type: Schema.Types.ObjectId, ref: 'Roster' },
     title: { type: String, required: true, trim: true },
     subject: { type: String, required: true, trim: true },
     courseCode: { type: String, default: '', trim: true },

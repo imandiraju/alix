@@ -14,10 +14,13 @@ import {
   Sparkles,
   QrCode,
   CheckCircle2,
-  Share2,
-  BookOpen,
-  ArrowLeft,
+  Lock,
+  Unlock,
+  Download,
+  ShieldCheck,
   ChevronRight,
+  Clock,
+  RotateCw,
 } from 'lucide-react';
 
 interface QuizQuestion {
@@ -37,6 +40,7 @@ export const HostPage: React.FC = () => {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [quizTitle, setQuizTitle] = useState('Interactive Classroom Quiz');
   const [subject, setSubject] = useState('Active Learning');
+  const [courseCode, setCourseCode] = useState('');
   const [questions, setQuestions] = useState<QuizQuestion[]>([
     {
       id: 'q-1',
@@ -56,11 +60,24 @@ export const HostPage: React.FC = () => {
   const [isQRExpanded, setIsQRExpanded] = useState(false);
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
   const [players, setPlayers] = useState<any[]>([]);
-  const [answerDistribution, setAnswerDistribution] = useState<number[]>([0, 0, 0, 0]);
 
-  // Compute live join URL (e.g. https://alix-alp.vercel.app/join?pin=842915)
+  // Anti-Proxy Classroom Protection States
+  const [isLocked, setIsLocked] = useState(false);
+  const [rollingToken, setRollingToken] = useState<string>(
+    Math.floor(Date.now() / 15000).toString(36)
+  );
+
+  // Rotate dynamic rolling QR token every 15 seconds to invalidate forwarded snapshots
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRollingToken(Math.floor(Date.now() / 15000).toString(36));
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Compute live join URL with dynamic anti-proxy token
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://alix-alp.vercel.app';
-  const joinUrl = `${origin}/join?pin=${pin}`;
+  const joinUrl = `${origin}/join?pin=${pin}&t=${rollingToken}`;
 
   // 1. Fetch real quiz from MongoDB if sessionId is provided
   useEffect(() => {
@@ -74,6 +91,7 @@ export const HostPage: React.FC = () => {
           if (data.quiz) {
             setQuizTitle(data.quiz.title);
             setSubject(data.quiz.subject || 'Classroom Module');
+            setCourseCode(data.quiz.courseCode || '');
             if (data.quiz.questions && data.quiz.questions.length > 0) {
               setQuestions(data.quiz.questions);
               setTimer(data.quiz.questions[0].timeLimit || 30);
@@ -95,7 +113,6 @@ export const HostPage: React.FC = () => {
 
       const onConnect = () => {
         setIsRealtimeActive(true);
-        // Request room session creation from server
         socket.emit('create-session', {
           quizId: sessionId || 'default',
           hostId: user?.id || 'host-teacher',
@@ -197,13 +214,49 @@ export const HostPage: React.FC = () => {
     }
   };
 
-  // Mock responses for live visual chart simulation if needed
-  const optCounts = [
-    answersSubmitted > 0 ? Math.floor(answersSubmitted * 0.1) : 0,
-    answersSubmitted > 0 ? Math.ceil(answersSubmitted * 0.7) : 0,
-    answersSubmitted > 0 ? Math.floor(answersSubmitted * 0.1) : 0,
-    answersSubmitted > 0 ? Math.floor(answersSubmitted * 0.1) : 0,
-  ];
+  // Anti-Proxy Shield: Close Room Doors to Outsiders
+  const handleToggleLock = async () => {
+    try {
+      const nextLocked = !isLocked;
+      const res = await fetch(`${REALTIME_URL}/api/sessions/${pin}/lock`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locked: nextLocked }),
+      });
+      if (res.ok) {
+        setIsLocked(nextLocked);
+      }
+    } catch (err) {
+      console.error('Failed to toggle lock:', err);
+    }
+  };
+
+  // Export Official Class Attendance to CSV
+  const handleExportAttendance = async () => {
+    try {
+      const res = await fetch(`${REALTIME_URL}/api/sessions/${pin}/attendance`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.attendance) return;
+
+      let csv = 'Roll No,Student Name,Email,Section,Status,Score,Joined At\n';
+      data.attendance.forEach((a: any) => {
+        csv += `${a.rollNo},"${a.name}",${a.email},${a.section},${a.status},${a.score},"${
+          a.joinedAt ? new Date(a.joinedAt).toLocaleTimeString() : 'N/A'
+        }"\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `ALIX_Attendance_${courseCode || pin}_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to export attendance:', err);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 text-white flex flex-col justify-between selection:bg-alix-violet-500 selection:text-white relative overflow-hidden select-none">
@@ -227,7 +280,7 @@ export const HostPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Center: Interactive Projector QR Button + PIN */}
+        {/* Center: Dynamic Projector QR Button + PIN */}
         <div className="flex items-center gap-2 sm:gap-4 bg-alix-indigo/70 px-3 sm:px-5 py-2 rounded-2xl border border-alix-violet-500/40 shadow-inner">
           <button
             type="button"
@@ -252,8 +305,43 @@ export const HostPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Live Audience Counter & Controls */}
+        {/* Live Audience Counter & Anti-Proxy Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Anti-Proxy Lock Button */}
+          <button
+            type="button"
+            onClick={handleToggleLock}
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              isLocked
+                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30'
+                : 'bg-slate-800 text-slate-300 border border-slate-700 hover:text-white'
+            }`}
+            title={isLocked ? 'Room Locked (Click to allow joins)' : 'Click to lock room from latecomers'}
+          >
+            {isLocked ? (
+              <>
+                <Lock className="w-3.5 h-3.5 text-rose-400" />
+                <span className="hidden md:inline">Locked</span>
+              </>
+            ) : (
+              <>
+                <Unlock className="w-3.5 h-3.5 text-slate-400" />
+                <span className="hidden md:inline">Lock Room</span>
+              </>
+            )}
+          </button>
+
+          {/* Export Attendance CSV */}
+          <button
+            type="button"
+            onClick={handleExportAttendance}
+            className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Export Attendance Roster to CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-alix-cyan-400" />
+            <span className="hidden md:inline">Attendance</span>
+          </button>
+
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800 border border-slate-700">
             <Users className="w-4 h-4 text-alix-cyan-400" />
             <span className="font-mono text-sm font-bold text-white">{totalLearners}</span>
@@ -294,7 +382,9 @@ export const HostPage: React.FC = () => {
               )}
               {stage === 'leaderboard' && (
                 <>
-                  <span>{currentQuestionIdx + 1 < questions.length ? 'Next Question' : 'Victory Podium!'}</span>
+                  <span>
+                    {currentQuestionIdx + 1 < questions.length ? 'Next Question' : 'Victory Podium!'}
+                  </span>
                   <ChevronRight className="w-4 h-4" />
                 </>
               )}
@@ -316,7 +406,7 @@ export const HostPage: React.FC = () => {
           <div className="text-center max-w-2xl mx-auto space-y-6 animate-fade-in">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-alix-violet-500/20 border border-alix-violet-500/30 text-xs font-bold text-alix-cyan-300">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>{subject}</span>
+              <span>{subject} {courseCode ? `• ${courseCode}` : ''}</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-heading font-extrabold text-white">
@@ -326,8 +416,14 @@ export const HostPage: React.FC = () => {
             <p className="text-slate-300 text-sm sm:text-base">
               Students, join on your smartphone or laptop by entering PIN{' '}
               <strong className="text-alix-cyan-400 font-mono text-lg">{pin}</strong> at{' '}
-              <span className="text-white underline underline-offset-4">{joinUrl}</span>.
+              <span className="text-white underline underline-offset-4">{origin}/join</span>.
             </p>
+
+            {/* Anti-Proxy Rolling Security Badge */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-slate-300">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Anti-Proxy Protection Active: Rolling QR & Verified Roster</span>
+            </div>
 
             {/* Waiting for players grid */}
             <div className="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 min-h-[160px] flex flex-col justify-center items-center">
@@ -341,23 +437,28 @@ export const HostPage: React.FC = () => {
                   {players.map((p, idx) => (
                     <span
                       key={idx}
-                      className="px-3 py-1 rounded-full bg-alix-violet-600/30 border border-alix-violet-500/40 text-alix-cyan-300 text-xs font-bold animate-scale-in"
+                      className="px-3 py-1 rounded-full bg-alix-violet-600/30 border border-alix-violet-500/40 text-alix-cyan-300 text-xs font-bold animate-scale-in flex items-center gap-1.5"
                     >
-                      {p.name}
+                      <span>{p.name}</span>
+                      {p.rollNo && (
+                        <span className="text-[10px] text-slate-400 font-mono">({p.rollNo})</span>
+                      )}
                     </span>
                   ))}
                 </div>
               )}
             </div>
 
-            <button
-              type="button"
-              onClick={handleStartSession}
-              className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-alix-violet-600 to-alix-indigo hover:from-alix-violet-500 hover:to-alix-indigo text-white font-bold text-base shadow-alix-lg hover:shadow-alix-glow transition-all inline-flex items-center gap-2 cursor-pointer"
-            >
-              <span>Launch First Question ({questions.length} Total)</span>
-              <ArrowRight className="w-5 h-5" />
-            </button>
+            <div className="flex items-center justify-center gap-4">
+              <button
+                type="button"
+                onClick={handleStartSession}
+                className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-alix-violet-600 to-alix-indigo hover:from-alix-violet-500 hover:to-alix-indigo text-white font-bold text-base shadow-alix-lg hover:shadow-alix-glow transition-all inline-flex items-center gap-2 cursor-pointer"
+              >
+                <span>Launch First Question ({questions.length} Total)</span>
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         )}
 
@@ -440,7 +541,6 @@ export const HostPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Bars for options */}
             <div className="space-y-4">
               {currentQ.options.map((opt, idx) => {
                 const isCorrect = idx === currentQ.correctIndex;
@@ -497,7 +597,12 @@ export const HostPage: React.FC = () => {
                       <span className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center font-bold text-xs">
                         {idx + 1}
                       </span>
-                      <span className="font-bold text-white text-sm">{p.name}</span>
+                      <div>
+                        <span className="font-bold text-white text-sm">{p.name}</span>
+                        {p.rollNo && (
+                          <span className="text-xs text-slate-400 font-mono ml-2">({p.rollNo})</span>
+                        )}
+                      </div>
                     </div>
                     <span className="font-mono text-sm font-bold text-alix-cyan-400">
                       {p.score || 1000} pts
@@ -509,7 +614,7 @@ export const HostPage: React.FC = () => {
           </div>
         )}
 
-        {/* Stage 4: Victory Podium */}
+        {/* Stage 4: Victory Podium & Export */}
         {stage === 'victory' && (
           <div className="text-center max-w-2xl mx-auto space-y-6 animate-scale-in">
             <div className="w-16 h-16 rounded-2xl bg-amber-400/20 text-amber-300 flex items-center justify-center mx-auto mb-2 border border-amber-400/30">
@@ -519,15 +624,27 @@ export const HostPage: React.FC = () => {
               Session Concluded!
             </h1>
             <p className="text-slate-300 text-sm sm:text-base">
-              Great engagement! Responses and student participation have been logged to your ALIX database.
+              Great engagement! Responses and student participation have been securely logged to your database.
             </p>
-            <Link
-              to="/dashboard"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-alix-violet-600 hover:bg-alix-violet-500 text-white font-bold text-sm shadow-alix-md transition-all cursor-pointer"
-            >
-              <span>Return to Dashboard</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleExportAttendance}
+                className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-alix-md transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>Export Attendance Sheet (CSV)</span>
+              </button>
+
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-alix-violet-600 hover:bg-alix-violet-500 text-white font-bold text-sm shadow-alix-md transition-all cursor-pointer"
+              >
+                <span>Return to Dashboard</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
         )}
       </main>

@@ -12,6 +12,7 @@ import { connectDatabase, lastDbError } from './db.js';
 import authRouter from './routes/auth.js';
 import quizRouter from './routes/quizzes.js';
 import sessionRouter from './routes/sessions.js';
+import rosterRouter from './routes/rosters.js';
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.use(express.json());
 app.use('/api/auth', authRouter);
 app.use('/api/quizzes', quizRouter);
 app.use('/api/sessions', sessionRouter);
+app.use('/api/rosters', rosterRouter);
 
 // ─── Socket.IO ──────────────────────────────────────────────────────────────
 

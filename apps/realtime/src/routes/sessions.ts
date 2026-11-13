@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { GameSessionModel } from '../models/GameSession.js';
 import { Quiz } from '../models/Quiz.js';
+import { Roster, IRosterStudent } from '../models/Roster.js';
 import { sessionManager } from '../handlers/session.js';
 import { QuestionType, DEFAULT_QUIZ_SETTINGS, type Quiz as SharedQuiz } from '@alix/shared';
 
@@ -56,7 +57,7 @@ router.get('/:pin', async (req: Request, res: Response) => {
     const pin = req.params.pin?.toUpperCase();
     const memorySession = sessionManager.findByCode(pin);
 
-    const doc = await GameSessionModel.findOne({ pin }).populate('quizId');
+    const doc = await GameSessionModel.findOne({ pin }).populate('quizId').populate('rosterId');
 
     if (!memorySession && !doc) {
       return res.status(404).json({ error: 'Session not found or PIN is invalid' });
@@ -65,6 +66,14 @@ router.get('/:pin', async (req: Request, res: Response) => {
     const quizTitle = (doc?.quizId as any)?.title || memorySession?.quiz?.title || 'ALIX Live Session';
     const playerCount = memorySession ? memorySession.players.length : (doc?.participants?.length || 0);
     const status = memorySession ? memorySession.status : (doc?.status || 'waiting');
+    const isLocked = doc?.isLocked || false;
+    const requireRoster = doc?.requireRoster || false;
+    const rosterInfo = doc?.rosterId
+      ? {
+          courseCode: (doc.rosterId as any).courseCode,
+          section: (doc.rosterId as any).section,
+        }
+      : null;
 
     return res.json({
       success: true,
@@ -73,6 +82,9 @@ router.get('/:pin', async (req: Request, res: Response) => {
         quizTitle,
         playerCount,
         status,
+        isLocked,
+        requireRoster,
+        roster: rosterInfo,
       },
     });
   } catch (err: any) {
@@ -80,11 +92,109 @@ router.get('/:pin', async (req: Request, res: Response) => {
   }
 });
 
+// ─── Toggle Session Lock (Anti-Proxy Shield: Close Room to Outsiders) ────────
+
+router.patch('/:pin/lock', async (req: Request, res: Response) => {
+  try {
+    const pin = req.params.pin?.toUpperCase();
+    const { locked } = req.body;
+
+    const session = await GameSessionModel.findOneAndUpdate(
+      { pin },
+      { isLocked: !!locked },
+      { new: true }
+    );
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    return res.json({
+      success: true,
+      isLocked: session.isLocked,
+      message: session.isLocked ? 'Classroom locked. No new joiners permitted.' : 'Classroom unlocked.',
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Failed to update lock' });
+  }
+});
+
+// ─── Export Official Attendance & Scores Roster ──────────────────────────────
+
+router.get('/:pin/attendance', async (req: Request, res: Response) => {
+  try {
+    const pin = req.params.pin?.toUpperCase();
+    const session = await GameSessionModel.findOne({ pin })
+      .populate('quizId')
+      .populate('rosterId');
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const participantsMap = new Map<string, any>();
+    session.participants.forEach((p: any) => {
+      const key = (p.rollNo || p.name).toUpperCase();
+      participantsMap.set(key, p);
+    });
+
+    let attendanceRecords: any[] = [];
+    const rosterDoc = session.rosterId as any;
+
+    if (rosterDoc && Array.isArray(rosterDoc.students) && rosterDoc.students.length > 0) {
+      // Cross-reference against official class roster
+      attendanceRecords = rosterDoc.students.map((student: IRosterStudent) => {
+        const participant = participantsMap.get(student.rollNo.toUpperCase());
+        const isPresent = !!participant;
+
+        return {
+          rollNo: student.rollNo,
+          name: student.name,
+          email: student.email,
+          section: student.section || rosterDoc.section,
+          status: isPresent ? 'PRESENT' : 'ABSENT',
+          score: participant ? participant.score : 0,
+          joinedAt: participant ? participant.joinedAt : null,
+        };
+      });
+    } else {
+      // No roster attached: list all participants who joined
+      attendanceRecords = session.participants.map((p: any) => ({
+        rollNo: p.rollNo || 'N/A',
+        name: p.name,
+        email: p.email || 'N/A',
+        section: 'N/A',
+        status: 'PRESENT',
+        score: p.score,
+        joinedAt: p.joinedAt,
+      }));
+    }
+
+    const totalEnrolled = rosterDoc?.students?.length || session.participants.length;
+    const totalPresent = session.participants.length;
+    const totalAbsent = Math.max(0, totalEnrolled - totalPresent);
+
+    return res.json({
+      success: true,
+      pin,
+      courseCode: rosterDoc?.courseCode || 'Interactive Session',
+      section: rosterDoc?.section || 'Default',
+      totalEnrolled,
+      totalPresent,
+      totalAbsent,
+      attendance: attendanceRecords,
+    });
+  } catch (err: any) {
+    console.error('[Attendance Export Error]:', err);
+    return res.status(500).json({ error: err.message || 'Failed to export attendance' });
+  }
+});
+
 // ─── Create Session via REST ─────────────────────────────────────────────────
 
 router.post('/create', async (req: Request, res: Response) => {
   try {
-    const { quizId, teacherId } = req.body;
+    const { quizId, teacherId, rosterId, requireRoster } = req.body;
 
     const session = sessionManager.createSession(quizId || 'default', teacherId || 'host');
 
@@ -125,6 +235,9 @@ router.post('/create', async (req: Request, res: Response) => {
         pin: session.code,
         quizId: mongoose.isValidObjectId(quizId) ? quizId : undefined,
         teacherId: mongoose.isValidObjectId(teacherId) ? teacherId : undefined,
+        rosterId: mongoose.isValidObjectId(rosterId) ? rosterId : undefined,
+        requireRoster: !!requireRoster,
+        isLocked: false,
         status: 'waiting',
         participants: [],
         responses: [],

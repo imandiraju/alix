@@ -18,6 +18,7 @@ import {
   LayoutDashboard,
   AlertCircle,
   HelpCircle,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface QuestionDraft {
@@ -37,6 +38,19 @@ export const CreatePage: React.FC = () => {
   const [subject, setSubject] = useState(user?.department || '');
   const [courseCode, setCourseCode] = useState('');
   const [description, setDescription] = useState('');
+  const [rosters, setRosters] = useState<any[]>([]);
+  const [selectedRosterId, setSelectedRosterId] = useState<string>('');
+
+  React.useEffect(() => {
+    if (user?.id) {
+      fetch(`${REALTIME_URL}/api/rosters?teacherId=${user.id}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.rosters) setRosters(d.rosters);
+        })
+        .catch(() => {});
+    }
+  }, [user]);
 
   const [questions, setQuestions] = useState<QuestionDraft[]>([
     {
@@ -132,6 +146,7 @@ export const CreatePage: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           teacherId: user?.id,
+          rosterId: selectedRosterId || undefined,
           title: title.trim(),
           subject: subject.trim(),
           courseCode: courseCode.trim(),
@@ -242,6 +257,38 @@ export const CreatePage: React.FC = () => {
                   placeholder="e.g. CS 301 - Sec A"
                 />
               </div>
+            </div>
+
+            {/* Anti-Proxy Roster Selector */}
+            <div className="pt-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Enforce Section Roster (Anti-Proxy Whitelist)</span>
+              </label>
+              <select
+                value={selectedRosterId}
+                onChange={(e) => {
+                  setSelectedRosterId(e.target.value);
+                  const matched = rosters.find((r) => r._id === e.target.value);
+                  if (matched) {
+                    if (!courseCode) setCourseCode(matched.courseCode);
+                    if (!subject) setSubject(matched.courseName);
+                  }
+                }}
+                className="w-full text-xs font-semibold text-alix-indigo border-b border-alix-slate-200 focus:border-emerald-600 outline-none pb-1 bg-transparent cursor-pointer"
+              >
+                <option value="">None (Open to all students with PIN)</option>
+                {rosters.map((r) => (
+                  <option key={r._id} value={r._id}>
+                    {r.courseCode} - {r.section} ({r.studentCount} Students Whitelisted)
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-alix-slate-400 mt-1">
+                {selectedRosterId
+                  ? '🔒 Protected: Only students with enrolled Roll Numbers can enter this session.'
+                  : 'Students can join by entering any display name.'}
+              </p>
             </div>
 
             <div>

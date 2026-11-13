@@ -21,6 +21,10 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
+  ShieldCheck,
+  UploadCloud,
+  FileSpreadsheet,
+  GraduationCap,
 } from 'lucide-react';
 
 interface QuizItem {
@@ -30,6 +34,15 @@ interface QuizItem {
   courseCode?: string;
   description?: string;
   questions: any[];
+  createdAt: string;
+}
+
+interface RosterItem {
+  _id: string;
+  courseCode: string;
+  courseName: string;
+  section: string;
+  studentCount: number;
   createdAt: string;
 }
 
@@ -44,14 +57,25 @@ export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
 
   const [quizzes, setQuizzes] = useState<QuizItem[]>([]);
+  const [rosters, setRosters] = useState<RosterItem[]>([]);
   const [stats, setStats] = useState<SessionStats>({
     totalSessions: 0,
     totalLearners: 0,
     avgParticipation: 0,
   });
+
   const [isLoading, setIsLoading] = useState(true);
   const [isLaunchModalOpen, setIsLaunchModalOpen] = useState(false);
+  const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Roster Bulk Upload Form
+  const [courseCode, setCourseCode] = useState('');
+  const [courseName, setCourseName] = useState('');
+  const [section, setSection] = useState('Section A');
+  const [rawRosterText, setRawRosterText] = useState('');
+  const [isSavingRoster, setIsSavingRoster] = useState(false);
+  const [rosterMessage, setRosterMessage] = useState<string | null>(null);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -65,7 +89,14 @@ export const DashboardPage: React.FC = () => {
         setQuizzes(quizData.quizzes || []);
       }
 
-      // 2. Fetch real session stats from MongoDB
+      // 2. Fetch rosters from MongoDB
+      const rosterRes = await fetch(`${REALTIME_URL}/api/rosters${teacherParam}`);
+      if (rosterRes.ok) {
+        const rosterData = await rosterRes.json();
+        setRosters(rosterData.rosters || []);
+      }
+
+      // 3. Fetch real session stats from MongoDB
       const statsRes = await fetch(`${REALTIME_URL}/api/sessions/stats${teacherParam}`);
       if (statsRes.ok) {
         const statsData = await statsRes.json();
@@ -104,6 +135,65 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
+  const handleDeleteRoster = async (rosterId: string) => {
+    if (!window.confirm('Delete this student roster?')) return;
+    try {
+      const res = await fetch(`${REALTIME_URL}/api/rosters/${rosterId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setRosters((prev) => prev.filter((r) => r._id !== rosterId));
+      }
+    } catch (err) {
+      console.error('Failed to delete roster:', err);
+    }
+  };
+
+  const handleSaveRoster = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRosterMessage(null);
+
+    if (!courseCode.trim() || !courseName.trim() || !section.trim()) {
+      setRosterMessage('Please fill Course Code, Course Name, and Section.');
+      return;
+    }
+
+    if (!rawRosterText.trim()) {
+      setRosterMessage('Please paste or enter at least one student record (Roll No, Name).');
+      return;
+    }
+
+    setIsSavingRoster(true);
+    try {
+      const res = await fetch(`${REALTIME_URL}/api/rosters`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teacherId: user?.id,
+          courseCode: courseCode.trim(),
+          courseName: courseName.trim(),
+          section: section.trim(),
+          rawCsv: rawRosterText,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setIsRosterModalOpen(false);
+        setRawRosterText('');
+        setCourseCode('');
+        setCourseName('');
+        fetchDashboardData();
+      } else {
+        setRosterMessage(data.error || 'Failed to save roster.');
+      }
+    } catch (err: any) {
+      setRosterMessage(err.message || 'Network error.');
+    } finally {
+      setIsSavingRoster(false);
+    }
+  };
+
   const handleStartLiveClick = () => {
     if (quizzes.length === 0) {
       navigate('/create');
@@ -113,6 +203,12 @@ export const DashboardPage: React.FC = () => {
       setIsLaunchModalOpen(true);
     }
   };
+
+  // Preview count of students in text area
+  const parsedStudentCount = rawRosterText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !/roll\s*(no|number)?/i.test(l)).length;
 
   return (
     <div className="min-h-screen flex flex-col bg-alix-slate-50">
@@ -132,7 +228,7 @@ export const DashboardPage: React.FC = () => {
               Welcome{user?.name ? `, ${user.name}` : ' to ALIX'}
             </h1>
             <p className="text-alix-slate-600 mt-1 text-sm sm:text-base">
-              Manage your interactive classroom activities, launch live sessions, and track learning metrics.
+              Manage your interactive classroom activities, student rosters, launch live sessions, and track learning metrics.
             </p>
           </div>
 
@@ -148,7 +244,9 @@ export const DashboardPage: React.FC = () => {
                   {quizzes.length}
                 </h3>
                 <span className="text-xs font-semibold text-emerald-600 inline-flex items-center mt-1">
-                  {quizzes.length > 0 ? `${quizzes.reduce((acc, q) => acc + (q.questions?.length || 0), 0)} questions drafted` : 'Ready to draft'}
+                  {quizzes.length > 0
+                    ? `${quizzes.reduce((acc, q) => acc + (q.questions?.length || 0), 0)} questions drafted`
+                    : 'Ready to draft'}
                 </span>
               </div>
               <div className="w-12 h-12 rounded-xl bg-alix-violet-50 text-alix-violet-600 flex items-center justify-center font-bold">
@@ -156,7 +254,25 @@ export const DashboardPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Active Sessions */}
+            {/* Enrolled Students / Rosters */}
+            <div className="p-5 rounded-2xl bg-white border border-alix-slate-200 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-alix-slate-400">
+                  Enrolled Students (Rosters)
+                </p>
+                <h3 className="text-2xl font-heading font-extrabold text-alix-indigo mt-1">
+                  {rosters.reduce((acc, r) => acc + (r.studentCount || 0), 0)}
+                </h3>
+                <span className="text-xs font-semibold text-alix-cyan-600 inline-flex items-center mt-1">
+                  {rosters.length > 0 ? `${rosters.length} sections registered` : 'No rosters uploaded'}
+                </span>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-alix-cyan-50 text-alix-cyan-600 flex items-center justify-center font-bold">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+            </div>
+
+            {/* Active Sessions Held */}
             <div className="p-5 rounded-2xl bg-white border border-alix-slate-200 shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-alix-slate-400">
@@ -165,26 +281,8 @@ export const DashboardPage: React.FC = () => {
                 <h3 className="text-2xl font-heading font-extrabold text-alix-indigo mt-1">
                   {stats.totalSessions}
                 </h3>
-                <span className="text-xs font-semibold text-alix-cyan-600 inline-flex items-center mt-1">
-                  {stats.totalSessions > 0 ? 'Live room logs synced' : 'No active sessions yet'}
-                </span>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-alix-cyan-50 text-alix-cyan-600 flex items-center justify-center font-bold">
-                <Play className="w-6 h-6 fill-current" />
-              </div>
-            </div>
-
-            {/* Total Learners Engaged */}
-            <div className="p-5 rounded-2xl bg-white border border-alix-slate-200 shadow-sm flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-alix-slate-400">
-                  Learners Engaged
-                </p>
-                <h3 className="text-2xl font-heading font-extrabold text-alix-indigo mt-1">
-                  {stats.totalLearners}
-                </h3>
                 <span className="text-xs font-semibold text-emerald-600 inline-flex items-center mt-1">
-                  {stats.avgParticipation > 0 ? `${stats.avgParticipation}% participation rate` : 'Auditorium ready'}
+                  {stats.totalLearners} attendances logged
                 </span>
               </div>
               <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
@@ -194,50 +292,148 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {/* Quick Actions Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <button
               type="button"
               onClick={handleStartLiveClick}
-              className="p-6 rounded-2xl bg-gradient-to-r from-alix-indigo to-alix-violet-900 text-white shadow-alix-md hover:shadow-alix-glow transition-all flex items-center justify-between group text-left cursor-pointer"
+              className="p-5 rounded-2xl bg-gradient-to-r from-alix-indigo to-alix-violet-900 text-white shadow-alix-md hover:shadow-alix-glow transition-all flex items-center justify-between group text-left cursor-pointer"
             >
               <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-semibold text-alix-cyan-300">
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-semibold text-alix-cyan-300">
                   <Play className="w-3 h-3 fill-current" />
                   <span>ALIX Live</span>
                 </div>
-                <h3 className="text-xl font-bold font-heading">Start Live Session</h3>
-                <p className="text-xs text-alix-slate-200">
-                  {quizzes.length > 0
-                    ? 'Generate auditorium PIN and project live questions.'
-                    : 'Create a quiz to generate an auditorium room PIN.'}
+                <h3 className="text-lg font-bold font-heading">Start Session</h3>
+                <p className="text-[11px] text-alix-slate-200">
+                  Project live questions to classroom.
                 </p>
               </div>
-              <div className="w-10 h-10 rounded-full bg-white/10 group-hover:bg-white/20 flex items-center justify-center transition-colors shrink-0">
-                <ArrowUpRight className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 rounded-full bg-white/10 group-hover:bg-white/20 flex items-center justify-center transition-colors shrink-0">
+                <ArrowUpRight className="w-4 h-4 text-white" />
               </div>
             </button>
 
             <Link
               to="/create"
-              className="p-6 rounded-2xl bg-white border border-alix-slate-200 hover:border-alix-violet-400 shadow-sm transition-all flex items-center justify-between group"
+              className="p-5 rounded-2xl bg-white border border-alix-slate-200 hover:border-alix-violet-400 shadow-sm transition-all flex items-center justify-between group"
             >
               <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-alix-violet-100 text-xs font-semibold text-alix-violet-700">
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-alix-violet-100 text-[10px] font-semibold text-alix-violet-700">
                   <PlusCircle className="w-3 h-3" />
                   <span>ALIX Create</span>
                 </div>
-                <h3 className="text-xl font-bold font-heading text-alix-indigo">Create Activity</h3>
-                <p className="text-xs text-alix-slate-500">
-                  Draft questions, polls, and peer-learning sets for your subject.
+                <h3 className="text-lg font-bold font-heading text-alix-indigo">Create Activity</h3>
+                <p className="text-[11px] text-alix-slate-500">
+                  Draft questions and concept checks.
                 </p>
               </div>
-              <div className="w-10 h-10 rounded-full bg-alix-slate-100 group-hover:bg-alix-violet-100 flex items-center justify-center transition-colors shrink-0">
-                <ArrowUpRight className="w-5 h-5 text-alix-violet-600" />
+              <div className="w-9 h-9 rounded-full bg-alix-slate-100 group-hover:bg-alix-violet-100 flex items-center justify-center transition-colors shrink-0">
+                <ArrowUpRight className="w-4 h-4 text-alix-violet-600" />
               </div>
             </Link>
+
+            <button
+              type="button"
+              onClick={() => setIsRosterModalOpen(true)}
+              className="p-5 rounded-2xl bg-white border border-alix-slate-200 hover:border-emerald-400 shadow-sm transition-all flex items-center justify-between group text-left cursor-pointer"
+            >
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-[10px] font-semibold text-emerald-700 border border-emerald-200">
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>Anti-Proxy Protection</span>
+                </div>
+                <h3 className="text-lg font-bold font-heading text-alix-indigo">Upload Roster</h3>
+                <p className="text-[11px] text-alix-slate-500">
+                  Bulk upload Roll Nos to whitelist students.
+                </p>
+              </div>
+              <div className="w-9 h-9 rounded-full bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center transition-colors shrink-0">
+                <UploadCloud className="w-4 h-4 text-emerald-600" />
+              </div>
+            </button>
           </div>
 
-          {/* Activity Library Section */}
+          {/* Section: Class Rosters (Anti-Cheating Whitelist) */}
+          <section className="bg-white rounded-2xl border border-alix-slate-200 shadow-sm overflow-hidden mb-8">
+            <div className="p-6 border-b border-alix-slate-100 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-heading font-bold text-alix-indigo">
+                    Enrolled Class Rosters
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                    Anti-Proxy Enabled
+                  </span>
+                </div>
+                <p className="text-xs text-alix-slate-500 mt-0.5">
+                  Only students with verified Roll Numbers in these rosters can join your sessions.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsRosterModalOpen(true)}
+                className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>+ Upload Section Roster</span>
+              </button>
+            </div>
+
+            {rosters.length === 0 ? (
+              <div className="p-8 text-center text-alix-slate-500">
+                <GraduationCap className="w-10 h-10 text-alix-slate-300 mx-auto mb-2" />
+                <p className="text-sm font-semibold text-alix-indigo">No section rosters uploaded yet</p>
+                <p className="text-xs text-alix-slate-400 mt-1 mb-4">
+                  Upload your student Roll Numbers, Names, and Emails to prevent photo-sharing and proxy attendance.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsRosterModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all"
+                >
+                  Bulk Upload Roster
+                </button>
+              </div>
+            ) : (
+              <div className="divide-y divide-alix-slate-100">
+                {rosters.map((r) => (
+                  <div
+                    key={r._id}
+                    className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-alix-slate-50/70 transition-colors"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-alix-indigo text-white font-mono">
+                          {r.courseCode}
+                        </span>
+                        <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {r.section}
+                        </span>
+                        <span className="text-xs text-alix-slate-400">
+                          {r.studentCount} Verified Students
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-bold text-alix-indigo">
+                        {r.courseName}
+                      </h4>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteRoster(r._id)}
+                      className="p-2 rounded-lg text-alix-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                      title="Delete Roster"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Section: Activity Library */}
           <section className="bg-white rounded-2xl border border-alix-slate-200 shadow-sm overflow-hidden mb-8">
             <div className="p-6 border-b border-alix-slate-100 flex items-center justify-between">
               <div>
@@ -273,7 +469,7 @@ export const DashboardPage: React.FC = () => {
                   No activities created yet
                 </h3>
                 <p className="text-xs text-alix-slate-500 max-w-md mx-auto mt-1 mb-5">
-                  Welcome, {user?.name || 'Instructor'}! You do not have any saved activities yet. Draft your first interactive quiz or concept check to launch live classroom sessions.
+                  Welcome, {user?.name || 'Instructor'}! Draft your first interactive quiz or concept check to launch live classroom sessions.
                 </p>
                 <Link
                   to="/create"
@@ -296,7 +492,7 @@ export const DashboardPage: React.FC = () => {
                           {quiz.subject || 'Interactive Module'}
                         </span>
                         {quiz.courseCode && (
-                          <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-alix-cyan-50 text-alix-cyan-800 border border-alix-cyan-200">
+                          <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-alix-cyan-50 text-alix-cyan-800 border border-alix-cyan-200 font-mono">
                             {quiz.courseCode}
                           </span>
                         )}
@@ -342,6 +538,126 @@ export const DashboardPage: React.FC = () => {
         </main>
       </div>
 
+      {/* Modal: Bulk Upload Student Roster */}
+      {isRosterModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-xl bg-white rounded-3xl shadow-alix-xl border border-alix-slate-200 overflow-hidden animate-scale-in">
+            <div className="p-6 border-b border-alix-slate-100 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                  <h3 className="text-lg font-heading font-extrabold text-alix-indigo">
+                    Bulk Upload Student Roster
+                  </h3>
+                </div>
+                <p className="text-xs text-alix-slate-500 mt-0.5">
+                  Upload your class list so only authorized students can join your sessions.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRosterModalOpen(false)}
+                className="p-1.5 rounded-lg text-alix-slate-400 hover:text-alix-indigo hover:bg-alix-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRoster} className="p-6 space-y-4">
+              {rosterMessage && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                  <span>{rosterMessage}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
+                    Course Code *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={courseCode}
+                    onChange={(e) => setCourseCode(e.target.value)}
+                    placeholder="e.g. CS 301"
+                    className="w-full p-2.5 rounded-xl border border-alix-slate-300 text-sm font-bold text-alix-indigo outline-none uppercase"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
+                    Course Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={courseName}
+                    onChange={(e) => setCourseName(e.target.value)}
+                    placeholder="Distributed Systems"
+                    className="w-full p-2.5 rounded-xl border border-alix-slate-300 text-sm font-semibold text-alix-indigo outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
+                    Section / Batch *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={section}
+                    onChange={(e) => setSection(e.target.value)}
+                    placeholder="Section A"
+                    className="w-full p-2.5 rounded-xl border border-alix-slate-300 text-sm font-semibold text-alix-indigo outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500">
+                    Paste Student Data (CSV, Excel rows, or Tab-separated)
+                  </label>
+                  {parsedStudentCount > 0 && (
+                    <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      {parsedStudentCount} students recognized
+                    </span>
+                  )}
+                </div>
+                <textarea
+                  rows={6}
+                  value={rawRosterText}
+                  onChange={(e) => setRawRosterText(e.target.value)}
+                  placeholder={`Roll No, Student Name, Email, Section\nAP21110010001, Aarav Sharma, aarav_s@srmap.edu.in, A\nAP21110010002, Ananya Patel, ananya_p@srmap.edu.in, A\nAP21110010003, Rohan Verma, rohan_v@srmap.edu.in, A`}
+                  className="w-full p-3 rounded-xl border border-alix-slate-300 text-xs font-mono text-alix-indigo outline-none focus:border-emerald-500 leading-relaxed"
+                />
+                <p className="text-[11px] text-alix-slate-400 mt-1">
+                  Format: One student per line (Roll No, Name, Email, Section). You can copy-paste columns directly from Excel or Google Sheets.
+                </p>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsRosterModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-alix-slate-300 text-alix-slate-600 text-xs font-bold hover:bg-alix-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingRoster}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>{isSavingRoster ? 'Saving Roster...' : 'Save & Whitelist Students'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Select Activity Modal to Start Live Session */}
       {isLaunchModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -381,7 +697,7 @@ export const DashboardPage: React.FC = () => {
                         {quiz.subject}
                       </span>
                       {quiz.courseCode && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-alix-slate-100 text-alix-slate-600">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-alix-slate-100 text-alix-slate-600 font-mono">
                           {quiz.courseCode}
                         </span>
                       )}

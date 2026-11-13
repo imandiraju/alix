@@ -29,6 +29,7 @@ export const PlayPage: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [searchParams] = useSearchParams();
   const studentName = searchParams.get('name') || 'Learner';
+  const rollNo = searchParams.get('rollNo') || '';
   const avatarId = searchParams.get('avatar') || 'fox';
   const avatar = getAvatarById(avatarId);
 
@@ -60,7 +61,8 @@ export const PlayPage: React.FC = () => {
         socket.emit('join-session', {
           code: sessionId || '842915',
           playerName: studentName,
-        });
+          rollNo: rollNo || undefined,
+        } as any);
       };
       const onDisconnect = () => setIsSocketConnected(false);
 
@@ -204,8 +206,13 @@ export const PlayPage: React.FC = () => {
                   <span>PIN {sessionId || 'Live'}</span>
                 </span>
               </div>
-              <div className="text-[10px] text-alix-slate-400 font-medium">
-                {avatar.name}
+              <div className="text-[10px] text-alix-slate-400 font-medium flex items-center gap-1.5">
+                <span>{avatar.name}</span>
+                {rollNo && (
+                  <span className="font-mono text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                    {rollNo}
+                  </span>
+                )}
               </div>
             </div>
           </div>
