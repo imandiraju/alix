@@ -9,6 +9,7 @@ interface InternalSession {
   id: string;
   code: string;
   hostId: string;
+  hostSocketId?: string;
   quizId: string;
   quiz: Quiz | null;
   status: SessionStatus;

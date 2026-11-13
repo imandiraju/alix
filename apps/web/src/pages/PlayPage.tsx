@@ -70,19 +70,30 @@ export const PlayPage: React.FC = () => {
       socket.on('disconnect', onDisconnect);
       if (socket.connected) onConnect();
 
+      // Listen for session status updates
+      socket.on('session-status', (data: any) => {
+        if (data.status === 'playing' && phase === 'waiting') {
+          // Instructor launched session - preparing to receive question
+        }
+      });
+
       // Listen for question dispatched by host
       socket.on('question-started', (data: any) => {
         if (data.question) {
-          const opts = Array.isArray(data.question.options)
+          const rawOpts = Array.isArray(data.question.options)
             ? data.question.options.map((o: any) => (typeof o === 'string' ? o : o.text || ''))
             : ['Option A', 'Option B', 'Option C', 'Option D'];
+
+          // Filter out blank options (e.g. True/False questions where options 3 & 4 were left blank)
+          const nonBlank = rawOpts.filter((o: string) => o && o.trim().length > 0);
+          const finalOpts = nonBlank.length >= 2 ? nonBlank : rawOpts;
 
           setCurrentQuestion({
             id: data.question.id,
             index: (data.questionIndex ?? 0) + 1,
             total: data.totalQuestions || 1,
             text: data.question.text,
-            options: opts,
+            options: finalOpts,
             timeLimit: data.timeLimit || 30,
           });
           setSecondsRemaining(data.timeLimit || 30);
@@ -96,6 +107,11 @@ export const PlayPage: React.FC = () => {
         if (typeof data.remaining === 'number') {
           setSecondsRemaining(data.remaining);
         }
+      });
+
+      // Listen for errors
+      socket.on('error', (err: any) => {
+        console.warn('[ALIX Student Play Error]:', err);
       });
 
       // Listen for answer verification

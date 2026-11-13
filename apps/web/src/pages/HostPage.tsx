@@ -116,7 +116,11 @@ export const HostPage: React.FC = () => {
         socket.emit('create-session', {
           quizId: sessionId || 'default',
           hostId: user?.id || 'host-teacher',
-        });
+          questions: questions.length > 0 ? questions : undefined,
+          quizTitle,
+          subject,
+          courseCode,
+        } as any);
       };
 
       const onDisconnect = () => setIsRealtimeActive(false);
@@ -146,16 +150,54 @@ export const HostPage: React.FC = () => {
         }
       });
 
+      socket.on('question-started', (data: any) => {
+        if (data.question) {
+          setStage('question');
+          if (typeof data.questionIndex === 'number') {
+            setCurrentQuestionIdx(data.questionIndex);
+          }
+          if (data.timeLimit) {
+            setTimer(data.timeLimit);
+          }
+        }
+      });
+
+      socket.on('timer-tick', (data: any) => {
+        if (typeof data.remaining === 'number') {
+          setTimer(data.remaining);
+        }
+      });
+
+      socket.on('leaderboard-update', (data: any) => {
+        if (data.questionResults?.totalCount !== undefined) {
+          setAnswersSubmitted(data.questionResults.totalCount);
+        }
+        setStage('chart');
+      });
+
+      socket.on('game-ended', () => {
+        setStage('victory');
+      });
+
+      socket.on('error', (err: any) => {
+        console.warn('[ALIX Host Socket Warning]:', err);
+      });
+
       return () => {
         socket.off('connect', onConnect);
         socket.off('disconnect', onDisconnect);
         socket.off('session-created');
         socket.off('player-joined');
+        socket.off('question-started');
+        socket.off('timer-tick');
+        socket.off('leaderboard-update');
+        socket.off('game-ended');
+        socket.off('error');
       };
     } catch (err) {
       console.warn('Socket connection error:', err);
     }
-  }, [sessionId, user]);
+  }, [sessionId, user, questions, quizTitle, subject, courseCode]);
 
   // Timer countdown when stage is 'question'
   useEffect(() => {
@@ -178,11 +220,14 @@ export const HostPage: React.FC = () => {
     setAnswersSubmitted(0);
     try {
       const socket = getSocket();
-      if (activeSessionId) {
-        socket.emit('start-game', { sessionId: activeSessionId });
-      }
-    } catch {
-      // quiet
+      socket.emit('start-game', {
+        sessionId: activeSessionId || sessionId,
+        code: pin,
+        questions,
+        quizTitle,
+      } as any);
+    } catch (err) {
+      console.warn('Could not emit start-game:', err);
     }
   };
 
@@ -195,21 +240,23 @@ export const HostPage: React.FC = () => {
       setStage('question');
       try {
         const socket = getSocket();
-        if (activeSessionId) {
-          socket.emit('next-question', { sessionId: activeSessionId });
-        }
-      } catch {
-        // quiet
+        socket.emit('next-question', {
+          sessionId: activeSessionId || sessionId,
+          code: pin,
+        } as any);
+      } catch (err) {
+        console.warn('Could not emit next-question:', err);
       }
     } else {
       setStage('victory');
       try {
         const socket = getSocket();
-        if (activeSessionId) {
-          socket.emit('end-game', { sessionId: activeSessionId });
-        }
-      } catch {
-        // quiet
+        socket.emit('end-game', {
+          sessionId: activeSessionId || sessionId,
+          code: pin,
+        } as any);
+      } catch (err) {
+        console.warn('Could not emit end-game:', err);
       }
     }
   };

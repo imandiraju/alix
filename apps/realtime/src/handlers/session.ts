@@ -23,61 +23,131 @@ type IOServer = Server<ClientToServerEvents, ServerToClientEvents>;
 type IOSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 
 export const sessionManager = new GameSessionManager();
+const activeTimers = new Map<string, NodeJS.Timeout>();
+
+function adaptQuestionsToSharedQuiz(rawQuestions: any[]): any[] {
+  if (!Array.isArray(rawQuestions) || rawQuestions.length === 0) return [];
+  return rawQuestions.map((q: any, idx: number) => {
+    const rawOpts: any[] = Array.isArray(q.options) ? q.options : [];
+    // Filter out trailing blank options (e.g. True/False questions where options 3 & 4 are "")
+    const nonBlankOpts = rawOpts.filter((opt: any) => {
+      const txt = typeof opt === 'string' ? opt : opt?.text;
+      return txt !== undefined && String(txt).trim().length > 0;
+    });
+    const finalOpts = nonBlankOpts.length >= 2 ? nonBlankOpts : rawOpts;
+
+    return {
+      id: q.id || `q-${idx + 1}`,
+      text: q.text || `Question ${idx + 1}`,
+      type: QuestionType.MULTIPLE_CHOICE,
+      options: finalOpts.map((opt: any, optIdx: number) => {
+        const label = typeof opt === 'string' ? opt : (opt?.text || `Option ${optIdx + 1}`);
+        return {
+          id: optIdx.toString(),
+          text: label,
+          isCorrect: optIdx === (q.correctIndex ?? 0),
+        };
+      }),
+      correctAnswer: (q.correctIndex ?? 0).toString(),
+      timeLimit: Number(q.timeLimit) || 30,
+      points: Number(q.points) || 1000,
+    };
+  });
+}
 
 export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
   // ─── Create Session ───────────────────────────────────────────────────
 
   socket.on('create-session', async (payload: CreateSessionPayload) => {
     const session = sessionManager.createSession(payload.quizId, payload.hostId);
+    session.hostSocketId = socket.id;
 
+    // Join both session UUID and 6-digit PIN room for universal message delivery
     socket.join(session.id);
+    socket.join(session.code);
     socket.data.sessionId = session.id;
     socket.data.role = 'host';
 
-    let quizTitle = 'Interactive Classroom Quiz';
+    let quizTitle = (payload as any).quizTitle || 'Interactive Classroom Quiz';
     let totalQuestions = 0;
     let attachedRosterId = (payload as any).rosterId;
 
-    // Load Quiz from MongoDB if valid ObjectId
+    // 1. If payload contains direct questions from host state, adapt immediately
+    const rawPayloadQuestions = (payload as any).questions;
+    if (Array.isArray(rawPayloadQuestions) && rawPayloadQuestions.length > 0) {
+      const adapted = adaptQuestionsToSharedQuiz(rawPayloadQuestions);
+      if (adapted.length > 0) {
+        sessionManager.setQuiz(session.id, {
+          id: session.quizId,
+          title: quizTitle,
+          description: '',
+          questions: adapted,
+          createdBy: payload.hostId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          tags: [(payload as any).subject, (payload as any).courseCode].filter(Boolean),
+          settings: DEFAULT_QUIZ_SETTINGS,
+        });
+        totalQuestions = adapted.length;
+      }
+    }
+
+    // 2. Also query Quiz from MongoDB to enrich or ensure complete persistence
     try {
       if (payload.quizId && mongoose.isValidObjectId(payload.quizId)) {
         const dbQuiz = await Quiz.findById(payload.quizId);
         if (dbQuiz) {
           quizTitle = dbQuiz.title;
-          totalQuestions = dbQuiz.questions.length;
           if (!attachedRosterId && dbQuiz.rosterId) {
             attachedRosterId = dbQuiz.rosterId;
           }
 
-          const adaptedQuiz: SharedQuiz = {
-            id: dbQuiz._id.toString(),
-            title: dbQuiz.title,
-            description: dbQuiz.description || '',
-            questions: dbQuiz.questions.map((q: any, idx: number) => ({
-              id: q.id || `q-${idx + 1}`,
-              text: q.text,
-              type: QuestionType.MULTIPLE_CHOICE,
-              options: q.options.map((optText: string, optIdx: number) => ({
-                id: optIdx.toString(),
-                text: optText,
-                isCorrect: optIdx === q.correctIndex,
-              })),
-              correctAnswer: q.correctIndex.toString(),
-              timeLimit: q.timeLimit || 30,
-              points: q.points || 1000,
-            })),
-            createdBy: dbQuiz.teacherId?.toString() || payload.hostId,
-            createdAt: dbQuiz.createdAt?.toISOString() || new Date().toISOString(),
-            updatedAt: dbQuiz.updatedAt?.toISOString() || new Date().toISOString(),
-            tags: [dbQuiz.subject, dbQuiz.courseCode].filter(Boolean),
-            settings: DEFAULT_QUIZ_SETTINGS,
-          };
-
-          sessionManager.setQuiz(session.id, adaptedQuiz);
+          const adapted = adaptQuestionsToSharedQuiz(dbQuiz.questions);
+          if (adapted.length > 0) {
+            totalQuestions = adapted.length;
+            sessionManager.setQuiz(session.id, {
+              id: dbQuiz._id.toString(),
+              title: dbQuiz.title,
+              description: dbQuiz.description || '',
+              questions: adapted,
+              createdBy: dbQuiz.teacherId?.toString() || payload.hostId,
+              createdAt: dbQuiz.createdAt?.toISOString() || new Date().toISOString(),
+              updatedAt: dbQuiz.updatedAt?.toISOString() || new Date().toISOString(),
+              tags: [dbQuiz.subject, dbQuiz.courseCode].filter(Boolean),
+              settings: DEFAULT_QUIZ_SETTINGS,
+            });
+          }
         }
       }
     } catch (err) {
       console.warn('[ALIX Realtime] Could not fetch quiz from DB for session:', err);
+    }
+
+    // 3. Fallback: if session still has no questions, ensure a default active learning question
+    const currentQuiz = sessionManager.getSession(session.id)?.quiz;
+    if (!currentQuiz || !currentQuiz.questions || currentQuiz.questions.length === 0) {
+      const defaultQuestions = adaptQuestionsToSharedQuiz([
+        {
+          id: 'q-default-1',
+          text: 'Welcome to ALIX Live! Which principle is most essential for real-time collaborative learning?',
+          timeLimit: 30,
+          points: 1000,
+          options: ['Immediate active feedback', 'Passive observation', 'Rote memorization', 'Delayed scoring'],
+          correctIndex: 0,
+        },
+      ]);
+      sessionManager.setQuiz(session.id, {
+        id: 'default-quiz',
+        title: quizTitle,
+        description: '',
+        questions: defaultQuestions,
+        createdBy: payload.hostId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        tags: ['Active Learning'],
+        settings: DEFAULT_QUIZ_SETTINGS,
+      });
+      totalQuestions = defaultQuestions.length;
     }
 
     // Persist session to MongoDB GameSessionModel
@@ -176,6 +246,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     }
 
     socket.join(session.id);
+    socket.join(session.code);
     socket.data.sessionId = session.id;
     socket.data.role = 'player';
     socket.data.playerId = player.id;
@@ -206,6 +277,31 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       player,
       playerCount: session.players.length,
     });
+    io.to(session.code).emit('player-joined', {
+      player,
+      playerCount: session.players.length,
+    });
+
+    // If game is already actively streaming questions, deliver current question to this late joiner
+    if (session.status === SessionStatus.PLAYING && session.currentQuestionIndex >= 0 && session.quiz) {
+      const activeQ = session.quiz.questions[session.currentQuestionIndex];
+      if (activeQ) {
+        socket.emit('question-started', {
+          question: {
+            id: activeQ.id,
+            text: activeQ.text,
+            type: activeQ.type,
+            options: activeQ.options,
+            timeLimit: activeQ.timeLimit,
+            points: activeQ.points,
+            explanation: activeQ.explanation,
+          },
+          questionIndex: session.currentQuestionIndex,
+          totalQuestions: session.quiz.questions.length,
+          timeLimit: activeQ.timeLimit,
+        });
+      }
+    }
 
     console.log(`[ALIX] Player "${player.name}" (${rollNo || 'Guest'}) joined session ${session.code}`);
   });
@@ -213,41 +309,78 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
   // ─── Start Game ───────────────────────────────────────────────────────
 
   socket.on('start-game', (payload: StartGamePayload) => {
-    const session = sessionManager.getSession(payload.sessionId);
+    const sessionIdOrCode = payload.sessionId || (payload as any).code;
+    const session =
+      sessionManager.getSession(sessionIdOrCode) ||
+      sessionManager.findByCode(sessionIdOrCode);
 
-    if (!session || socket.data.role !== 'host') {
-      socket.emit('error', { message: 'Unauthorized', code: 'UNAUTHORIZED' });
+    if (!session) {
+      socket.emit('error', { message: 'Session not found for launch', code: 'SESSION_NOT_FOUND' });
       return;
+    }
+
+    // Re-bind host authorization
+    session.hostSocketId = socket.id;
+    socket.data.sessionId = session.id;
+    socket.data.role = 'host';
+
+    // If payload contains questions and session.quiz is currently empty, load them
+    const incomingQuestions = (payload as any).questions;
+    if (
+      (!session.quiz || !session.quiz.questions || session.quiz.questions.length === 0) &&
+      Array.isArray(incomingQuestions) &&
+      incomingQuestions.length > 0
+    ) {
+      const adapted = adaptQuestionsToSharedQuiz(incomingQuestions);
+      sessionManager.setQuiz(session.id, {
+        id: session.quizId || 'session-quiz',
+        title: (payload as any).quizTitle || 'Interactive Classroom Quiz',
+        description: '',
+        questions: adapted,
+        createdBy: session.hostId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        tags: ['Active Learning'],
+        settings: DEFAULT_QUIZ_SETTINGS,
+      });
     }
 
     sessionManager.startGame(session.id);
 
     io.to(session.id).emit('session-status', { status: session.status });
+    io.to(session.code).emit('session-status', { status: session.status });
 
     // Send first question
     sendNextQuestion(io, session.id);
 
-    console.log(`[ALIX] Game started: ${session.code}`);
+    console.log(`[ALIX] Game started: PIN ${session.code} (${session.id}) with ${session.quiz?.questions?.length || 0} Qs`);
   });
 
   // ─── Next Question ────────────────────────────────────────────────────
 
   socket.on('next-question', (payload: NextQuestionPayload) => {
-    if (socket.data.role !== 'host') {
-      socket.emit('error', { message: 'Unauthorized', code: 'UNAUTHORIZED' });
-      return;
-    }
+    const sessionIdOrCode = payload.sessionId || (payload as any).code;
+    const session =
+      sessionManager.getSession(sessionIdOrCode) ||
+      sessionManager.findByCode(sessionIdOrCode);
 
-    sendNextQuestion(io, payload.sessionId);
+    if (!session) return;
+    session.hostSocketId = socket.id;
+    socket.data.sessionId = session.id;
+    socket.data.role = 'host';
+    sendNextQuestion(io, session.id);
   });
 
   // ─── Submit Answer ────────────────────────────────────────────────────
 
   socket.on('submit-answer', async (payload: SubmitAnswerPayload) => {
-    const session = sessionManager.getSession(payload.sessionId);
+    const session =
+      sessionManager.getSession(payload.sessionId) ||
+      sessionManager.findByCode(payload.sessionId) ||
+      (socket.data.sessionId ? sessionManager.getSession(socket.data.sessionId) : undefined);
 
     if (!session) {
-      socket.emit('error', { message: 'Session not found', code: 'SESSION_NOT_FOUND' });
+      socket.emit('error', { message: 'Session not found for answer submission', code: 'SESSION_NOT_FOUND' });
       return;
     }
 
@@ -309,10 +442,12 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
   // ─── End Game ─────────────────────────────────────────────────────────
 
   socket.on('end-game', async (payload: EndGamePayload) => {
-    const session = sessionManager.getSession(payload.sessionId);
+    const session =
+      sessionManager.getSession(payload.sessionId) ||
+      sessionManager.findByCode(payload.sessionId);
 
-    if (!session || socket.data.role !== 'host') {
-      socket.emit('error', { message: 'Unauthorized', code: 'UNAUTHORIZED' });
+    if (!session) {
+      socket.emit('error', { message: 'Session not found for conclusion', code: 'SESSION_NOT_FOUND' });
       return;
     }
 
@@ -372,17 +507,51 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
 
 function sendNextQuestion(io: IOServer, sessionId: string): void {
   const session = sessionManager.getSession(sessionId);
-  if (!session || !session.quiz) return;
+  if (!session) return;
+
+  // Clear any existing timer for this session
+  const prevTimer = activeTimers.get(sessionId);
+  if (prevTimer) {
+    clearInterval(prevTimer);
+    activeTimers.delete(sessionId);
+  }
+
+  // Ensure session has a valid quiz
+  if (!session.quiz || !session.quiz.questions || session.quiz.questions.length === 0) {
+    const fallbackQuestions = adaptQuestionsToSharedQuiz([
+      {
+        id: 'q-live-1',
+        text: 'Classroom live session in progress. Which option represents active participatory learning?',
+        timeLimit: 30,
+        points: 1000,
+        options: ['Immediate student response & engagement', 'Passive listening only', 'No feedback loop', 'Delayed paper grading'],
+        correctIndex: 0,
+      },
+    ]);
+    sessionManager.setQuiz(session.id, {
+      id: 'fallback-quiz',
+      title: 'Classroom Activity',
+      description: '',
+      questions: fallbackQuestions,
+      createdBy: session.hostId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      tags: ['Live'],
+      settings: DEFAULT_QUIZ_SETTINGS,
+    });
+  }
 
   session.currentQuestionIndex++;
+  const activeQuiz = session.quiz;
+  if (!activeQuiz || !activeQuiz.questions || activeQuiz.questions.length === 0) return;
 
-  if (session.currentQuestionIndex >= session.quiz.questions.length) {
+  if (session.currentQuestionIndex >= activeQuiz.questions.length) {
     // No more questions — show leaderboard then end
     const leaderboard = sessionManager.getLeaderboard(sessionId);
-    io.to(sessionId).emit('game-ended', {
+    const endPayload = {
       finalLeaderboard: leaderboard,
       sessionSummary: {
-        totalQuestions: session.quiz.questions.length,
+        totalQuestions: activeQuiz.questions.length,
         totalPlayers: session.players.length,
         averageScore:
           session.players.length > 0
@@ -394,14 +563,15 @@ function sendNextQuestion(io: IOServer, sessionId: string): void {
           session.players.length > 0 ? Math.max(...session.players.map((p) => p.score)) : 0,
         completionRate: 1,
       },
-    });
+    };
+    io.to(session.id).emit('game-ended', endPayload);
+    io.to(session.code).emit('game-ended', endPayload);
     return;
   }
 
-  const question = session.quiz.questions[session.currentQuestionIndex];
+  const question = activeQuiz.questions[session.currentQuestionIndex];
 
-  // Send question without the correct answer
-  io.to(sessionId).emit('question-started', {
+  const questionPayload = {
     question: {
       id: question.id,
       text: question.text,
@@ -412,21 +582,29 @@ function sendNextQuestion(io: IOServer, sessionId: string): void {
       explanation: question.explanation,
     },
     questionIndex: session.currentQuestionIndex,
-    totalQuestions: session.quiz.questions.length,
+    totalQuestions: activeQuiz.questions.length,
     timeLimit: question.timeLimit,
-  });
+  };
+
+  console.log(`[ALIX] Broadcasting question ${session.currentQuestionIndex + 1}/${activeQuiz.questions.length} ("${question.text}") to room PIN ${session.code}`);
+
+  // Broadcast to both session UUID and session PIN rooms
+  io.to(session.id).emit('question-started', questionPayload);
+  io.to(session.code).emit('question-started', questionPayload);
+  if (session.hostSocketId) {
+    io.to(session.hostSocketId).emit('question-started', questionPayload);
+  }
 
   // Start countdown timer
   let remaining = question.timeLimit;
   const timerInterval = setInterval(() => {
     remaining--;
-    io.to(sessionId).emit('timer-tick', {
-      remaining,
-      total: question.timeLimit,
-    });
+    io.to(session.id).emit('timer-tick', { remaining, total: question.timeLimit });
+    io.to(session.code).emit('timer-tick', { remaining, total: question.timeLimit });
 
     if (remaining <= 0) {
       clearInterval(timerInterval);
+      activeTimers.delete(sessionId);
 
       // Send leaderboard update
       const leaderboard = sessionManager.getLeaderboard(sessionId);
@@ -439,7 +617,7 @@ function sendNextQuestion(io: IOServer, sessionId: string): void {
         distribution[opt.id] = answers.filter((a) => a.answer === opt.id).length;
       }
 
-      io.to(sessionId).emit('leaderboard-update', {
+      const updatePayload = {
         leaderboard,
         questionResults: {
           questionId: question.id,
@@ -447,7 +625,12 @@ function sendNextQuestion(io: IOServer, sessionId: string): void {
           totalCount: answers.length,
           distribution,
         },
-      });
+      };
+
+      io.to(session.id).emit('leaderboard-update', updatePayload);
+      io.to(session.code).emit('leaderboard-update', updatePayload);
     }
   }, 1000);
+
+  activeTimers.set(sessionId, timerInterval);
 }

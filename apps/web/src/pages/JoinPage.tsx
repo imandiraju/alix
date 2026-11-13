@@ -253,7 +253,7 @@ export const JoinPage: React.FC = () => {
                 <span className="text-[11px] text-alix-slate-400">6 digits from screen</span>
               </div>
 
-              <div className="flex gap-2 justify-between">
+              <div className="flex gap-1.5 sm:gap-2 justify-between">
                 {pin.map((digit, i) => (
                   <input
                     key={i}
@@ -264,7 +264,7 @@ export const JoinPage: React.FC = () => {
                     value={digit}
                     onChange={(e) => handlePinChange(i, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(i, e)}
-                    className="w-12 h-14 sm:w-13 sm:h-16 text-center text-xl sm:text-2xl font-mono font-black text-alix-indigo bg-alix-slate-50 border-2 border-alix-slate-300 focus:border-alix-violet-600 focus:bg-white rounded-xl shadow-inner outline-none transition-all"
+                    className="flex-1 max-w-[50px] h-12 sm:h-16 text-center text-lg sm:text-2xl font-mono font-black text-alix-indigo bg-alix-slate-50 border-2 border-alix-slate-300 focus:border-alix-violet-600 focus:bg-white rounded-xl shadow-inner outline-none transition-all"
                   />
                 ))}
               </div>
