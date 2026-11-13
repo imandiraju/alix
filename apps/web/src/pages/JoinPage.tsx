@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import AlixLogo from '../components/common/AlixLogo';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import StudentQRScannerModal from '../components/common/StudentQRScannerModal';
 import { ALIX_AVATARS, AlixAvatar } from '../components/game/AlixAvatars';
 import { RenderAvatarSvg } from '../components/game/AlixSvgAvatars';
@@ -8,22 +7,22 @@ import { REALTIME_URL } from '../services/socket';
 import {
   Sparkles,
   ArrowRight,
-  User,
-  QrCode,
-  CheckCircle2,
   Camera,
   Shuffle,
   ShieldCheck,
   GraduationCap,
   AlertCircle,
   Lock,
+  CheckCircle2,
+  Globe,
+  Radio,
 } from 'lucide-react';
 
 export const JoinPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const [pin, setPin] = useState(['', '', '', '', '', '']);
+  const [pinValue, setPinValue] = useState('');
   const [nickname, setNickname] = useState('');
   const [rollNo, setRollNo] = useState('');
   const [requiresRoster, setRequiresRoster] = useState(false);
@@ -40,26 +39,17 @@ export const JoinPage: React.FC = () => {
   useEffect(() => {
     const urlPin = searchParams.get('pin');
     if (urlPin && urlPin.length === 6) {
-      applyPin(urlPin);
-      setQrDetectedMessage(`PIN ${urlPin} loaded from QR code!`);
+      setPinValue(urlPin.toUpperCase());
+      setQrDetectedMessage(`PIN ${urlPin} detected from projector scan!`);
+      checkSessionRequirements(urlPin.toUpperCase());
     }
   }, [searchParams]);
 
-  const applyPin = (code: string) => {
-    const chars = code.toUpperCase().slice(0, 6).split('');
-    const newPin = ['', '', '', '', '', ''];
-    chars.forEach((c, i) => {
-      newPin[i] = c;
-    });
-    setPin(newPin);
-    setError(null);
-    checkSessionRequirements(code.toUpperCase());
-  };
-
-  const checkSessionRequirements = async (fullPin: string) => {
-    if (fullPin.length !== 6) return;
+  const checkSessionRequirements = async (code: string) => {
+    const cleaned = code.replace(/\s+/g, '').toUpperCase();
+    if (cleaned.length !== 6) return;
     try {
-      const res = await fetch(`${REALTIME_URL}/api/sessions/${fullPin}`);
+      const res = await fetch(`${REALTIME_URL}/api/sessions/${cleaned}`);
       if (res.ok) {
         const data = await res.json();
         if (data.session) {
@@ -77,34 +67,27 @@ export const JoinPage: React.FC = () => {
     }
   };
 
-  const handlePinChange = (index: number, value: string) => {
-    const cleaned = value.toUpperCase().slice(-1);
-    const newPin = [...pin];
-    newPin[index] = cleaned;
-    setPin(newPin);
+  const handlePinInput = (val: string) => {
+    // Only accept alphanumeric characters, up to 6
+    const cleaned = val.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6);
+    setPinValue(cleaned);
     setError(null);
+    setQrDetectedMessage(null);
 
-    if (cleaned && index < 5) {
-      const nextInput = document.getElementById(`pin-${index + 1}`);
-      nextInput?.focus();
-    }
-
-    const fullCode = newPin.join('');
-    if (fullCode.length === 6) {
-      checkSessionRequirements(fullCode);
-    }
-  };
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !pin[index] && index > 0) {
-      const prevInput = document.getElementById(`pin-${index - 1}`);
-      prevInput?.focus();
+    if (cleaned.length === 6) {
+      checkSessionRequirements(cleaned);
+    } else {
+      setRequiresRoster(false);
+      setSessionCourseName(null);
+      setIsLocked(false);
     }
   };
 
   const handleQRDetected = (detectedPin: string) => {
-    applyPin(detectedPin);
-    setQrDetectedMessage(`PIN ${detectedPin} Verified via Camera!`);
+    const cleaned = detectedPin.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6);
+    setPinValue(cleaned);
+    setQrDetectedMessage(`PIN ${cleaned} loaded from Camera!`);
+    checkSessionRequirements(cleaned);
   };
 
   const handleRandomizeAvatar = () => {
@@ -114,15 +97,15 @@ export const JoinPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const fullPin = pin.join('');
+    const cleanPin = pinValue.trim().toUpperCase();
 
-    if (fullPin.length < 6) {
-      setError('Please enter the complete 6-digit session PIN.');
+    if (cleanPin.length < 6) {
+      setError('Please enter the full 6-digit Game PIN.');
       return;
     }
 
     if (isLocked) {
-      setError('This session has been locked by the instructor. No new joiners are permitted.');
+      setError('This session is locked by the instructor. No late entries permitted.');
       return;
     }
 
@@ -141,7 +124,7 @@ export const JoinPage: React.FC = () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            pin: fullPin,
+            pin: cleanPin,
             rollNo: rollNo.trim().toUpperCase(),
           }),
         });
@@ -149,243 +132,258 @@ export const JoinPage: React.FC = () => {
         const verifyData = await verifyRes.json();
 
         if (!verifyRes.ok || !verifyData.allowed) {
-          setError(verifyData.message || 'Access Denied: You are not enrolled in this section.');
+          setError(verifyData.message || 'Access Denied: You are not enrolled in this section roster.');
           setIsSubmitting(false);
           return;
         }
 
         const verifiedName = verifyData.student?.name || nickname.trim() || 'Student';
         navigate(
-          `/play/${fullPin}?name=${encodeURIComponent(verifiedName)}&rollNo=${encodeURIComponent(
+          `/play/${cleanPin}?name=${encodeURIComponent(verifiedName)}&rollNo=${encodeURIComponent(
             rollNo.trim().toUpperCase()
           )}&avatar=${selectedAvatar.id}`
         );
       } catch (err: any) {
-        setError(err.message || 'Failed to verify enrollment with classroom server.');
+        setError(err.message || 'Network error verifying enrollment with classroom server.');
         setIsSubmitting(false);
       }
       return;
     }
 
     // Open session: standard nickname entry
-    if (!nickname.trim()) {
-      setError('Please choose a display name or nickname.');
-      return;
-    }
+    const finalNickname = nickname.trim() || `Learner ${Math.floor(100 + Math.random() * 900)}`;
 
     setIsSubmitting(true);
     setTimeout(() => {
       navigate(
-        `/play/${fullPin}?name=${encodeURIComponent(nickname.trim())}&avatar=${selectedAvatar.id}`
+        `/play/${cleanPin}?name=${encodeURIComponent(finalNickname)}&avatar=${selectedAvatar.id}`
       );
-    }, 300);
+    }, 250);
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-alix-slate-50 relative overflow-hidden select-none">
-      {/* Decorative backdrop glow */}
-      <div className="absolute -top-32 -left-32 w-96 h-96 bg-alix-violet-200/40 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-alix-cyan-200/40 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-gradient-to-br from-[#46178F] via-[#350F6E] to-[#1E0938] text-white flex flex-col justify-between selection:bg-alix-violet-400 selection:text-white relative overflow-hidden select-none">
+      {/* Subtle Kahoot-style radial backdrop curves */}
+      <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-white/[0.04] rounded-full blur-2xl pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-[700px] h-[700px] bg-alix-violet-500/[0.12] rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/3 -right-20 w-[400px] h-[400px] bg-alix-cyan-400/[0.08] rounded-full blur-3xl pointer-events-none" />
 
-      {/* Header bar */}
-      <header className="p-6 flex items-center justify-between max-w-5xl mx-auto w-full">
-        <AlixLogo size="md" withTagline={false} />
-        <button
-          type="button"
-          onClick={() => setIsScannerOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-alix-slate-300 text-alix-indigo text-xs font-bold hover:border-alix-violet-400 hover:bg-alix-violet-50 transition-all shadow-sm cursor-pointer"
-        >
-          <Camera className="w-3.5 h-3.5 text-alix-cyan-600" />
-          <span>Scan Projector QR</span>
-        </button>
+      {/* Sleek Top Navigation Pill Bar */}
+      <header className="p-3 sm:p-4 flex items-center justify-between max-w-6xl mx-auto w-full z-20">
+        {/* Left: Brand Tag */}
+        <div className="flex items-center gap-2">
+          <Link
+            to="/"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 text-xs font-black text-white tracking-wide transition-all shadow-sm"
+          >
+            <Radio className="w-3.5 h-3.5 text-alix-cyan-400 animate-pulse" />
+            <span>ALIX LIVE</span>
+          </Link>
+        </div>
+
+        {/* Right: Quick shortcuts */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsScannerOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 text-xs font-bold text-white transition-all cursor-pointer shadow-sm"
+            title="Scan Projector QR Code"
+          >
+            <Camera className="w-3.5 h-3.5 text-alix-cyan-300" />
+            <span className="hidden sm:inline">Camera Scan</span>
+          </button>
+
+          <Link
+            to="/login"
+            className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-white transition-all"
+          >
+            Teacher Login
+          </Link>
+        </div>
       </header>
 
-      {/* Main Join Container */}
-      <main className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-3xl border border-alix-slate-200 shadow-alix-lg p-6 sm:p-8 relative">
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-alix-violet-50 text-alix-violet-700 text-xs font-bold mb-2 border border-alix-violet-200">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Interactive Classroom</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-heading font-black text-alix-indigo tracking-tight">
-              Join ALIX
-            </h1>
-            <p className="text-xs sm:text-sm text-alix-slate-500 mt-1">
-              Enter the 6-digit room PIN or scan the projector screen.
-            </p>
-          </div>
+      {/* Main Hero & Floating Kahoot-style Card */}
+      <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 z-10 my-auto">
+        {/* Giant Centered Brand Wordmark */}
+        <div className="text-center mb-6 animate-fade-in">
+          <h1 className="text-5xl sm:text-7xl font-heading font-black tracking-tight text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.35)] flex items-center justify-center">
+            <span>ALIX</span>
+            <span className="text-alix-cyan-400 animate-bounce">!</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-alix-slate-200/90 font-semibold tracking-wider mt-1 uppercase">
+            Active Learning & Interactive Experience
+          </p>
+        </div>
 
-          {/* Locked Room Alert */}
+        {/* Floating White Card */}
+        <div className="w-full max-w-[360px] sm:max-w-[390px] bg-white text-alix-slate-900 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] p-6 sm:p-7 relative border border-white/20 animate-scale-in">
+          {/* Locked Alert */}
           {isLocked && (
-            <div className="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
+            <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
               <Lock className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>Session Locked: The instructor has closed entry for this quiz.</span>
+              <span>Room Locked by Instructor</span>
             </div>
           )}
 
           {/* Roster Protection Badge */}
           {requiresRoster && (
-            <div className="mb-5 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
+            <div className="mb-4 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>
-                Protected Roster Active: {sessionCourseName}. Roll Number verification required.
+              <span className="truncate">
+                {sessionCourseName || 'Protected Section'} • Roll No Required
               </span>
             </div>
           )}
 
-          {/* QR Code Auto-fill Notification */}
+          {/* QR Scan Message */}
           {qrDetectedMessage && (
-            <div className="mb-5 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-scale-in">
+            <div className="mb-4 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-scale-in">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>{qrDetectedMessage}</span>
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* 6-Digit PIN Boxes */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Unified Game PIN Input */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-alix-slate-600">
-                  Session PIN
-                </label>
-                <span className="text-[11px] text-alix-slate-400">6 digits from screen</span>
-              </div>
-
-              <div className="flex gap-1.5 sm:gap-2 justify-between">
-                {pin.map((digit, i) => (
-                  <input
-                    key={i}
-                    id={`pin-${i}`}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handlePinChange(i, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(i, e)}
-                    className="flex-1 max-w-[50px] h-12 sm:h-16 text-center text-lg sm:text-2xl font-mono font-black text-alix-indigo bg-alix-slate-50 border-2 border-alix-slate-300 focus:border-alix-violet-600 focus:bg-white rounded-xl shadow-inner outline-none transition-all"
-                  />
-                ))}
-              </div>
+              <input
+                id="game-pin-input"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="off"
+                autoFocus
+                maxLength={6}
+                value={pinValue}
+                onChange={(e) => handlePinInput(e.target.value)}
+                placeholder="Game PIN"
+                className="w-full py-3.5 px-4 text-center text-xl sm:text-2xl font-mono font-black text-alix-indigo placeholder-alix-slate-400 bg-white border-2 border-alix-slate-300 rounded-xl focus:border-alix-indigo focus:ring-2 focus:ring-alix-violet-200 outline-none transition-all shadow-inner tracking-widest"
+              />
             </div>
 
-            {/* University Roll Number (if Roster Required) */}
+            {/* University Roll Number (when section roster protection is active) */}
             {requiresRoster ? (
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-600 mb-1.5 flex items-center gap-1.5">
-                  <GraduationCap className="w-4 h-4 text-emerald-600" />
-                  <span>University Roll Number / Reg No *</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={rollNo}
-                  onChange={(e) => setRollNo(e.target.value.toUpperCase())}
-                  placeholder="e.g. AP21110010045"
-                  className="w-full px-4 py-3 rounded-xl border border-alix-slate-300 focus:border-emerald-600 outline-none text-sm font-mono font-bold text-alix-indigo uppercase tracking-wider shadow-inner"
-                />
-                <p className="text-[11px] text-alix-slate-400 mt-1">
-                  Only 1 active device allowed per student. Duplicate logins are blocked.
-                </p>
-              </div>
-            ) : (
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-600 mb-1.5">
-                  Your Name / Nickname
-                </label>
+              <div className="animate-fade-in space-y-1">
                 <div className="relative">
                   <input
                     type="text"
-                    value={nickname}
-                    onChange={(e) => setNickname(e.target.value)}
-                    placeholder="Enter your name..."
-                    maxLength={24}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-alix-slate-300 focus:border-alix-violet-600 outline-none text-sm font-semibold text-alix-indigo shadow-inner"
+                    required
+                    value={rollNo}
+                    onChange={(e) => setRollNo(e.target.value.toUpperCase())}
+                    placeholder="University Roll Number"
+                    className="w-full py-3 px-4 text-center text-sm font-mono font-bold text-alix-indigo placeholder-alix-slate-400 bg-white border-2 border-emerald-500 rounded-xl focus:ring-2 focus:ring-emerald-200 outline-none uppercase tracking-wider"
                   />
-                  <User className="w-4 h-4 text-alix-slate-400 absolute left-3.5 top-3.5" />
+                  <GraduationCap className="w-4 h-4 text-emerald-600 absolute left-3.5 top-3.5" />
                 </div>
+                <p className="text-[10px] text-center text-alix-slate-400">
+                  Strictly 1 device per student. Verified against section roster.
+                </p>
+              </div>
+            ) : (
+              /* Nickname / Display Name */
+              <div>
+                <input
+                  type="text"
+                  maxLength={20}
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="Nickname"
+                  className="w-full py-3 px-4 text-center text-base font-bold text-alix-indigo placeholder-alix-slate-400 bg-white border-2 border-alix-slate-300 rounded-xl focus:border-alix-indigo focus:ring-2 focus:ring-alix-violet-200 outline-none transition-all shadow-inner"
+                />
               </div>
             )}
 
-            {/* Avatar Selector */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-alix-slate-600">
-                  Select Mascot Avatar
+            {/* Mascot Avatar Mini Bar */}
+            <div className="pt-1">
+              <div className="flex items-center justify-between mb-1.5 px-1">
+                <span className="text-[11px] font-bold text-alix-slate-500 uppercase tracking-wider">
+                  Mascot
                 </span>
                 <button
                   type="button"
                   onClick={handleRandomizeAvatar}
-                  className="text-xs font-bold text-alix-violet-600 hover:text-alix-violet-800 inline-flex items-center gap-1 cursor-pointer"
+                  className="text-[11px] font-bold text-alix-violet-600 hover:text-alix-violet-800 flex items-center gap-1 cursor-pointer"
                 >
                   <Shuffle className="w-3 h-3" />
                   <span>Random</span>
                 </button>
               </div>
 
-              <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none">
-                {ALIX_AVATARS.map((av) => (
+              <div className="flex items-center justify-center gap-2">
+                {ALIX_AVATARS.slice(0, 5).map((av) => (
                   <button
                     key={av.id}
                     type="button"
                     onClick={() => setSelectedAvatar(av)}
-                    className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center p-1 transition-all ${
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center p-0.5 transition-all cursor-pointer ${
                       selectedAvatar.id === av.id
-                        ? 'ring-3 ring-alix-violet-600 scale-105 shadow-md'
-                        : 'opacity-70 hover:opacity-100 hover:scale-100'
+                        ? 'ring-3 ring-alix-violet-600 scale-110 shadow-md'
+                        : 'opacity-60 hover:opacity-100 hover:scale-105'
                     } bg-gradient-to-tr ${av.bgGradient}`}
                     title={av.name}
                   >
-                    <RenderAvatarSvg avatarId={av.id} size={34} />
+                    <RenderAvatarSvg avatarId={av.id} size={28} />
                   </button>
                 ))}
               </div>
             </div>
 
+            {/* Error Message */}
             {error && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold text-center">
+              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold text-center animate-shake">
                 {error}
               </div>
             )}
 
-            {/* Submit Button */}
+            {/* Tactile Kahoot-style Enter Button */}
             <button
               type="submit"
-              disabled={isSubmitting || isLocked}
-              className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-alix-violet-600 to-alix-indigo hover:from-alix-violet-700 hover:to-alix-indigo text-white font-bold text-base shadow-alix-md hover:shadow-alix-glow active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+              disabled={isSubmitting || isLocked || pinValue.length < 6}
+              className="w-full py-3.5 px-4 bg-[#333333] hover:bg-[#1E1B4B] disabled:bg-alix-slate-300 text-white font-black text-base uppercase tracking-wider rounded-xl shadow-md active:translate-y-0.5 active:shadow-sm transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
             >
-              <span>{isSubmitting ? 'Verifying with Classroom...' : 'Join ALIX Live'}</span>
-              <ArrowRight className="w-5 h-5" />
+              <span>{isSubmitting ? 'Entering Room...' : 'Enter'}</span>
+              {!isSubmitting && <ArrowRight className="w-4 h-4 stroke-[3]" />}
             </button>
           </form>
 
-          {/* QR Camera Shortcut */}
-          <div className="mt-5 pt-4 border-t border-alix-slate-100 flex items-center justify-between text-xs">
-            <span className="text-alix-slate-400">Classroom screen visible?</span>
-
+          {/* Camera Scan Link */}
+          <div className="mt-4 pt-3 border-t border-alix-slate-100 text-center">
             <button
               type="button"
               onClick={() => setIsScannerOpen(true)}
-              className="text-alix-cyan-700 hover:text-alix-cyan-900 font-semibold inline-flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold text-alix-indigo hover:text-alix-violet-700 inline-flex items-center gap-1.5 cursor-pointer transition-colors"
             >
-              <QrCode className="w-3.5 h-3.5" />
-              <span>Camera Scan</span>
+              <Camera className="w-3.5 h-3.5 text-alix-cyan-600" />
+              <span>Scan Classroom Projector QR Code</span>
             </button>
           </div>
         </div>
+
+        {/* Get Started Disclaimer */}
+        <div className="mt-6 text-center text-xs text-white/70">
+          <p>
+            Instructors: Host your classroom interactive session at{' '}
+            <Link to="/login" className="text-white font-bold underline underline-offset-4 hover:text-alix-cyan-300">
+              alix.edu
+            </Link>
+          </p>
+        </div>
       </main>
 
-      {/* Optical QR Scanner Modal (with real camera feed, no simulation buttons) */}
+      {/* Optical QR Scanner Modal */}
       <StudentQRScannerModal
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
         onDetected={handleQRDetected}
       />
 
-      {/* Footer disclaimer */}
-      <footer className="p-4 text-center text-xs text-alix-slate-400">
-        <p>ALIX – Where Every Learner Participates.</p>
+      {/* Bottom Footer */}
+      <footer className="p-4 text-center text-xs text-white/60 z-10 flex flex-wrap items-center justify-center gap-4">
+        <span>Active Learning Platform • ALIX</span>
+        <span>•</span>
+        <Link to="/" className="hover:text-white transition-colors">Privacy</Link>
+        <span>•</span>
+        <Link to="/" className="hover:text-white transition-colors">Classroom Security</Link>
       </footer>
     </div>
   );

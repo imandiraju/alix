@@ -259,17 +259,28 @@ export const PlayPage: React.FC = () => {
       <main className="flex-1 max-w-3xl w-full mx-auto p-4 sm:p-6 flex flex-col justify-center">
         {/* Phase: Waiting for instructor */}
         {phase === 'waiting' && (
-          <div className="text-center max-w-md mx-auto space-y-5 animate-fade-in py-12">
-            <div className="w-16 h-16 rounded-2xl bg-alix-violet-100 text-alix-violet-600 flex items-center justify-center mx-auto shadow-inner animate-bounce">
-              <Sparkles className="w-8 h-8" />
+          <div className="text-center max-w-md mx-auto space-y-6 animate-fade-in py-12 px-4">
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-alix-violet-600 to-alix-cyan-400 text-white flex items-center justify-center mx-auto shadow-xl animate-bounce">
+              <Sparkles className="w-10 h-10" />
             </div>
-            <h2 className="text-2xl font-heading font-extrabold text-alix-indigo">
-              You are Connected!
-            </h2>
-            <p className="text-xs sm:text-sm text-alix-slate-500 leading-relaxed">
-              Welcome, <strong className="text-alix-indigo">{studentName}</strong>! Keep this window open. Questions will stream to your screen when the instructor starts the session.
-            </p>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
+            <div>
+              <h2 className="text-3xl sm:text-4xl font-heading font-black text-alix-indigo">
+                You're in!
+              </h2>
+              <p className="text-sm sm:text-base text-alix-slate-500 font-semibold mt-2">
+                See your nickname on screen?
+              </p>
+            </div>
+            <div className="p-4 rounded-2xl bg-white border border-alix-slate-200 shadow-md flex items-center justify-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-alix-violet-600 to-alix-cyan-400 p-0.5 shadow-sm">
+                <RenderAvatarSvg avatarId={avatar.id} size={36} />
+              </div>
+              <div className="text-left">
+                <div className="font-heading font-black text-base text-alix-indigo">{studentName}</div>
+                {rollNo && <div className="text-xs font-mono font-bold text-emerald-600">{rollNo}</div>}
+              </div>
+            </div>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold shadow-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
               <span>Room PIN: {sessionId}</span>
             </div>
@@ -278,9 +289,10 @@ export const PlayPage: React.FC = () => {
 
         {/* Phase: Answering */}
         {phase === 'answering' && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-alix-slate-400">
+          <div className="space-y-4 sm:space-y-6 animate-fade-in w-full max-w-2xl mx-auto">
+            {/* Top Info Bar */}
+            <div className="flex items-center justify-between px-1">
+              <span className="px-3 py-1 rounded-full bg-alix-violet-100 text-alix-violet-800 text-xs font-black tracking-wider uppercase">
                 Question {currentQuestion.index} of {currentQuestion.total}
               </span>
               <Countdown
@@ -290,16 +302,15 @@ export const PlayPage: React.FC = () => {
               />
             </div>
 
-            <QuestionCard
-              questionIndex={currentQuestion.index}
-              totalQuestions={currentQuestion.total}
-              questionText={currentQuestion.text}
-              category="Classroom Activity"
-              points={1000}
-              timeLimit={currentQuestion.timeLimit}
-            />
+            {/* Prompt Banner */}
+            <div className="bg-white rounded-2xl border-2 border-alix-slate-200 p-5 sm:p-7 shadow-md text-center">
+              <h2 className="text-xl sm:text-2xl font-heading font-extrabold text-alix-indigo leading-tight">
+                {currentQuestion.text}
+              </h2>
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-2">
+            {/* Kahoot 4-Color Tactile Options Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-1">
               {currentQuestion.options.map((opt, idx) => (
                 <OptionButton
                   key={idx}
@@ -316,18 +327,20 @@ export const PlayPage: React.FC = () => {
 
         {/* Phase: Submitted Answer */}
         {phase === 'submitted' && (
-          <div className="text-center max-w-md mx-auto space-y-4 animate-scale-in py-12">
-            <div className="w-16 h-16 rounded-2xl bg-alix-cyan-100 text-alix-cyan-600 flex items-center justify-center mx-auto shadow-inner">
-              <CheckCircle2 className="w-8 h-8" />
+          <div className="text-center max-w-md mx-auto space-y-5 animate-scale-in py-12 px-4">
+            <div className="w-20 h-20 rounded-3xl bg-alix-indigo text-alix-cyan-400 flex items-center justify-center mx-auto shadow-2xl animate-pulse">
+              <CheckCircle2 className="w-10 h-10" />
             </div>
-            <h2 className="text-2xl font-heading font-extrabold text-alix-indigo">
-              Answer Submitted!
-            </h2>
-            <p className="text-xs text-alix-slate-500">
-              Response recorded in real time. Look at the auditorium projector for results.
-            </p>
-            <div className="p-4 rounded-xl bg-white border border-alix-slate-200 shadow-sm text-xs text-alix-slate-600">
-              Selected: <strong className="text-alix-indigo">Option {String.fromCharCode(65 + (selectedIndex ?? 0))}</strong>
+            <div>
+              <h2 className="text-3xl sm:text-4xl font-heading font-black text-alix-indigo">
+                Answer Locked!
+              </h2>
+              <p className="text-sm text-alix-slate-500 font-medium mt-1">
+                Hang tight! Results will appear on the projector when the timer expires.
+              </p>
+            </div>
+            <div className="p-4 rounded-2xl bg-white border-2 border-alix-slate-200 shadow-md text-sm font-heading font-extrabold text-alix-indigo">
+              Selected: Option {String.fromCharCode(65 + (selectedIndex ?? 0))}
             </div>
           </div>
         )}
