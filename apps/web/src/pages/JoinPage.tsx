@@ -34,6 +34,7 @@ export const JoinPage: React.FC = () => {
 
   const [selectedAvatar, setSelectedAvatar] = useState<AlixAvatar>(ALIX_AVATARS[0]);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [sessionQuizId, setSessionQuizId] = useState<string | null>(null);
   const [qrDetectedMessage, setQrDetectedMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +59,7 @@ export const JoinPage: React.FC = () => {
         if (data.session) {
           setIsLocked(!!data.session.isLocked);
           setRequiresRoster(!!data.session.requireRoster);
+          if (data.session.quizId) setSessionQuizId(data.session.quizId);
           setSessionCourseName(
             data.session.roster
               ? `${data.session.roster.courseCode} (${data.session.roster.section})`
@@ -112,6 +114,8 @@ export const JoinPage: React.FC = () => {
       return;
     }
 
+    const urlQuizId = searchParams.get('quizId') || searchParams.get('sessionId') || sessionQuizId || '';
+
     // If session requires roster, verify Roll Number
     if (requiresRoster) {
       if (!rollNo.trim()) {
@@ -140,11 +144,17 @@ export const JoinPage: React.FC = () => {
           return;
         }
 
-        const verifiedName = verifyData.student?.name || nickname.trim() || 'Student';
+        const verifiedName = verifyData.student?.name || nickname.trim();
+        if (!verifiedName) {
+          setError('Please enter your name to join.');
+          setIsSubmitting(false);
+          return;
+        }
+
         navigate(
           `/play/${cleanPin}?name=${encodeURIComponent(verifiedName)}&rollNo=${encodeURIComponent(
             rollNo.trim().toUpperCase()
-          )}&avatar=${selectedAvatar.id}`
+          )}&avatar=${selectedAvatar.id}${urlQuizId ? `&quizId=${encodeURIComponent(urlQuizId)}` : ''}`
         );
       } catch (err: any) {
         setError(err.message || 'Network error verifying enrollment with classroom server.');
@@ -153,13 +163,20 @@ export const JoinPage: React.FC = () => {
       return;
     }
 
-    // Open session: standard nickname entry
-    const finalNickname = nickname.trim() || `Learner ${Math.floor(100 + Math.random() * 900)}`;
+    // Open session: strictly require student nickname / name (no auto fallback)
+    if (!nickname.trim()) {
+      setError('Please enter your name or nickname to enter the game.');
+      return;
+    }
+
+    const finalNickname = nickname.trim();
 
     setIsSubmitting(true);
     setTimeout(() => {
       navigate(
-        `/play/${cleanPin}?name=${encodeURIComponent(finalNickname)}&avatar=${selectedAvatar.id}`
+        `/play/${cleanPin}?name=${encodeURIComponent(finalNickname)}&avatar=${selectedAvatar.id}${
+          urlQuizId ? `&quizId=${encodeURIComponent(urlQuizId)}` : ''
+        }`
       );
     }, 250);
   };
@@ -339,11 +356,15 @@ export const JoinPage: React.FC = () => {
               <div>
                 <input
                   type="text"
-                  maxLength={20}
+                  required
+                  maxLength={24}
                   value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  placeholder="Nickname"
-                  className="w-full py-3 px-4 text-center text-base font-bold text-alix-indigo placeholder-alix-slate-400 bg-white border-2 border-alix-slate-300 rounded-xl focus:border-alix-indigo focus:ring-2 focus:ring-alix-violet-200 outline-none transition-all shadow-inner"
+                  onChange={(e) => {
+                    setNickname(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  placeholder="Enter Your Name or Nickname *"
+                  className="w-full py-3.5 px-4 text-center text-base font-black text-slate-900 placeholder-slate-400 bg-white border-2 border-slate-300 rounded-xl focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all shadow-inner"
                 />
               </div>
             )}

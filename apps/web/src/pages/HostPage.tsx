@@ -77,9 +77,9 @@ export const HostPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Compute live join URL with dynamic anti-proxy token
+  // Compute live join URL with dynamic anti-proxy token and quiz id for instant student preloading
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://alix-alp.vercel.app';
-  const joinUrl = `${origin}/join?pin=${pin}&t=${rollingToken}`;
+  const joinUrl = `${origin}/join?pin=${pin}&t=${rollingToken}${sessionId ? `&quizId=${sessionId}` : ''}`;
 
   const sessionCreatedRef = useRef(false);
 
