@@ -10,6 +10,7 @@ import {
   Play,
   Eye,
   Sparkles,
+  Brain,
   BookOpen,
   GraduationCap,
   Cpu,
@@ -588,7 +589,9 @@ export const DiscoverPage: React.FC = () => {
   const CAROUSEL_SLIDES = [
     {
       id: 'slide-stem',
-      badge: '⭐ FEATURED ACADEMIC CURRICULUM',
+      badgeText: 'FEATURED ACADEMIC CURRICULUM',
+      badgeIcon: Sparkles,
+      iconColor: 'text-amber-300',
       title: 'University STEM Concept Inventory',
       desc: 'Calibrated conceptual checks designed to uncover cognitive traps in Algorithms, Linear Algebra, and System Engineering.',
       actionLabel: 'Launch Algorithms Live',
@@ -599,24 +602,28 @@ export const DiscoverPage: React.FC = () => {
     },
     {
       id: 'slide-ai',
-      badge: '🤖 ENTERPRISE AI QUIZ STUDIO',
+      badgeText: 'ENTERPRISE AI QUIZ STUDIO',
+      badgeIcon: Brain,
+      iconColor: 'text-cyan-300',
       title: 'Instant Question Synthesis with Grok-2 & Gemini',
       desc: 'Transform raw lecture notes, slide PDFs, or course syllabi into interactive multiple-choice assessments in under 15 seconds.',
       actionLabel: 'Open AI Studio',
       secondaryLabel: 'Explore Examples',
-      gradient: 'from-[#0B3B70] via-[#1368CE] to-[#041D3B]',
+      gradient: 'from-[#3A0CA3] via-[#46178F] to-[#250954]',
       accent: '#FFD600',
       isAiAction: true,
     },
     {
       id: 'slide-proxy',
-      badge: '🛡️ INTEGRITY & PARTICIPATION',
+      badgeText: 'ZERO-PROXY ROSTER PROTECTION',
+      badgeIcon: ShieldCheck,
+      iconColor: 'text-purple-200',
       title: 'Zero-Proxy Institutional Roster Protection',
       desc: 'Lock live rooms strictly to verified student roll numbers. Prevent outside guest joins and phantom attendance with one-click whitelisting.',
       actionLabel: 'Manage Class Rosters',
       secondaryLabel: 'Learn More',
-      gradient: 'from-[#144705] via-[#26890C] to-[#092403]',
-      accent: '#69F0AE',
+      gradient: 'from-[#46178F] via-[#5A189A] to-[#240046]',
+      accent: '#E0AAFF',
       navigateTarget: '/dashboard',
     },
   ];
@@ -693,13 +700,14 @@ export const DiscoverPage: React.FC = () => {
           <div className="relative rounded-3xl overflow-hidden shadow-md text-white transition-all">
             <div className={`p-6 sm:p-10 bg-gradient-to-r ${currentSlide.gradient} flex flex-col md:flex-row items-start md:items-center justify-between gap-6 min-h-[220px] sm:min-h-[240px]`}>
               <div className="space-y-3 max-w-2xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-[11px] font-extrabold uppercase tracking-wider border border-white/20">
-                  <span>{currentSlide.badge}</span>
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/15 backdrop-blur-md text-[11px] font-extrabold uppercase tracking-wider border border-white/20 text-white">
+                  <currentSlide.badgeIcon className={`w-3.5 h-3.5 ${currentSlide.iconColor}`} />
+                  <span>{currentSlide.badgeText}</span>
                 </div>
-                <h1 className="text-2xl sm:text-4xl font-heading font-black tracking-tight leading-tight">
+                <h1 className="text-2xl sm:text-4xl font-heading font-black tracking-tight leading-tight text-white drop-shadow-sm">
                   {currentSlide.title}
                 </h1>
-                <p className="text-xs sm:text-sm text-white/85 leading-relaxed font-normal max-w-xl">
+                <p className="text-xs sm:text-sm text-white/90 leading-relaxed font-normal max-w-xl">
                   {currentSlide.desc}
                 </p>
 
