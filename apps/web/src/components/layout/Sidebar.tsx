@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   Home,
@@ -26,6 +26,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDiscoverClick,
 }) => {
   const { user } = useAuth();
+  const location = useLocation();
 
   const navItems = [
     {
@@ -64,6 +65,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
   ];
 
+  const isItemActive = (item: (typeof navItems)[0]) => {
+    const currentPath = location.pathname;
+    const currentSearch = location.search;
+
+    if (item.name === 'Home') {
+      return (
+        currentPath === '/dashboard' &&
+        (!currentSearch || currentSearch === '' || currentSearch === '?view=all' || currentSearch.startsWith('?q='))
+      );
+    }
+    if (item.name === 'Class Rosters') {
+      return currentPath === '/dashboard' && currentSearch.includes('view=rosters');
+    }
+    if (item.name === 'Student Groups') {
+      return currentPath === '/dashboard' && currentSearch.includes('view=teams');
+    }
+    if (item.name === 'Discover') {
+      return currentPath.startsWith('/discover');
+    }
+    if (item.name === 'Library & Creator') {
+      return currentPath.startsWith('/create');
+    }
+    if (item.name === 'Reports & Insights') {
+      return currentPath.startsWith('/insights');
+    }
+    return false;
+  };
+
   return (
     <aside
       className={`w-60 bg-white border-r border-[#E5E5E5] flex flex-col justify-between h-[calc(100vh-4rem)] sticky top-16 select-none ${className}`}
@@ -73,6 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
+            const isActive = isItemActive(item);
 
             const handleClick = (e: React.MouseEvent) => {
               if (item.name === 'Class Rosters' && onOpenRosters) {
@@ -82,40 +112,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
             };
 
             return (
-              <NavLink
+              <Link
                 key={item.name}
                 to={item.path}
                 onClick={handleClick}
-                end={item.path === '/dashboard'}
-                className={({ isActive }) =>
-                  `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                    isActive
-                      ? 'bg-[#46178F] text-white font-semibold shadow-xs'
-                      : 'text-[#252525] hover:bg-[#F3F3F3] hover:text-[#46178F]'
-                  }`
-                }
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  isActive
+                    ? 'bg-[#46178F] text-white font-semibold shadow-xs'
+                    : 'text-[#252525] hover:bg-[#F3F3F3] hover:text-[#46178F]'
+                }`}
               >
-                {({ isActive }) => (
-                  <>
-                    <div className="flex items-center gap-3 min-w-0">
-                      <Icon
-                        className={`w-4 h-4 shrink-0 ${
-                          isActive ? 'text-white' : 'text-[#626262] group-hover:text-[#46178F]'
-                        }`}
-                      />
-                      <span className="truncate">{item.name}</span>
-                    </div>
+                <div className="flex items-center gap-3 min-w-0">
+                  <Icon
+                    className={`w-4 h-4 shrink-0 ${
+                      isActive ? 'text-white' : 'text-[#626262] group-hover:text-[#46178F]'
+                    }`}
+                  />
+                  <span className="truncate">{item.name}</span>
+                </div>
 
-                    {item.badge && !isActive && (
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${item.badgeColor}`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </>
+                {item.badge && !isActive && (
+                  <span
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${item.badgeColor}`}
+                  >
+                    {item.badge}
+                  </span>
                 )}
-              </NavLink>
+              </Link>
             );
           })}
         </nav>
@@ -124,21 +147,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Footer Navigation */}
       <div className="p-3 border-t border-[#E5E5E5] space-y-1 bg-white">
         {user?.role === 'admin' && (
-          <NavLink
+          <Link
             to="/admin"
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-amber-900 bg-amber-50 hover:bg-amber-100 transition-colors"
+            className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
+              location.pathname.startsWith('/admin')
+                ? 'bg-amber-200 text-amber-950 font-bold'
+                : 'text-amber-900 bg-amber-50 hover:bg-amber-100'
+            }`}
           >
             <ShieldCheck className="w-4 h-4 text-amber-600" />
             <span>Platform Admin & Keys</span>
-          </NavLink>
+          </Link>
         )}
-        <NavLink
+        <Link
           to="/dashboard"
           className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-[#626262] hover:bg-[#F3F3F3] hover:text-[#252525] transition-colors"
         >
           <HelpCircle className="w-4 h-4 text-[#626262]" />
           <span>Help & Tutorial</span>
-        </NavLink>
+        </Link>
         <div className="px-3 pt-1 text-[11px] text-[#626262] font-normal">
           Academic Learning Platform • RKGlobal EdTech
         </div>

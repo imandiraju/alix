@@ -96,9 +96,9 @@ export const Footer: React.FC = () => {
             Where Every Learner Participates. Built for high-engagement universities,
             STEM laboratories, and collaborative seminar rooms globally.
           </p>
-          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-alix-slate-100 text-[11px] font-medium text-alix-indigo">
-            <span className="w-1.5 h-1.5 rounded-full bg-alix-cyan-500" />
-            Global EdTech Architecture
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-purple-50 text-[11px] font-semibold text-[#46178F] border border-purple-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#46178F]" />
+            RKGlobal EdTech • Academic Learning Platform
           </div>
         </div>
       </div>

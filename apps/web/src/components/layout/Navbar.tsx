@@ -19,6 +19,7 @@ import {
   BookOpen,
   Bell,
   Sparkles,
+  LayoutDashboard,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -88,6 +89,19 @@ export const Navbar: React.FC = () => {
 
           {isAuthenticated && user ? (
             <>
+              {/* Faculty Dashboard Button */}
+              <Link
+                to="/dashboard"
+                className={`hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs sm:text-sm font-semibold transition-all ${
+                  location.pathname === '/dashboard'
+                    ? 'bg-[#46178F] text-white border-[#46178F] shadow-xs'
+                    : 'border-[#E5E5E5] text-[#252525] hover:bg-[#F3F3F3] hover:border-slate-300'
+                }`}
+              >
+                <LayoutDashboard className={`w-3.5 h-3.5 ${location.pathname === '/dashboard' ? 'text-amber-300' : 'text-[#46178F]'}`} />
+                <span>Dashboard</span>
+              </Link>
+
               {/* Admin Portal Button - Strictly for Platform Admin (alixadmin@gmail.com) */}
               {user.role === 'admin' && (
                 <Link
@@ -141,6 +155,22 @@ export const Navbar: React.FC = () => {
                     </div>
 
                     <div className="py-2 space-y-1">
+                      <Link
+                        to="/dashboard"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-[#252525] hover:bg-[#F3F3F3] rounded-lg font-bold transition-colors"
+                      >
+                        <LayoutDashboard className="w-3.5 h-3.5 text-[#46178F]" />
+                        <span>Faculty Dashboard</span>
+                      </Link>
+                      <Link
+                        to="/discover"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-[#252525] hover:bg-[#F3F3F3] rounded-lg font-medium transition-colors"
+                      >
+                        <Compass className="w-3.5 h-3.5 text-[#1368CE]" />
+                        <span>Discover Activities</span>
+                      </Link>
                       <Link
                         to="/create"
                         onClick={() => setIsDropdownOpen(false)}
@@ -261,8 +291,17 @@ export const Navbar: React.FC = () => {
               onClick={() => setIsMobileMenuOpen(false)}
               className="flex items-center gap-2.5 p-2.5 rounded-lg text-sm font-medium text-[#252525] hover:bg-[#F3F3F3]"
             >
-              <Compass className="w-4 h-4 text-[#46178F]" />
-              <span>Activities & Quizzes</span>
+              <LayoutDashboard className="w-4 h-4 text-[#46178F]" />
+              <span>Faculty Dashboard</span>
+            </Link>
+
+            <Link
+              to="/discover"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 p-2.5 rounded-lg text-sm font-medium text-[#252525] hover:bg-[#F3F3F3]"
+            >
+              <Compass className="w-4 h-4 text-[#1368CE]" />
+              <span>Discover Activities</span>
             </Link>
 
             <Link
@@ -271,7 +310,7 @@ export const Navbar: React.FC = () => {
               className="flex items-center gap-2.5 p-2.5 rounded-lg text-sm font-medium text-[#252525] hover:bg-[#F3F3F3]"
             >
               <ShieldCheck className="w-4 h-4 text-[#00A6A6]" />
-              <span>Class Rosters</span>
+              <span>Class Rosters & Anti-Proxy</span>
             </Link>
 
             <Link
