@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import Navbar from '../components/layout/Navbar';
 import Sidebar from '../components/layout/Sidebar';
@@ -80,6 +80,23 @@ export const DashboardPage: React.FC = () => {
   const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState('All');
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const viewParam = searchParams.get('view') || searchParams.get('tab');
+    if (viewParam === 'rosters') {
+      setActiveFilter('Rosters');
+      setIsRosterModalOpen(true);
+    } else if (viewParam === 'present') {
+      if (quizzes.length === 1) {
+        navigate(`/host/${quizzes[0]._id}`);
+      } else if (quizzes.length > 1) {
+        setIsLaunchModalOpen(true);
+      }
+    } else if (viewParam === 'discover' || viewParam === 'activities') {
+      setActiveFilter('All');
+    }
+  }, [searchParams, quizzes, navigate]);
 
   // Roster Bulk Upload Form
   const [courseCode, setCourseCode] = useState('');
@@ -332,7 +349,12 @@ export const DashboardPage: React.FC = () => {
 
       <div className="flex-1 flex max-w-[1440px] w-full mx-auto">
         {/* Left Sidebar */}
-        <Sidebar className="hidden lg:flex shrink-0" />
+        <Sidebar
+          className="hidden lg:flex shrink-0"
+          onStartLive={handleStartLiveClick}
+          onOpenRosters={() => setIsRosterModalOpen(true)}
+          onDiscoverClick={() => setActiveFilter('All')}
+        />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 max-w-6xl">
           {/* Section: "Create your own: quick tools to get started" (Kahoot exact 3-card block) */}

@@ -49,8 +49,12 @@ export const PlayPage: React.FC = () => {
   const [phase, setPhase] = useState<'waiting' | 'answering' | 'submitted' | 'score' | 'leaderboard'>('waiting');
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [secondsRemaining, setSecondsRemaining] = useState(30);
-  const [score, setScore] = useState(0);
-  const [streak, setStreak] = useState(0);
+  const [score, setScore] = useState(() => {
+    return Number(sessionStorage.getItem(`alix_score_${sessionId}`)) || 0;
+  });
+  const [streak, setStreak] = useState(() => {
+    return Number(sessionStorage.getItem(`alix_streak_${sessionId}`)) || 0;
+  });
   const [lastPointsAwarded, setLastPointsAwarded] = useState(0);
   const [isLastAnswerCorrect, setIsLastAnswerCorrect] = useState(false);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
@@ -185,6 +189,10 @@ export const PlayPage: React.FC = () => {
           const qIdx = data.questionIndex ?? 0;
           currentIdxRef.current = qIdx;
 
+          const remainingSeconds = typeof data.remaining === 'number'
+            ? data.remaining
+            : (data.timeLimit || 30);
+
           setCurrentQuestion({
             id: data.question.id,
             index: qIdx + 1,
@@ -193,16 +201,28 @@ export const PlayPage: React.FC = () => {
             options: finalOpts,
             timeLimit: data.timeLimit || 30,
           });
-          setSecondsRemaining(data.timeLimit || 30);
-          setSelectedIndex(null);
-          setPhase('answering');
+          setSecondsRemaining(remainingSeconds);
+
+          // Restore submission if player already locked answer before refresh
+          const subKey = `alix_sub_${sessionId}_q${qIdx}`;
+          const existingSub = sessionStorage.getItem(subKey);
+          if (existingSub !== null) {
+            setSelectedIndex(Number(existingSub));
+            setPhase('submitted');
+          } else {
+            setSelectedIndex(null);
+            setPhase('answering');
+          }
         }
       });
 
-      // Listen for timer ticks
+      // Listen for server / host timer ticks (Strict Teacher Source-of-Truth)
       socket.on('timer-tick', (data: any) => {
         if (typeof data.remaining === 'number') {
           setSecondsRemaining(data.remaining);
+          if (data.remaining <= 0) {
+            setPhase((prev) => (prev === 'answering' || prev === 'submitted' ? 'score' : prev));
+          }
         }
       });
 
@@ -267,51 +287,41 @@ export const PlayPage: React.FC = () => {
       setPhase('score');
       // Apply local score evaluation if server response did not arrive
       if (isLastAnswerCorrect) {
-        setScore((prev) => prev + lastPointsAwarded);
+        setScore((prev) => {
+          const newScore = prev + lastPointsAwarded;
+          try { sessionStorage.setItem(`alix_score_${sessionId}`, newScore.toString()); } catch {}
+          return newScore;
+        });
         const newStreak = streak + 1;
         setStreak(newStreak);
+        try { sessionStorage.setItem(`alix_streak_${sessionId}`, newStreak.toString()); } catch {}
         triggerCorrectAnswerConfetti();
         if (newStreak >= 3) {
           setTimeout(() => triggerStreakBurst(), 400);
         }
       } else {
         setStreak(0);
+        try { sessionStorage.setItem(`alix_streak_${sessionId}`, '0'); } catch {}
       }
       return;
     }
 
     const interval = setInterval(() => {
-      setSecondsRemaining((prev) => prev - 1);
+      setSecondsRemaining((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(interval);
-  }, [secondsRemaining, phase, isLastAnswerCorrect, lastPointsAwarded, streak]);
-
-  // Automatic question progression on score screen (or student manual skip)
-  useEffect(() => {
-    if (phase !== 'score') return;
-
-    const nextIdx = currentIdxRef.current + 1;
-    const totalCount = quizQuestionsRef.current.length;
-
-    // After 6 seconds on score card, auto-advance to next question if host hasn't already emitted
-    if (nextIdx < totalCount) {
-      const timer = setTimeout(() => {
-        activateQuestion(nextIdx);
-      }, 6000);
-      return () => clearTimeout(timer);
-    } else if (totalCount > 0 && nextIdx >= totalCount) {
-      const timer = setTimeout(() => {
-        setPhase('leaderboard');
-      }, 6000);
-      return () => clearTimeout(timer);
-    }
-  }, [phase]);
+  }, [secondsRemaining, phase, isLastAnswerCorrect, lastPointsAwarded, streak, sessionId]);
 
   // Student selects an option
   const handleSelectOption = (idx: number) => {
     if (selectedIndex !== null || phase !== 'answering') return;
     setSelectedIndex(idx);
     setPhase('submitted');
+
+    // Save choice to session storage to persist across student refreshes
+    try {
+      sessionStorage.setItem(`alix_sub_${sessionId}_q${currentIdxRef.current}`, idx.toString());
+    } catch {}
 
     const timeSpentMs = Math.max(
       100,
@@ -340,9 +350,6 @@ export const PlayPage: React.FC = () => {
     setIsLastAnswerCorrect(isCorrect);
     setLastPointsAwarded(calculatedPoints);
   };
-
-  const nextQuestionExists =
-    currentIdxRef.current + 1 < (quizQuestionsRef.current.length || currentQuestion.total);
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-gradient-to-br from-[#46178F] via-[#350F6E] to-[#1E0938] text-white select-none relative overflow-hidden">
@@ -555,26 +562,11 @@ export const PlayPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick Action: Advance to next question */}
-            {nextQuestionExists ? (
-              <button
-                type="button"
-                onClick={() => activateQuestion(currentIdxRef.current + 1)}
-                className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-heading font-black text-sm shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
-              >
-                <span>Continue to Next Question</span>
-                <ArrowRight className="w-4 h-4 stroke-[3]" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setPhase('leaderboard')}
-                className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-heading font-black text-sm shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
-              >
-                <Trophy className="w-4 h-4" />
-                <span>View Final Podium & Results</span>
-              </button>
-            )}
+            {/* Teacher Synchronized Wait Banner */}
+            <div className="p-4 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-center gap-3 text-xs sm:text-sm font-black text-white/95 shadow-inner">
+              <span className="w-2.5 h-2.5 rounded-full bg-alix-cyan-400 animate-ping shrink-0" />
+              <span>Waiting for instructor to present next question...</span>
+            </div>
           </div>
         )}
 

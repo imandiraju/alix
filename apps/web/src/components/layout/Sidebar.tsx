@@ -15,9 +15,17 @@ import {
 
 interface SidebarProps {
   className?: string;
+  onStartLive?: () => void;
+  onOpenRosters?: () => void;
+  onDiscoverClick?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  className = '',
+  onStartLive,
+  onOpenRosters,
+  onDiscoverClick,
+}) => {
   const navItems = [
     {
       name: 'Home',
@@ -64,10 +72,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {
         <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
+
+            const handleClick = (e: React.MouseEvent) => {
+              if (item.name === 'Discover' && onDiscoverClick) {
+                e.preventDefault();
+                onDiscoverClick();
+              } else if (item.name === 'Class Rosters' && onOpenRosters) {
+                e.preventDefault();
+                onOpenRosters();
+              }
+            };
+
             return (
               <NavLink
                 key={item.name}
                 to={item.path}
+                onClick={handleClick}
                 className={({ isActive }) =>
                   `flex items-center justify-between px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                     isActive && item.name === 'Home'
@@ -103,13 +123,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {
             <p className="text-xs text-slate-200 leading-snug">
               Launch interactive quizzes & live concept checks to your students.
             </p>
-            <NavLink
-              to="/dashboard"
-              className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-[#1368CE] hover:bg-[#105AB3] text-white font-black text-xs shadow-sm transition-all active:scale-95"
+            <button
+              type="button"
+              onClick={onStartLive}
+              className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-[#1368CE] hover:bg-[#105AB3] text-white font-black text-xs shadow-sm transition-all active:scale-95 cursor-pointer"
             >
               <Play className="w-3 h-3 fill-current" />
               <span>Start Live Host</span>
-            </NavLink>
+            </button>
           </div>
         </div>
       </div>

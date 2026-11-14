@@ -55,9 +55,9 @@ export const Navbar: React.FC = () => {
           <nav className="hidden lg:flex items-center gap-2">
             {/* 1. Activities (Discover - Green) */}
             <Link
-              to="/dashboard"
+              to="/dashboard?view=activities"
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black transition-all shadow-sm active:scale-95 ${
-                location.pathname === '/dashboard'
+                location.pathname === '/dashboard' && !location.search.includes('rosters') && !location.search.includes('present')
                   ? 'bg-[#26890C] text-white ring-2 ring-white/30'
                   : 'bg-[#26890C]/85 hover:bg-[#26890C] text-white'
               }`}
@@ -68,7 +68,7 @@ export const Navbar: React.FC = () => {
 
             {/* 2. Class Rosters (Study - Amber/Brown) */}
             <Link
-              to="/dashboard"
+              to="/dashboard?view=rosters"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black bg-[#A35200]/90 hover:bg-[#A35200] text-white transition-all shadow-sm active:scale-95"
             >
               <ShieldCheck className="w-3.5 h-3.5 stroke-[2.5] text-amber-200" />
@@ -77,8 +77,8 @@ export const Navbar: React.FC = () => {
 
             {/* 3. ALIX Live (Present - Blue) */}
             <Link
-              to="/dashboard"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black bg-[#1368CE]/90 hover:bg-[#1368CE] text-white transition-all shadow-sm active:scale-95"
+              to="/dashboard?view=present"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black bg-[#1368CE]/90 hover:bg-[#105AB3] text-white transition-all shadow-sm active:scale-95"
             >
               <Play className="w-3 h-3 fill-current stroke-[2.5]" />
               <span>Present</span>

@@ -206,6 +206,8 @@ export const HostPage: React.FC = () => {
     }
   }, [sessionId, user]);
 
+  const currentQ = questions[currentQuestionIdx] || questions[0];
+
   // Timer countdown when stage is 'question'
   useEffect(() => {
     if (stage !== 'question') return;
@@ -214,12 +216,21 @@ export const HostPage: React.FC = () => {
       return;
     }
     const interval = setInterval(() => {
-      setTimer((prev) => prev - 1);
+      setTimer((prev) => {
+        const next = prev - 1;
+        try {
+          const socket = getSocket();
+          (socket as any).emit('sync-timer', {
+            code: pin,
+            remaining: next,
+            total: currentQ.timeLimit || 30,
+          });
+        } catch {}
+        return next;
+      });
     }, 1000);
     return () => clearInterval(interval);
-  }, [timer, stage]);
-
-  const currentQ = questions[currentQuestionIdx] || questions[0];
+  }, [timer, stage, pin, currentQ?.timeLimit]);
 
   const rawOptions: string[] = (currentQ?.options || []).map((o: any) =>
     typeof o === 'string' ? o : o?.text || ''
@@ -240,6 +251,10 @@ export const HostPage: React.FC = () => {
   ];
 
   const handleStartSession = () => {
+    if (totalLearners === 0) {
+      alert('At least 1 learner must join the session before starting the live test.');
+      return;
+    }
     setStage('question');
     setTimer(currentQ.timeLimit || 30);
     setAnswersSubmitted(0);
@@ -261,7 +276,9 @@ export const HostPage: React.FC = () => {
     if (currentQuestionIdx + 1 < questions.length) {
       const nextIdx = currentQuestionIdx + 1;
       setCurrentQuestionIdx(nextIdx);
-      setTimer(questions[nextIdx].timeLimit || 30);
+      const nextQ = questions[nextIdx];
+      const nextTimeLimit = nextQ?.timeLimit || 30;
+      setTimer(nextTimeLimit);
       setAnswersSubmitted(0);
       setStage('question');
       try {
@@ -270,7 +287,15 @@ export const HostPage: React.FC = () => {
           sessionId: activeSessionId || pin,
           code: pin,
           quizId: sessionId,
+          questionIndex: nextIdx,
         } as any);
+        (socket as any).emit('host-question-advance', {
+          code: pin,
+          questionIndex: nextIdx,
+          timeLimit: nextTimeLimit,
+          question: nextQ,
+          totalQuestions: questions.length,
+        });
       } catch (err) {
         console.warn('Could not emit next-question:', err);
       }
@@ -410,9 +435,14 @@ export const HostPage: React.FC = () => {
             <button
               type="button"
               onClick={handleStartSession}
-              className="px-5 py-2 rounded-lg bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#1a5e08] active:border-b-0 active:translate-y-1 font-bold text-sm text-white transition-all duration-100 flex items-center gap-1.5 cursor-pointer"
+              disabled={totalLearners === 0}
+              className={`px-5 py-2 rounded-lg font-bold text-sm text-white transition-all duration-100 flex items-center gap-1.5 ${
+                totalLearners === 0
+                  ? 'bg-slate-700/80 border-b-4 border-slate-900 opacity-60 cursor-not-allowed'
+                  : 'bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#1a5e08] active:border-b-0 active:translate-y-1 cursor-pointer'
+              }`}
             >
-              <span>Start</span>
+              <span>{totalLearners === 0 ? 'Waiting...' : 'Start'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
@@ -572,9 +602,18 @@ export const HostPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleStartSession}
-                className="px-10 py-4 sm:py-5 rounded-2xl bg-[#26890C] hover:bg-[#20740A] border-b-6 border-[#175407] active:border-b-0 active:translate-y-1.5 text-white font-heading font-black text-lg sm:text-2xl shadow-2xl transition-all duration-100 inline-flex items-center gap-3 cursor-pointer group"
+                disabled={totalLearners === 0}
+                className={`px-10 py-4 sm:py-5 rounded-2xl text-white font-heading font-black text-lg sm:text-2xl shadow-2xl transition-all duration-100 inline-flex items-center gap-3 ${
+                  totalLearners === 0
+                    ? 'bg-slate-700/80 border-b-6 border-slate-900 opacity-60 cursor-not-allowed'
+                    : 'bg-[#26890C] hover:bg-[#20740A] border-b-6 border-[#175407] active:border-b-0 active:translate-y-1.5 cursor-pointer group'
+                }`}
               >
-                <span>Start Game ({questions.length} questions)</span>
+                <span>
+                  {totalLearners === 0
+                    ? 'Waiting for Learners to Join...'
+                    : `Start Game (${questions.length} questions)`}
+                </span>
                 <ArrowRight className="w-6 h-6 stroke-[3] group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
@@ -702,12 +741,47 @@ export const HostPage: React.FC = () => {
                 );
               })}
             </div>
+
+            {/* Prominent Action Bar directly under Chart */}
+            <div className="pt-8 flex flex-wrap items-center justify-center gap-4">
+              {currentQuestionIdx + 1 < questions.length ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleNextQuestion}
+                    className="px-8 py-3.5 rounded-2xl bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#175407] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-lg sm:text-xl shadow-2xl flex items-center gap-3 cursor-pointer transition-all"
+                  >
+                    <span>Next Question ({currentQuestionIdx + 2} of {questions.length})</span>
+                    <ArrowRight className="w-5 h-5 stroke-[3]" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStage('leaderboard')}
+                    className="px-6 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-heading font-black text-sm sm:text-base flex items-center gap-2 cursor-pointer shadow-lg transition-all"
+                  >
+                    <Trophy className="w-4 h-4 text-amber-400" />
+                    <span>View Leaderboard</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleNextQuestion}
+                  className="px-10 py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 border-b-6 border-amber-700 active:border-b-0 active:translate-y-1.5 text-white font-heading font-black text-xl sm:text-2xl shadow-2xl flex items-center gap-3 cursor-pointer transition-all"
+                >
+                  <Trophy className="w-6 h-6 stroke-[2.5]" />
+                  <span>Final Podium & Results</span>
+                  <ArrowRight className="w-6 h-6 stroke-[3]" />
+                </button>
+              )}
+            </div>
           </div>
         )}
 
         {/* Stage 3: Live Session Leaderboard */}
         {stage === 'leaderboard' && (
-          <div className="max-w-2xl mx-auto w-full animate-fade-in">
+          <div className="max-w-2xl mx-auto w-full animate-fade-in space-y-6">
             <div className="text-center mb-6">
               <span className="text-xs font-bold uppercase tracking-wider text-alix-cyan-400">
                 Auditorium Standings
@@ -742,6 +816,22 @@ export const HostPage: React.FC = () => {
                   </div>
                 ))
               )}
+            </div>
+
+            {/* Leaderboard Action Button */}
+            <div className="pt-4 flex justify-center">
+              <button
+                type="button"
+                onClick={handleNextQuestion}
+                className="px-8 py-3.5 rounded-2xl bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#175407] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-lg shadow-xl flex items-center gap-3 cursor-pointer transition-all"
+              >
+                <span>
+                  {currentQuestionIdx + 1 < questions.length
+                    ? `Next Question (${currentQuestionIdx + 2} of ${questions.length})`
+                    : 'View Final Podium 🏆'}
+                </span>
+                <ArrowRight className="w-5 h-5 stroke-[3]" />
+              </button>
             </div>
           </div>
         )}

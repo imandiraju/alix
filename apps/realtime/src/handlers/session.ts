@@ -326,10 +326,16 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       playerCount: session.players.length,
     });
 
-    // If game is already actively streaming questions, deliver current question to this late joiner
+    // If game is already actively streaming questions, deliver current question to this late joiner or refreshing student
     if (session.status === SessionStatus.PLAYING && session.currentQuestionIndex >= 0 && session.quiz) {
       const activeQ = session.quiz.questions[session.currentQuestionIndex];
       if (activeQ) {
+        const remainingSeconds = typeof (session as any).questionRemaining === 'number'
+          ? (session as any).questionRemaining
+          : (session as any).questionStartedAt
+          ? Math.max(0, (activeQ.timeLimit || 30) - Math.floor((Date.now() - (session as any).questionStartedAt) / 1000))
+          : (activeQ.timeLimit || 30);
+
         socket.emit('question-started', {
           question: {
             id: activeQ.id,
@@ -343,6 +349,10 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
           questionIndex: session.currentQuestionIndex,
           totalQuestions: session.quiz.questions.length,
           timeLimit: activeQ.timeLimit,
+        } as any);
+        socket.emit('timer-tick', {
+          remaining: remainingSeconds,
+          total: activeQ.timeLimit,
         });
       }
     }
@@ -405,7 +415,71 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     session.hostSocketId = socket.id;
     socket.data.sessionId = session.id;
     socket.data.role = 'host';
+
+    if (typeof (payload as any)?.questionIndex === 'number') {
+      session.currentQuestionIndex = (payload as any).questionIndex - 1;
+    }
+
     sendNextQuestion(io, session.id);
+  });
+
+  // ─── Sync Timer from Host Teacher ─────────────────────────────────────
+
+  (socket as any).on('sync-timer', (payload: any) => {
+    const session = resolveSession(socket, payload);
+    if (!session) return;
+    if (typeof payload?.remaining === 'number') {
+      (session as any).questionRemaining = payload.remaining;
+      (session as any).questionTotal = payload.total || 30;
+      io.to(session.id).emit('timer-tick', { remaining: payload.remaining, total: payload.total || 30 });
+      io.to(session.code).emit('timer-tick', { remaining: payload.remaining, total: payload.total || 30 });
+    }
+  });
+
+  // ─── Host Instant Question Advance ────────────────────────────────────
+
+  (socket as any).on('host-question-advance', (payload: any) => {
+    const session = resolveSession(socket, payload);
+    if (!session) return;
+    session.hostSocketId = socket.id;
+    socket.data.sessionId = session.id;
+    socket.data.role = 'host';
+
+    const qIdx = typeof payload?.questionIndex === 'number' ? payload.questionIndex : (session.currentQuestionIndex + 1);
+    session.currentQuestionIndex = qIdx;
+    (session as any).questionStartedAt = Date.now();
+
+    const incomingQ = payload.question;
+    const timeLimit = Number(payload.timeLimit) || Number(incomingQ?.timeLimit) || 30;
+    (session as any).questionRemaining = timeLimit;
+
+    const rawOpts = Array.isArray(incomingQ?.options) ? incomingQ.options : [];
+    const nonBlank = rawOpts.filter((o: any) => {
+      const txt = typeof o === 'string' ? o : o?.text;
+      return txt !== undefined && String(txt).trim().length > 0;
+    });
+    const finalOpts = nonBlank.length >= 2 ? nonBlank : rawOpts;
+
+    const questionPayload = {
+      question: {
+        id: incomingQ?.id || `q-${qIdx + 1}`,
+        text: incomingQ?.text || `Question ${qIdx + 1}`,
+        type: QuestionType.MULTIPLE_CHOICE,
+        options: finalOpts.map((opt: any, oIdx: number) => {
+          const label = typeof opt === 'string' ? opt : (opt?.text || `Option ${oIdx + 1}`);
+          return { id: oIdx.toString(), text: label };
+        }),
+        timeLimit,
+        points: Number(incomingQ?.points) || 1000,
+      },
+      questionIndex: qIdx,
+      totalQuestions: payload.totalQuestions || session.quiz?.questions?.length || 1,
+      timeLimit,
+      remaining: timeLimit,
+    };
+
+    io.to(session.id).emit('question-started', questionPayload);
+    io.to(session.code).emit('question-started', questionPayload);
   });
 
   // ─── Submit Answer ────────────────────────────────────────────────────
@@ -628,9 +702,12 @@ function sendNextQuestion(io: IOServer, sessionId: string): void {
   }
 
   // Start countdown timer
+  (session as any).questionStartedAt = Date.now();
   let remaining = question.timeLimit;
+  (session as any).questionRemaining = remaining;
   const timerInterval = setInterval(() => {
     remaining--;
+    (session as any).questionRemaining = remaining;
     io.to(session.id).emit('timer-tick', { remaining, total: question.timeLimit });
     io.to(session.code).emit('timer-tick', { remaining, total: question.timeLimit });
 
