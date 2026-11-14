@@ -9,6 +9,8 @@ export interface IQuestion {
   options: string[];
   correctIndex: number;
   correctIndices?: number[];
+  image?: string;
+  mediaUrl?: string;
 }
 
 export interface IQuiz extends Document {
@@ -35,6 +37,8 @@ const QuestionSchema = new Schema<IQuestion>(
     options: { type: [String], required: true },
     correctIndex: { type: Number, default: 0 },
     correctIndices: { type: [Number], default: [] },
+    image: { type: String, default: '' },
+    mediaUrl: { type: String, default: '' },
   },
   { _id: false }
 );

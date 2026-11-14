@@ -45,6 +45,8 @@ interface ActiveQuestion {
   options: string[];
   timeLimit: number;
   points?: number;
+  image?: string;
+  mediaUrl?: string;
 }
 
 export const DEFAULT_SQUADS = [
@@ -187,6 +189,8 @@ export const PlayPage: React.FC = () => {
         options: finalOpts,
         timeLimit: q.timeLimit || 30,
         points: q.points || 1000,
+        image: q.image || q.mediaUrl,
+        mediaUrl: q.mediaUrl || q.image,
       });
       setSecondsRemaining(q.timeLimit || 30);
       setSelectedIndex(null);
@@ -264,6 +268,8 @@ export const PlayPage: React.FC = () => {
             options: finalOpts,
             timeLimit: data.timeLimit || 30,
             points: data.question.points || 1000,
+            image: data.question.image || data.question.mediaUrl,
+            mediaUrl: data.question.mediaUrl || data.question.image,
           });
           setSecondsRemaining(remainingSeconds);
           setIsLastAnswerCorrect(false);
@@ -758,6 +764,17 @@ export const PlayPage: React.FC = () => {
                 {currentQuestion.text}
               </h2>
             </div>
+
+            {/* Optional Question Visual Prompt / Diagram */}
+            {Boolean(currentQuestion.image || currentQuestion.mediaUrl) && (
+              <div className="flex justify-center my-2">
+                <img
+                  src={currentQuestion.image || currentQuestion.mediaUrl}
+                  alt="Visual Diagram"
+                  className="max-h-40 sm:max-h-52 object-contain rounded-xl border border-white/20 shadow-lg bg-black/40"
+                />
+              </div>
+            )}
 
             {/* Question Format Indicators */}
             {isMultiSelect && (

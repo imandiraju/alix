@@ -36,6 +36,13 @@ export const Navbar: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+    setIsDropdownOpen(false);
+    setIsMobileMenuOpen(false);
+    navigate('/');
+  };
+
   return (
     <header className="sticky top-0 z-40 w-full bg-white border-b border-[#E5E5E5] select-none text-[#252525] shadow-xs">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
@@ -178,10 +185,7 @@ export const Navbar: React.FC = () => {
                     <div className="pt-2 border-t border-[#E5E5E5]">
                       <button
                         type="button"
-                        onClick={() => {
-                          logout();
-                          setIsDropdownOpen(false);
-                        }}
+                        onClick={handleLogout}
                         className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                       >
                         <LogOut className="w-3.5 h-3.5" />
@@ -301,10 +305,7 @@ export const Navbar: React.FC = () => {
           {isAuthenticated ? (
             <button
               type="button"
-              onClick={() => {
-                logout();
-                setIsMobileMenuOpen(false);
-              }}
+              onClick={handleLogout}
               className="w-full py-2.5 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               <LogOut className="w-4 h-4" />

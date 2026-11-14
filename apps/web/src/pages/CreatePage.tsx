@@ -47,6 +47,8 @@ interface QuestionDraft {
   options: string[];
   correctIndex: number;
   correctIndices?: number[];
+  image?: string;
+  mediaUrl?: string;
 }
 
 export const CreatePage: React.FC = () => {
@@ -55,6 +57,7 @@ export const CreatePage: React.FC = () => {
   const editQuizId = searchParams.get('edit');
   const isEditMode = Boolean(editQuizId);
   const { user } = useAuth();
+  const imageInputRef = React.useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState(user?.department || '');
@@ -301,6 +304,59 @@ export const CreatePage: React.FC = () => {
     setQuestions(
       questions.map((q) =>
         q.id === activeQuestion.id ? { ...q, [field]: value } : q
+      )
+    );
+  };
+
+  const processImageFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file (PNG, JPG, SVG, WEBP).');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image file is too large. Please select an image under 5MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        setQuestions((prev) =>
+          prev.map((q) =>
+            q.id === activeQuestion.id
+              ? { ...q, image: dataUrl, mediaUrl: dataUrl }
+              : q
+          )
+        );
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processImageFile(file);
+    }
+    if (e.target) {
+      e.target.value = '';
+    }
+  };
+
+  const handleImageDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processImageFile(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setQuestions((prev) =>
+      prev.map((q) =>
+        q.id === activeQuestion.id
+          ? { ...q, image: '', mediaUrl: '' }
+          : q
       )
     );
   };
@@ -612,9 +668,15 @@ export const CreatePage: React.FC = () => {
                           <div className="w-full h-2 rounded bg-white/30 truncate text-[7px] text-white/90 px-1 overflow-hidden font-bold">
                             {q.text || 'Question Prompt...'}
                           </div>
-                          <div className="flex items-center justify-center text-white/40 text-[9px]">
-                            <ImageIcon className="w-3.5 h-3.5" />
-                          </div>
+                          {q.image ? (
+                            <div className="w-full h-6 rounded overflow-hidden my-0.5 bg-black/40">
+                              <img src={q.image} alt="Visual" className="w-full h-full object-cover" />
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center text-white/40 text-[9px]">
+                              <ImageIcon className="w-3.5 h-3.5" />
+                            </div>
+                          )}
                           <div className="grid grid-cols-2 gap-1">
                             <div className="h-2 rounded bg-[#E21B3C]" />
                             <div className="h-2 rounded bg-[#1368CE]" />
@@ -736,15 +798,64 @@ export const CreatePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Slide Middle: Presentation Visual / Media Box */}
+              {/* Slide Middle: Presentation Visual / Media Box (Click to upload diagram/formula/image) */}
               <div className="my-auto py-2">
-                <div className="w-full max-w-sm mx-auto h-28 sm:h-36 rounded-2xl bg-white/10 border-2 border-dashed border-white/30 flex flex-col items-center justify-center gap-1.5 text-white/80 hover:bg-white/15 hover:border-white/50 transition-all cursor-pointer p-4 text-center group">
-                  <div className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center text-cyan-300 group-hover:scale-110 transition-transform">
-                    <ImageIcon className="w-6 h-6" />
+                <input
+                  type="file"
+                  ref={imageInputRef}
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+
+                {activeQuestion.image ? (
+                  <div className="relative group max-w-sm sm:max-w-md mx-auto rounded-2xl overflow-hidden border-2 border-white/30 bg-black/40 shadow-xl">
+                    <img
+                      src={activeQuestion.image}
+                      alt="Question Visual Prompt"
+                      className="w-full max-h-36 sm:max-h-48 object-contain mx-auto bg-black/20"
+                    />
+                    {/* Hover Actions Bar */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => imageInputRef.current?.click()}
+                        className="px-3.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-[#252525] font-semibold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                        title="Choose a different image"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5 text-[#46178F]" />
+                        <span>Change Image</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                        title="Remove image from question"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Remove</span>
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-xs font-black text-white">Presentation Visual Prompt</div>
-                  <div className="text-[10px] text-white/60 font-semibold">Click to upload diagram, formula, or image</div>
-                </div>
+                ) : (
+                  <div
+                    onClick={() => imageInputRef.current?.click()}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={handleImageDrop}
+                    className="w-full max-w-sm mx-auto h-28 sm:h-36 rounded-2xl bg-white/10 border-2 border-dashed border-white/30 hover:border-white/60 hover:bg-white/15 flex flex-col items-center justify-center gap-1.5 text-white/80 transition-all cursor-pointer p-4 text-center group active:scale-98"
+                    role="button"
+                    tabIndex={0}
+                    title="Click to browse or drop an image file"
+                  >
+                    <div className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center text-cyan-300 group-hover:scale-110 transition-transform shadow-inner">
+                      <ImageIcon className="w-6 h-6" />
+                    </div>
+                    <div className="text-xs font-semibold text-white">Presentation Visual Prompt</div>
+                    <div className="text-[10px] text-white/70 font-normal">
+                      Click to upload diagram, formula, or image (PNG, JPG, SVG)
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Slide Bottom: Answer Choices Blocks (Tactile 3D Buttons) */}
@@ -1098,12 +1209,23 @@ export const CreatePage: React.FC = () => {
             </div>
 
             {/* Center Slide Stage */}
-            <div className="max-w-4xl w-full mx-auto my-auto space-y-6 text-center">
-              <div className="bg-white text-slate-900 rounded-3xl p-6 sm:p-10 shadow-2xl border-4 border-white/20">
+            <div className="max-w-4xl w-full mx-auto my-auto space-y-4 text-center">
+              <div className="bg-white text-slate-900 rounded-3xl p-6 sm:p-8 shadow-2xl border-4 border-white/20">
                 <h1 className="text-2xl sm:text-4xl lg:text-5xl font-heading font-black leading-snug">
                   {pQ.text || 'Question Prompt...'}
                 </h1>
               </div>
+
+              {/* Question Visual Diagram in Fullscreen */}
+              {pQ.image && (
+                <div className="flex justify-center my-2">
+                  <img
+                    src={pQ.image}
+                    alt="Question Diagram"
+                    className="max-h-48 sm:max-h-60 object-contain rounded-2xl border-2 border-white/20 shadow-2xl bg-black/40"
+                  />
+                </div>
+              )}
 
               {/* Answer Cards in Fullscreen */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">

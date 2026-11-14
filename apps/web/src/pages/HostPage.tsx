@@ -1042,6 +1042,17 @@ export const HostPage: React.FC = () => {
               <h1 className="text-2xl sm:text-4xl lg:text-4xl font-heading font-extrabold leading-tight text-white mb-2">
                 {currentQ.text}
               </h1>
+
+              {/* Question Visual Diagram / Image */}
+              {Boolean((currentQ as any).image || (currentQ as any).mediaUrl) && (
+                <div className="mt-4 flex justify-center">
+                  <img
+                    src={(currentQ as any).image || (currentQ as any).mediaUrl}
+                    alt="Question visual"
+                    className="max-h-56 sm:max-h-72 object-contain rounded-2xl border-2 border-white/20 shadow-2xl bg-black/40"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Answer Options Grid (Filtered for valid non-empty options only) */}
