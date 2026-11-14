@@ -6,6 +6,9 @@ export interface ISessionParticipant {
   rollNo?: string;
   email?: string;
   avatarId: string;
+  teamId?: string;
+  teamName?: string;
+  teamColor?: string;
   score: number;
   streak: number;
   joinedAt: Date;
@@ -15,6 +18,8 @@ export interface ISessionResponse {
   questionId: string;
   playerName: string;
   rollNo?: string;
+  teamId?: string;
+  teamName?: string;
   answer: string;
   isCorrect: boolean;
   timeMs: number;
@@ -28,6 +33,7 @@ export interface IGameSessionDoc extends Document {
   teacherId?: mongoose.Types.ObjectId;
   rosterId?: mongoose.Types.ObjectId;
   status: 'waiting' | 'active' | 'completed';
+  gameMode?: 'classic' | 'team';
   isLocked: boolean;
   requireRoster: boolean;
   rollingToken?: string;
@@ -43,6 +49,9 @@ const ParticipantSchema = new Schema<ISessionParticipant>(
     rollNo: { type: String, default: '', uppercase: true, trim: true },
     email: { type: String, default: '', lowercase: true, trim: true },
     avatarId: { type: String, default: 'fox' },
+    teamId: { type: String, default: '' },
+    teamName: { type: String, default: '' },
+    teamColor: { type: String, default: '' },
     score: { type: Number, default: 0 },
     streak: { type: Number, default: 0 },
     joinedAt: { type: Date, default: Date.now },
@@ -55,6 +64,8 @@ const ResponseSchema = new Schema<ISessionResponse>(
     questionId: { type: String, required: true },
     playerName: { type: String, required: true },
     rollNo: { type: String, default: '', uppercase: true, trim: true },
+    teamId: { type: String, default: '' },
+    teamName: { type: String, default: '' },
     answer: { type: String, required: true },
     isCorrect: { type: Boolean, required: true },
     timeMs: { type: Number, default: 0 },
@@ -71,6 +82,7 @@ const GameSessionDocSchema = new Schema<IGameSessionDoc>(
     teacherId: { type: Schema.Types.ObjectId, ref: 'Teacher' },
     rosterId: { type: Schema.Types.ObjectId, ref: 'Roster' },
     status: { type: String, enum: ['waiting', 'active', 'completed'], default: 'waiting' },
+    gameMode: { type: String, enum: ['classic', 'team'], default: 'classic' },
     isLocked: { type: Boolean, default: false },
     requireRoster: { type: Boolean, default: false },
     rollingToken: { type: String, default: '' },

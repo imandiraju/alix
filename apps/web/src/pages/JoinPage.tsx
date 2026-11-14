@@ -39,6 +39,17 @@ export const JoinPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Team Mode State
+  const [isTeamMode, setIsTeamMode] = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState('team-red');
+
+  const SQUADS = [
+    { id: 'team-red', name: 'Red Dragons', color: '#E21B3C', icon: '🐉', border: 'border-[#E21B3C]', bg: 'bg-[#E21B3C]/10', text: 'text-[#E21B3C]' },
+    { id: 'team-blue', name: 'Blue Titans', color: '#1368CE', icon: '⚡', border: 'border-[#1368CE]', bg: 'bg-[#1368CE]/10', text: 'text-[#1368CE]' },
+    { id: 'team-green', name: 'Emerald Knights', color: '#26890C', icon: '🛡️', border: 'border-[#26890C]', bg: 'bg-[#26890C]/10', text: 'text-[#26890C]' },
+    { id: 'team-yellow', name: 'Golden Eagles', color: '#D89E00', icon: '🦅', border: 'border-[#D89E00]', bg: 'bg-[#D89E00]/10', text: 'text-[#D89E00]' },
+  ];
+
   // Check URL query parameters (e.g. from camera QR scan: /join?pin=842915)
   useEffect(() => {
     const urlPin = searchParams.get('pin');
@@ -59,6 +70,7 @@ export const JoinPage: React.FC = () => {
         if (data.session) {
           setIsLocked(!!data.session.isLocked);
           setRequiresRoster(!!data.session.requireRoster);
+          setIsTeamMode(data.session.gameMode === 'team');
           if (data.session.quizId) setSessionQuizId(data.session.quizId);
           setSessionCourseName(
             data.session.roster
@@ -154,7 +166,9 @@ export const JoinPage: React.FC = () => {
         navigate(
           `/play/${cleanPin}?name=${encodeURIComponent(verifiedName)}&rollNo=${encodeURIComponent(
             rollNo.trim().toUpperCase()
-          )}&avatar=${selectedAvatar.id}${urlQuizId ? `&quizId=${encodeURIComponent(urlQuizId)}` : ''}`
+          )}&avatar=${selectedAvatar.id}${urlQuizId ? `&quizId=${encodeURIComponent(urlQuizId)}` : ''}${
+            isTeamMode ? `&teamId=${encodeURIComponent(selectedTeamId)}` : ''
+          }`
         );
       } catch (err: any) {
         setError(err.message || 'Network error verifying enrollment with classroom server.');
@@ -176,7 +190,7 @@ export const JoinPage: React.FC = () => {
       navigate(
         `/play/${cleanPin}?name=${encodeURIComponent(finalNickname)}&avatar=${selectedAvatar.id}${
           urlQuizId ? `&quizId=${encodeURIComponent(urlQuizId)}` : ''
-        }`
+        }${isTeamMode ? `&teamId=${encodeURIComponent(selectedTeamId)}` : ''}`
       );
     }, 250);
   };
@@ -403,6 +417,47 @@ export const JoinPage: React.FC = () => {
                 ))}
               </div>
             </div>
+
+            {/* Team / Squad Selection (When Team Mode is enabled) */}
+            {isTeamMode && (
+              <div className="pt-2 border-t border-slate-100 animate-fade-in">
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <span className="text-[11px] font-black text-indigo-700 uppercase tracking-wider flex items-center gap-1">
+                    <span>👥</span>
+                    <span>Choose Your Squad *</span>
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-400">Team vs Team</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {SQUADS.map((sq) => {
+                    const isSelected = selectedTeamId === sq.id;
+                    return (
+                      <button
+                        key={sq.id}
+                        type="button"
+                        onClick={() => setSelectedTeamId(sq.id)}
+                        className={`p-2.5 rounded-xl border-2 text-left transition-all flex items-center gap-2 cursor-pointer ${
+                          isSelected
+                            ? `${sq.border} ${sq.bg} ring-2 ring-indigo-200 shadow-sm scale-[1.02]`
+                            : 'border-slate-200 bg-white hover:border-slate-300 opacity-80 hover:opacity-100'
+                        }`}
+                      >
+                        <span className="text-xl shrink-0">{sq.icon}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className={`text-xs font-black truncate ${isSelected ? sq.text : 'text-slate-900'}`}>
+                            {sq.name}
+                          </div>
+                          <div className="text-[9px] font-bold text-slate-400">
+                            {isSelected ? '✓ Selected' : 'Tap to join'}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Error Message */}
             {error && (

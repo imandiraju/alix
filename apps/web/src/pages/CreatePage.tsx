@@ -23,6 +23,15 @@ import {
   AlertCircle,
   HelpCircle,
   ShieldCheck,
+  Maximize2,
+  Minimize2,
+  ChevronLeft,
+  ChevronRight,
+  Image as ImageIcon,
+  Eye,
+  EyeOff,
+  Layers,
+  X,
 } from 'lucide-react';
 
 interface QuestionDraft {
@@ -74,6 +83,34 @@ export const CreatePage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [createdQuizId, setCreatedQuizId] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  // Fullscreen Presentation Deck Mode
+  const [isFullscreenPresentation, setIsFullscreenPresentation] = useState(false);
+  const [presentationSlideIdx, setPresentationSlideIdx] = useState(0);
+  const [revealSolution, setRevealSolution] = useState(false);
+
+  React.useEffect(() => {
+    if (!isFullscreenPresentation) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        setPresentationSlideIdx((prev) => Math.min(questions.length - 1, prev + 1));
+        setRevealSolution(false);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setPresentationSlideIdx((prev) => Math.max(0, prev - 1));
+        setRevealSolution(false);
+      } else if (e.key === 'Escape') {
+        setIsFullscreenPresentation(false);
+      } else if (e.key === 'Enter') {
+        setRevealSolution((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreenPresentation, questions.length]);
 
   const activeQuestion =
     questions.find((q) => q.id === activeQuestionId) || questions[0];
@@ -265,10 +302,10 @@ export const CreatePage: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-alix-slate-50">
       <Navbar />
 
-      <div className="flex-1 flex max-w-7xl w-full mx-auto">
+      <div className="flex-1 flex max-w-[1550px] w-full mx-auto">
         <Sidebar className="hidden lg:flex" />
 
-        <main className="flex-1 p-6 sm:p-8 max-w-5xl">
+        <main className="flex-1 p-4 sm:p-6 w-full">
           {/* Header Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
@@ -282,11 +319,26 @@ export const CreatePage: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const activeIdx = questions.findIndex((q) => q.id === activeQuestion.id);
+                  setPresentationSlideIdx(Math.max(0, activeIdx));
+                  setRevealSolution(false);
+                  setIsFullscreenPresentation(true);
+                }}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-white font-bold text-sm shadow-md flex items-center gap-2 transition-all cursor-pointer"
+                title="Present slides in full screen like a slideshow"
+              >
+                <Maximize2 className="w-4 h-4" />
+                <span>Present Fullscreen</span>
+              </button>
+
               <Link
                 to="/dashboard"
                 className="px-4 py-2 rounded-xl border border-alix-slate-300 text-alix-slate-600 hover:bg-alix-slate-100 text-sm font-semibold transition-colors"
               >
-                Back to Dashboard
+                Dashboard
               </Link>
 
               <button
@@ -397,13 +449,14 @@ export const CreatePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Question Editor Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left Column: Questions List */}
-            <div className="lg:col-span-4 space-y-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-alix-slate-500">
-                  Questions ({questions.length})
+          {/* Question Editor Grid: 3-Panel Slide Presentation Studio */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* 1. Left Panel: Slide Deck Navigator (Col span 3) */}
+            <div className="lg:col-span-3 space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Slide Deck ({questions.length})</span>
                 </span>
                 <button
                   type="button"
@@ -411,29 +464,31 @@ export const CreatePage: React.FC = () => {
                   className="text-xs font-bold text-alix-violet-700 hover:text-alix-violet-900 inline-flex items-center gap-1 cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
-                  <span>Add Question</span>
+                  <span>Add Slide</span>
                 </button>
               </div>
 
-              <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                {questions.map((q, idx) => (
-                  <div
-                    key={q.id}
-                    className={`p-3 rounded-xl border-2 transition-all flex items-center justify-between gap-2 ${
-                      q.id === activeQuestion.id
-                        ? 'bg-alix-violet-50 border-alix-violet-500 shadow-sm'
-                        : 'bg-white border-alix-slate-200 hover:border-alix-slate-300'
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setActiveQuestionId(q.id)}
-                      className="flex-1 text-left min-w-0 cursor-pointer"
+              <div className="space-y-2.5 max-h-[640px] overflow-y-auto pr-1">
+                {questions.map((q, idx) => {
+                  const isActive = q.id === activeQuestion.id;
+                  return (
+                    <div
+                      key={q.id}
+                      className={`p-2.5 rounded-2xl border-2 transition-all flex flex-col gap-2 ${
+                        isActive
+                          ? 'bg-alix-violet-50/80 border-alix-violet-600 shadow-md ring-2 ring-alix-violet-200'
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-bold text-alix-indigo">
-                            Q{idx + 1}
+                      <button
+                        type="button"
+                        onClick={() => setActiveQuestionId(q.id)}
+                        className="w-full text-left cursor-pointer"
+                      >
+                        {/* Slide Top Bar */}
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-black text-slate-900">
+                            Slide {idx + 1}
                           </span>
                           <span
                             className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
@@ -449,297 +504,166 @@ export const CreatePage: React.FC = () => {
                             {q.type === 'true_false' ? 'T/F' : q.type === 'multi_select' ? 'MULTI' : q.type === 'poll' ? 'POLL' : 'QUIZ'}
                           </span>
                         </div>
-                        <span className="text-[10px] text-alix-slate-400 font-mono">
-                          {q.timeLimit}s • {q.points}pts
-                        </span>
-                      </div>
-                      <p className="text-xs text-alix-slate-600 truncate font-medium">
-                        {q.text || 'Untitled Question Prompt...'}
-                      </p>
-                    </button>
 
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleDuplicateQuestion(q.id)}
-                        className="p-1 rounded text-alix-slate-300 hover:text-alix-violet-600 transition-colors cursor-pointer"
-                        title="Duplicate question"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
+                        {/* Miniature Slide Preview */}
+                        <div className="w-full h-16 rounded-lg bg-slate-900 p-1.5 flex flex-col justify-between border border-slate-700 relative overflow-hidden shadow-inner">
+                          <div className="w-full h-2 rounded bg-white/20 truncate text-[7px] text-white/70 px-1 overflow-hidden">
+                            {q.text || 'Question Prompt...'}
+                          </div>
+                          <div className="flex items-center justify-center text-white/30 text-[9px]">
+                            <ImageIcon className="w-3 h-3" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-1">
+                            <div className="h-1.5 rounded bg-[#E21B3C]/80" />
+                            <div className="h-1.5 rounded bg-[#1368CE]/80" />
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-slate-700 truncate font-semibold mt-1.5">
+                          {q.text || 'Untitled Question Prompt...'}
+                        </p>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          {q.timeLimit}s • {q.points}pts
+                        </div>
                       </button>
 
-                      {questions.length > 1 && (
+                      {/* Slide Action Buttons */}
+                      <div className="flex items-center justify-end gap-1 pt-1 border-t border-slate-100">
                         <button
                           type="button"
-                          onClick={() => handleDeleteQuestion(q.id)}
-                          className="p-1 rounded text-alix-slate-300 hover:text-rose-600 transition-colors cursor-pointer"
-                          title="Delete question"
+                          onClick={() => handleDuplicateQuestion(q.id)}
+                          className="p-1 rounded text-slate-400 hover:text-alix-violet-600 transition-colors cursor-pointer"
+                          title="Duplicate slide"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Copy className="w-3.5 h-3.5" />
                         </button>
-                      )}
+                        {questions.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteQuestion(q.id)}
+                            className="p-1 rounded text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                            title="Delete slide"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
+
+                {/* Big Add Slide Card at bottom of deck */}
+                <button
+                  type="button"
+                  onClick={() => handleAddQuestion('multiple_choice')}
+                  className="w-full py-3.5 rounded-2xl border-2 border-dashed border-slate-300 hover:border-alix-violet-500 hover:bg-alix-violet-50/50 text-slate-600 hover:text-alix-violet-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Add Question Slide</span>
+                </button>
               </div>
             </div>
 
-            {/* Right Column: Question Detail Editor */}
-            <div className="lg:col-span-8 bg-white p-6 rounded-2xl border border-alix-slate-200 shadow-sm space-y-6">
-              {/* Question Format Selector (4 Types matching Kahoot) */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Question Type
-                  </label>
-                  <span className="text-[11px] font-bold text-slate-400">
-                    {activeQuestion.type === 'multi_select'
-                      ? 'Learners select all correct options'
-                      : activeQuestion.type === 'poll'
-                      ? 'Opinion poll, no grading'
-                      : activeQuestion.type === 'true_false'
-                      ? 'Binary true/false'
-                      : 'Single choice, 1 correct'}
+            {/* 2. Center Panel: 16:9 Presentation Slide Canvas (Col span 6) */}
+            <div className="lg:col-span-6 bg-gradient-to-br from-[#1E0B36] via-[#2A104E] to-[#140626] rounded-3xl border-2 border-slate-700 p-4 sm:p-6 shadow-2xl relative flex flex-col justify-between min-h-[580px] text-white">
+              {/* Slide Format Indicator Badge */}
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-lg bg-white/15 text-white font-mono text-xs font-bold">
+                    Slide {questions.findIndex((q) => q.id === activeQuestion.id) + 1} of {questions.length}
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-alix-cyan-500/20 text-alix-cyan-300 border border-alix-cyan-500/40 text-xs font-black uppercase">
+                    {activeQuestion.type === 'true_false' ? 'True / False' : activeQuestion.type === 'multi_select' ? 'Multi-Select' : activeQuestion.type === 'poll' ? 'Opinion Poll' : 'Quiz (Single)'}
                   </span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const activeIdx = questions.findIndex((q) => q.id === activeQuestion.id);
+                    setPresentationSlideIdx(Math.max(0, activeIdx));
+                    setRevealSolution(false);
+                    setIsFullscreenPresentation(true);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-all flex items-center gap-1 cursor-pointer"
+                  title="Present this slide fullscreen"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Fullscreen</span>
+                </button>
+              </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  {/* 1. Quiz (Single Choice) */}
-                  <button
-                    type="button"
-                    onClick={() => handleSetQuestionType('multiple_choice')}
-                    className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between min-h-[72px] ${
-                      (activeQuestion.type || 'multiple_choice') === 'multiple_choice'
-                        ? 'border-alix-violet-600 bg-alix-violet-50 text-alix-violet-950 shadow-xs ring-2 ring-alix-violet-200'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="w-3 h-3 rounded-full bg-[#E21B3C]" />
-                      <span className="text-[10px] font-black uppercase text-slate-400">Single</span>
-                    </div>
-                    <div>
-                      <div className="font-heading font-black text-xs text-slate-900">Quiz</div>
-                      <div className="text-[10px] text-slate-500">1 correct answer</div>
-                    </div>
-                  </button>
-
-                  {/* 2. True / False */}
-                  <button
-                    type="button"
-                    onClick={() => handleSetQuestionType('true_false')}
-                    className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between min-h-[72px] ${
+              {/* Slide Top: Prominent Question Prompt Input */}
+              <div className="my-3">
+                <div className="bg-white text-slate-900 rounded-2xl p-4 shadow-xl border-2 border-white/40">
+                  <textarea
+                    rows={2}
+                    value={activeQuestion.text}
+                    onChange={(e) => handleUpdateActiveQuestion('text', e.target.value)}
+                    className="w-full text-center text-base sm:text-xl font-heading font-black text-slate-900 placeholder-slate-400 outline-none bg-transparent resize-none leading-snug"
+                    placeholder={
                       activeQuestion.type === 'true_false'
-                        ? 'border-[#1368CE] bg-blue-50 text-blue-950 shadow-xs ring-2 ring-blue-200'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="w-3 h-3 rounded-full bg-[#1368CE]" />
-                      <span className="text-[10px] font-black uppercase text-slate-400">Binary</span>
-                    </div>
-                    <div>
-                      <div className="font-heading font-black text-xs text-slate-900">True / False</div>
-                      <div className="text-[10px] text-slate-500">2 options only</div>
-                    </div>
-                  </button>
-
-                  {/* 3. Multi-Select Quiz */}
-                  <button
-                    type="button"
-                    onClick={() => handleSetQuestionType('multi_select')}
-                    className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between min-h-[72px] ${
-                      activeQuestion.type === 'multi_select'
-                        ? 'border-emerald-600 bg-emerald-50 text-emerald-950 shadow-xs ring-2 ring-emerald-200'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="w-3 h-3 rounded-full bg-[#26890C]" />
-                      <span className="text-[10px] font-black uppercase text-emerald-600">Multi</span>
-                    </div>
-                    <div>
-                      <div className="font-heading font-black text-xs text-slate-900">Multi-Select</div>
-                      <div className="text-[10px] text-slate-500">Choose all that apply</div>
-                    </div>
-                  </button>
-
-                  {/* 4. Poll (Opinion Survey) */}
-                  <button
-                    type="button"
-                    onClick={() => handleSetQuestionType('poll')}
-                    className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between min-h-[72px] ${
-                      activeQuestion.type === 'poll'
-                        ? 'border-amber-500 bg-amber-50 text-amber-950 shadow-xs ring-2 ring-amber-200'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="w-3 h-3 rounded-full bg-[#D89E00]" />
-                      <span className="text-[10px] font-black uppercase text-amber-600">Opinion</span>
-                    </div>
-                    <div>
-                      <div className="font-heading font-black text-xs text-slate-900">Poll</div>
-                      <div className="text-[10px] text-slate-500">Collect sentiment</div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Question Text */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-2">
-                  Question Prompt *
-                </label>
-                <textarea
-                  rows={3}
-                  value={activeQuestion.text}
-                  onChange={(e) =>
-                    handleUpdateActiveQuestion('text', e.target.value)
-                  }
-                  className="w-full p-3.5 rounded-xl border-2 border-alix-slate-200 focus:border-alix-violet-600 focus:ring-2 focus:ring-alix-violet-100 outline-none text-base text-alix-indigo font-medium"
-                  placeholder={
-                    activeQuestion.type === 'true_false'
-                      ? 'Enter the statement to evaluate as True or False...'
-                      : activeQuestion.type === 'poll'
-                      ? 'Enter your opinion or survey question prompt...'
-                      : 'Enter the concept question prompt here...'
-                  }
-                />
-              </div>
-
-              {/* Time & Points */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-2 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-alix-cyan-600" />
-                    <span>Time Limit</span>
-                  </label>
-                  <select
-                    value={activeQuestion.timeLimit}
-                    onChange={(e) =>
-                      handleUpdateActiveQuestion(
-                        'timeLimit',
-                        Number(e.target.value)
-                      )
+                        ? 'Type True or False statement here...'
+                        : activeQuestion.type === 'poll'
+                        ? 'Type your opinion or poll prompt here...'
+                        : 'Start typing your question prompt here...'
                     }
-                    className="w-full p-2.5 rounded-xl border border-alix-slate-300 text-sm font-semibold text-alix-indigo outline-none cursor-pointer"
-                  >
-                    <option value={10}>10 Seconds</option>
-                    <option value={15}>15 Seconds</option>
-                    <option value={20}>20 Seconds</option>
-                    <option value={30}>30 Seconds</option>
-                    <option value={45}>45 Seconds</option>
-                    <option value={60}>60 Seconds</option>
-                    <option value={90}>90 Seconds</option>
-                    <option value={120}>120 Seconds</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-2 flex items-center gap-1">
-                    <Zap className="w-3.5 h-3.5 text-alix-coral-500" />
-                    <span>Points Scale</span>
-                  </label>
-                  <select
-                    value={activeQuestion.points}
-                    onChange={(e) =>
-                      handleUpdateActiveQuestion('points', Number(e.target.value))
-                    }
-                    className="w-full p-2.5 rounded-xl border border-alix-slate-300 text-sm font-semibold text-alix-indigo outline-none cursor-pointer"
-                  >
-                    <option value={0}>0 Points (No score)</option>
-                    <option value={500}>500 Points</option>
-                    <option value={1000}>1,000 Points (Standard)</option>
-                    <option value={2000}>2,000 Points (Double)</option>
-                  </select>
+                  />
                 </div>
               </div>
 
-              {/* Answer Choices */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">
-                  {activeQuestion.type === 'true_false'
-                    ? 'Select the Correct Truth Value'
-                    : activeQuestion.type === 'multi_select'
-                    ? 'Answer Choices (Click checkmark on each correct answer)'
-                    : activeQuestion.type === 'poll'
-                    ? 'Poll Choices (All options collect learner sentiment)'
-                    : 'Answer Choices (Click checkmark to set correct answer)'}
-                </label>
+              {/* Slide Middle: Presentation Visual / Media Box */}
+              <div className="my-auto py-2">
+                <div className="w-full max-w-sm mx-auto h-28 sm:h-36 rounded-2xl bg-white/5 border-2 border-dashed border-white/20 flex flex-col items-center justify-center gap-1.5 text-white/60 hover:bg-white/10 hover:border-white/30 transition-all cursor-pointer p-4 text-center">
+                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-alix-cyan-400">
+                    <ImageIcon className="w-5 h-5" />
+                  </div>
+                  <div className="text-xs font-bold text-white">Presentation Visual Prompt</div>
+                  <div className="text-[10px] text-white/50">Add diagram, equation, or image mockup</div>
+                </div>
+              </div>
 
+              {/* Slide Bottom: Answer Choices Blocks */}
+              <div className="mt-3">
                 {activeQuestion.type === 'true_false' ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* True Card */}
+                  <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => handleUpdateActiveQuestion('correctIndex', 0)}
-                      className={`p-5 rounded-2xl border-4 text-center transition-all flex flex-col items-center justify-center gap-2 cursor-pointer ${
+                      className={`p-4 rounded-2xl border-4 text-center transition-all flex items-center justify-between cursor-pointer ${
                         activeQuestion.correctIndex === 0
-                          ? 'border-emerald-500 bg-emerald-50/80 shadow-lg ring-4 ring-emerald-200'
-                          : 'border-slate-200 bg-white hover:border-slate-300 opacity-80 hover:opacity-100'
+                          ? 'border-emerald-400 bg-[#E21B3C] shadow-lg ring-4 ring-emerald-300/40'
+                          : 'border-transparent bg-[#E21B3C] opacity-80 hover:opacity-100'
                       }`}
                     >
-                      <div className="w-12 h-12 rounded-xl bg-[#E21B3C] text-white flex items-center justify-center text-2xl font-black shadow-sm">
-                        ▲
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl font-black">▲</span>
+                        <span className="font-heading font-black text-lg text-white">True</span>
                       </div>
-                      <div className="font-heading font-black text-xl text-slate-900">
-                        True
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs font-bold mt-1">
-                        {activeQuestion.correctIndex === 0 ? (
-                          <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                            <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />
-                            Correct Answer
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">Click to set as correct</span>
-                        )}
-                      </div>
+                      <span className="text-xs font-bold bg-white/20 px-2.5 py-1 rounded-full">
+                        {activeQuestion.correctIndex === 0 ? '✓ Correct' : 'Mark'}
+                      </span>
                     </button>
 
-                    {/* False Card */}
                     <button
                       type="button"
                       onClick={() => handleUpdateActiveQuestion('correctIndex', 1)}
-                      className={`p-5 rounded-2xl border-4 text-center transition-all flex flex-col items-center justify-center gap-2 cursor-pointer ${
+                      className={`p-4 rounded-2xl border-4 text-center transition-all flex items-center justify-between cursor-pointer ${
                         activeQuestion.correctIndex === 1
-                          ? 'border-emerald-500 bg-emerald-50/80 shadow-lg ring-4 ring-emerald-200'
-                          : 'border-slate-200 bg-white hover:border-slate-300 opacity-80 hover:opacity-100'
+                          ? 'border-emerald-400 bg-[#1368CE] shadow-lg ring-4 ring-emerald-300/40'
+                          : 'border-transparent bg-[#1368CE] opacity-80 hover:opacity-100'
                       }`}
                     >
-                      <div className="w-12 h-12 rounded-xl bg-[#1368CE] text-white flex items-center justify-center text-2xl font-black shadow-sm">
-                        ◆
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl font-black">◆</span>
+                        <span className="font-heading font-black text-lg text-white">False</span>
                       </div>
-                      <div className="font-heading font-black text-xl text-slate-900">
-                        False
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs font-bold mt-1">
-                        {activeQuestion.correctIndex === 1 ? (
-                          <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                            <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />
-                            Correct Answer
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">Click to set as correct</span>
-                        )}
-                      </div>
+                      <span className="text-xs font-bold bg-white/20 px-2.5 py-1 rounded-full">
+                        {activeQuestion.correctIndex === 1 ? '✓ Correct' : 'Mark'}
+                      </span>
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {activeQuestion.type === 'multi_select' && (
-                      <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800 flex items-center gap-2">
-                        <CheckSquare className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>Multi-Select Active: Click the checkbox button on every correct choice.</span>
-                      </div>
-                    )}
-                    {activeQuestion.type === 'poll' && (
-                      <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800 flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4 text-amber-600 shrink-0" />
-                        <span>Opinion Poll Active: All choices are valid options for learners to vote on.</span>
-                      </div>
-                    )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {activeQuestion.options.map((opt, idx) => {
                       const themes = [
                         { shape: '▲', bg: 'bg-[#E21B3C]', border: 'border-[#9E1329]' },
@@ -757,25 +681,18 @@ export const CreatePage: React.FC = () => {
                       return (
                         <div
                           key={idx}
-                          className={`flex items-center gap-3 p-2.5 rounded-xl border-2 transition-all ${
-                            isCorrect && !isPoll
-                              ? 'border-emerald-500 bg-emerald-50/50 shadow-sm ring-2 ring-emerald-200'
-                              : 'border-slate-200 bg-white hover:border-slate-300'
+                          className={`p-2.5 rounded-2xl ${t.bg} border-2 flex items-center gap-2 shadow-md transition-all ${
+                            isCorrect && !isPoll ? 'border-white ring-4 ring-emerald-400/50' : 'border-black/20'
                           }`}
                         >
-                          <div
-                            className={`w-9 h-9 rounded-lg ${t.bg} text-white font-black text-base flex items-center justify-center shrink-0 shadow-sm`}
-                          >
-                            {t.shape}
-                          </div>
+                          <span className="text-lg font-black text-white shrink-0 pl-1">{t.shape}</span>
                           <input
                             type="text"
                             value={opt}
                             onChange={(e) => handleUpdateOption(idx, e.target.value)}
-                            className="flex-1 px-3 py-1.5 text-sm font-bold text-slate-900 outline-none bg-transparent"
+                            className="flex-1 px-2 py-1 text-xs sm:text-sm font-bold text-white placeholder-white/60 outline-none bg-transparent"
                             placeholder={`Add answer ${idx + 1}...`}
                           />
-
                           {!isPoll && (
                             <button
                               type="button"
@@ -786,23 +703,18 @@ export const CreatePage: React.FC = () => {
                                   handleUpdateActiveQuestion('correctIndex', idx);
                                 }
                               }}
-                              className={`px-3 py-1.5 rounded-lg border-2 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                              className={`p-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer shrink-0 ${
                                 isCorrect
-                                  ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm'
-                                  : 'border-slate-300 text-slate-400 hover:border-emerald-500 hover:text-emerald-600'
+                                  ? 'bg-white text-slate-900 border-white shadow-md'
+                                  : 'bg-black/20 border-white/30 text-white/70 hover:bg-white hover:text-slate-900'
                               }`}
-                              title={isCorrect ? 'Marked as correct' : 'Mark as correct'}
+                              title={isCorrect ? 'Correct Answer' : 'Mark as correct'}
                             >
                               {isMulti ? (
-                                isCorrect ? (
-                                  <CheckSquare className="w-4 h-4 stroke-[2.5]" />
-                                ) : (
-                                  <Square className="w-4 h-4" />
-                                )
+                                isCorrect ? <CheckSquare className="w-4 h-4 stroke-[2.5]" /> : <Square className="w-4 h-4" />
                               ) : (
                                 <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
                               )}
-                              <span className="hidden sm:inline">{isCorrect ? 'Correct' : 'Mark'}</span>
                             </button>
                           )}
                         </div>
@@ -810,6 +722,133 @@ export const CreatePage: React.FC = () => {
                     })}
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* 3. Right Panel: Properties Inspector (Col span 3) */}
+            <div className="lg:col-span-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                  Question Properties
+                </span>
+                <span className="text-[10px] font-bold text-slate-400">Settings</span>
+              </div>
+
+              {/* Question Type Selector */}
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  Format
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSetQuestionType('multiple_choice')}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      (activeQuestion.type || 'multiple_choice') === 'multiple_choice'
+                        ? 'border-indigo-600 bg-indigo-50/80 ring-2 ring-indigo-200 text-indigo-950 font-bold'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="text-xs font-black">Quiz</div>
+                    <div className="text-[9px] text-slate-400">Single select</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSetQuestionType('true_false')}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      activeQuestion.type === 'true_false'
+                        ? 'border-[#1368CE] bg-blue-50/80 ring-2 ring-blue-200 text-blue-950 font-bold'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="text-xs font-black">True / False</div>
+                    <div className="text-[9px] text-slate-400">Binary 2 options</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSetQuestionType('multi_select')}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      activeQuestion.type === 'multi_select'
+                        ? 'border-emerald-600 bg-emerald-50/80 ring-2 ring-emerald-200 text-emerald-950 font-bold'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="text-xs font-black">Multi-Select</div>
+                    <div className="text-[9px] text-slate-400">All that apply</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSetQuestionType('poll')}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      activeQuestion.type === 'poll'
+                        ? 'border-amber-500 bg-amber-50/80 ring-2 ring-amber-200 text-amber-950 font-bold'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="text-xs font-black">Poll</div>
+                    <div className="text-[9px] text-slate-400">Opinion check</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Time Limit */}
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-cyan-600" />
+                  <span>Time Limit</span>
+                </label>
+                <select
+                  value={activeQuestion.timeLimit}
+                  onChange={(e) => handleUpdateActiveQuestion('timeLimit', Number(e.target.value))}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 outline-none bg-white cursor-pointer"
+                >
+                  <option value={10}>10 Seconds</option>
+                  <option value={15}>15 Seconds</option>
+                  <option value={20}>20 Seconds</option>
+                  <option value={30}>30 Seconds (Default)</option>
+                  <option value={45}>45 Seconds</option>
+                  <option value={60}>60 Seconds</option>
+                  <option value={90}>90 Seconds</option>
+                  <option value={120}>120 Seconds</option>
+                </select>
+              </div>
+
+              {/* Points Scale */}
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Points</span>
+                </label>
+                <select
+                  value={activeQuestion.points}
+                  onChange={(e) => handleUpdateActiveQuestion('points', Number(e.target.value))}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 outline-none bg-white cursor-pointer"
+                >
+                  <option value={0}>0 Points (No score)</option>
+                  <option value={500}>500 Points</option>
+                  <option value={1000}>1,000 Points (Standard)</option>
+                  <option value={2000}>2,000 Points (Double)</option>
+                </select>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const activeIdx = questions.findIndex((q) => q.id === activeQuestion.id);
+                    setPresentationSlideIdx(Math.max(0, activeIdx));
+                    setRevealSolution(false);
+                    setIsFullscreenPresentation(true);
+                  }}
+                  className="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current text-cyan-400" />
+                  <span>Present Slide Deck</span>
+                </button>
               </div>
             </div>
           </div>
@@ -851,6 +890,132 @@ export const CreatePage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Fullscreen Interactive Presentation Deck Mode */}
+      {isFullscreenPresentation && (() => {
+        const pQ = questions[presentationSlideIdx] || questions[0];
+        const isMulti = pQ.type === 'multi_select';
+        const isPoll = pQ.type === 'poll';
+        const isTF = pQ.type === 'true_false';
+        const correctIndices = isMulti
+          ? (pQ.correctIndices || [pQ.correctIndex ?? 0])
+          : [pQ.correctIndex ?? 0];
+
+        return (
+          <div className="fixed inset-0 z-50 bg-[#12072B] text-white flex flex-col justify-between p-4 sm:p-8 select-none animate-fade-in overflow-hidden">
+            {/* Top Presentation Bar */}
+            <div className="w-full flex items-center justify-between pb-4 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <span className="font-heading font-black text-xl text-white">ALIX!</span>
+                <span className="px-3 py-1 rounded-full bg-white/15 text-xs font-bold text-cyan-300">
+                  Slide {presentationSlideIdx + 1} of {questions.length}
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/40 text-[10px] font-black uppercase">
+                  {isTF ? 'True / False' : isMulti ? 'Multi-Select' : isPoll ? 'Poll' : 'Quiz'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRevealSolution((prev) => !prev)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    revealSolution
+                      ? 'bg-emerald-500 text-white shadow-md'
+                      : 'bg-white/10 hover:bg-white/20 text-white'
+                  }`}
+                >
+                  {revealSolution ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  <span>{revealSolution ? 'Solution Revealed' : 'Reveal Solution (Enter)'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsFullscreenPresentation(false)}
+                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer"
+                  title="Exit Fullscreen (Esc)"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Center Slide Stage */}
+            <div className="max-w-4xl w-full mx-auto my-auto space-y-6 text-center">
+              <div className="bg-white text-slate-900 rounded-3xl p-6 sm:p-10 shadow-2xl border-4 border-white/20">
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-heading font-black leading-snug">
+                  {pQ.text || 'Question Prompt...'}
+                </h1>
+              </div>
+
+              {/* Answer Cards in Fullscreen */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                {(isTF ? ['True', 'False'] : pQ.options.filter(Boolean)).map((opt, oIdx) => {
+                  const themes = [
+                    { shape: '▲', bg: 'bg-[#E21B3C]' },
+                    { shape: '◆', bg: 'bg-[#1368CE]' },
+                    { shape: '●', bg: 'bg-[#D89E00]' },
+                    { shape: '■', bg: 'bg-[#26890C]' },
+                  ];
+                  const t = themes[oIdx % themes.length];
+                  const isCorrect = !isPoll && correctIndices.includes(oIdx);
+                  return (
+                    <div
+                      key={oIdx}
+                      className={`p-5 sm:p-6 rounded-2xl ${t.bg} text-white font-heading font-black text-lg sm:text-2xl shadow-xl flex items-center justify-between transition-all ${
+                        revealSolution && isCorrect ? 'ring-6 ring-emerald-400 scale-105' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{t.shape}</span>
+                        <span>{opt}</span>
+                      </div>
+                      {revealSolution && isCorrect && (
+                        <span className="px-3 py-1 rounded-full bg-white text-slate-950 text-xs font-black uppercase">
+                          ✓ Correct
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bottom Controls */}
+            <div className="w-full flex items-center justify-between pt-4 border-t border-white/10 text-xs text-white/60">
+              <button
+                type="button"
+                onClick={() => {
+                  setPresentationSlideIdx((prev) => Math.max(0, prev - 1));
+                  setRevealSolution(false);
+                }}
+                disabled={presentationSlideIdx === 0}
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-40 text-white font-bold flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span>Previous Slide</span>
+              </button>
+
+              <div className="font-mono text-xs">
+                Use Arrow Keys (← / →) or Space to advance • Esc to exit
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPresentationSlideIdx((prev) => Math.min(questions.length - 1, prev + 1));
+                  setRevealSolution(false);
+                }}
+                disabled={presentationSlideIdx >= questions.length - 1}
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-40 text-white font-bold flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+              >
+                <span>Next Slide</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       <Footer />
     </div>

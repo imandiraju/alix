@@ -113,7 +113,8 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
   // ─── Create Session ───────────────────────────────────────────────────
 
   socket.on('create-session', async (payload: CreateSessionPayload) => {
-    const session = sessionManager.createSession(payload.quizId, payload.hostId);
+    const gameMode = (payload as any).gameMode === 'team' ? 'team' : 'classic';
+    const session = sessionManager.createSession(payload.quizId, payload.hostId, gameMode);
     session.hostSocketId = socket.id;
 
     // Join both session UUID and 6-digit PIN room for universal message delivery
@@ -216,6 +217,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
           requireRoster: !!attachedRosterId,
           isLocked: false,
           status: 'waiting',
+          gameMode: session.gameMode,
           participants: [],
           responses: [],
         },
@@ -228,9 +230,11 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     socket.emit('session-created', {
       sessionId: session.id,
       code: session.code,
-    });
+      gameMode: session.gameMode,
+      teams: session.teams,
+    } as any);
 
-    console.log(`[ALIX] Session created: ${session.code} (${session.id}) for quiz "${quizTitle}" (${totalQuestions} Qs)`);
+    console.log(`[ALIX] Session created: ${session.code} (${session.id}) [Mode: ${session.gameMode}] for quiz "${quizTitle}" (${totalQuestions} Qs)`);
   });
 
   // ─── Join Session ─────────────────────────────────────────────────────
@@ -341,7 +345,10 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       socket.id,
       payload.playerName,
       chosenAvatar,
-      rollNo || undefined
+      rollNo || undefined,
+      (payload as any).teamId,
+      (payload as any).teamName,
+      (payload as any).teamColor
     );
 
     if (!player) {
@@ -368,6 +375,9 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
             $set: {
               'participants.$.socketId': socket.id,
               'participants.$.avatarId': chosenAvatar,
+              'participants.$.teamId': player.teamId,
+              'participants.$.teamName': player.teamName,
+              'participants.$.teamColor': player.teamColor,
             },
           }
         );
@@ -381,6 +391,9 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
                 name: payload.playerName,
                 rollNo: rollNo || undefined,
                 avatarId: chosenAvatar,
+                teamId: player.teamId,
+                teamName: player.teamName,
+                teamColor: player.teamColor,
                 score: 0,
                 streak: 0,
                 joinedAt: new Date(),
@@ -393,14 +406,16 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       console.warn('[ALIX Realtime] Could not save participant to DB:', err);
     }
 
-    io.to(session.id).emit('player-joined', {
+    const joinPayload = {
       player,
       playerCount: session.players.length,
-    });
-    io.to(session.code).emit('player-joined', {
-      player,
-      playerCount: session.players.length,
-    });
+      gameMode: session.gameMode,
+      teams: session.teams,
+      teamLeaderboard: sessionManager.getTeamLeaderboard(session.id),
+    };
+
+    io.to(session.id).emit('player-joined', joinPayload as any);
+    io.to(session.code).emit('player-joined', joinPayload as any);
 
     // If game is already actively streaming questions, deliver current question to this late joiner or refreshing student
     if (session.status === SessionStatus.PLAYING && session.currentQuestionIndex >= 0 && session.quiz) {
@@ -434,6 +449,29 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     }
 
     console.log(`[ALIX] Player "${player.name}" (${rollNo || 'Guest'}) joined session ${session.code}`);
+  });
+
+  // ─── Player Select / Switch Team (Team Mode) ──────────────────────────
+
+  socket.on('select-team', (payload: any) => {
+    const session = resolveSession(socket, payload);
+    if (!session) return;
+    const teamId = payload?.teamId;
+    if (!teamId) return;
+
+    const updated = sessionManager.setPlayerTeam(session.id, socket.id, teamId);
+    if (updated) {
+      const updatePayload = {
+        player: updated,
+        playerCount: session.players.length,
+        gameMode: session.gameMode,
+        teams: session.teams,
+        teamLeaderboard: sessionManager.getTeamLeaderboard(session.id),
+      };
+      io.to(session.id).emit('player-joined', updatePayload as any);
+      io.to(session.code).emit('player-joined', updatePayload as any);
+      console.log(`[ALIX] Player "${updated.name}" selected squad "${updated.teamName}" in PIN ${session.code}`);
+    }
   });
 
   // ─── Start Game ───────────────────────────────────────────────────────
@@ -568,8 +606,11 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     socket.data.role = 'host';
 
     const leaderboard = sessionManager.getLeaderboard(session.id);
+    const teamLeaderboard = sessionManager.getTeamLeaderboard(session.id);
     const leaderboardPayload = {
       leaderboard,
+      teamLeaderboard,
+      gameMode: session.gameMode,
       sessionId: session.id,
       code: session.code,
     };
@@ -646,6 +687,9 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
             responses: {
               questionId: payload.questionId,
               playerName: player?.name || 'Anonymous',
+              rollNo: (player as any)?.rollNo,
+              teamId: player?.teamId,
+              teamName: player?.teamName,
               answer: payload.answer,
               isCorrect: correct,
               timeMs: payload.timeMs,
@@ -690,10 +734,13 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     }
 
     const leaderboard = sessionManager.getLeaderboard(session.id);
+    const teamLeaderboard = sessionManager.getTeamLeaderboard(session.id);
     const players = session.players;
 
     const endPayload = {
       finalLeaderboard: leaderboard,
+      teamLeaderboard,
+      gameMode: session.gameMode,
       sessionSummary: {
         totalQuestions: session.quiz?.questions.length ?? 0,
         totalPlayers: players.length,
@@ -860,6 +907,8 @@ function sendNextQuestion(io: IOServer, sessionId: string): void {
 
       const updatePayload = {
         leaderboard,
+        teamLeaderboard: sessionManager.getTeamLeaderboard(sessionId),
+        gameMode: session.gameMode,
         questionResults: {
           questionId: question.id,
           correctCount: answers.filter((a) => a.correct).length,

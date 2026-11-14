@@ -8,11 +8,15 @@ import type { Question } from './quiz.js';
 export interface CreateSessionPayload {
   quizId: string;
   hostId: string;
+  gameMode?: 'classic' | 'team';
 }
 
 export interface JoinSessionPayload {
   code: string;
   playerName: string;
+  teamId?: string;
+  teamName?: string;
+  teamColor?: string;
 }
 
 export interface SubmitAnswerPayload {
@@ -68,10 +72,25 @@ export interface LeaderboardEntry {
   rank: number;
   previousRank: number;
   streak: number;
+  teamId?: string;
+  teamName?: string;
+  teamColor?: string;
+}
+
+export interface TeamLeaderboardEntry {
+  teamId: string;
+  teamName: string;
+  color: string;
+  icon?: string;
+  score: number;
+  rank: number;
+  memberCount: number;
 }
 
 export interface LeaderboardUpdatePayload {
   leaderboard: LeaderboardEntry[];
+  teamLeaderboard?: TeamLeaderboardEntry[];
+  gameMode?: 'classic' | 'team';
   questionResults: {
     questionId: string;
     correctCount: number;
@@ -82,6 +101,8 @@ export interface LeaderboardUpdatePayload {
 
 export interface GameEndedPayload {
   finalLeaderboard: LeaderboardEntry[];
+  teamLeaderboard?: TeamLeaderboardEntry[];
+  gameMode?: 'classic' | 'team';
   sessionSummary: {
     totalQuestions: number;
     totalPlayers: number;
@@ -111,6 +132,7 @@ export interface SessionStatusPayload {
 export interface ClientToServerEvents {
   'create-session': (payload: CreateSessionPayload) => void;
   'join-session': (payload: JoinSessionPayload) => void;
+  'select-team': (payload: { sessionId?: string; code?: string; teamId: string }) => void;
   'start-game': (payload: StartGamePayload) => void;
   'next-question': (payload: NextQuestionPayload) => void;
   'submit-answer': (payload: SubmitAnswerPayload) => void;

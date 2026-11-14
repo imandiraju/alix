@@ -66,6 +66,18 @@ export const HostPage: React.FC = () => {
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
   const [players, setPlayers] = useState<any[]>([]);
 
+  // Team Mode State
+  const [gameMode, setGameMode] = useState<'classic' | 'team'>('classic');
+  const [teamLeaderboard, setTeamLeaderboard] = useState<any[]>([]);
+  const [leaderboardTab, setLeaderboardTab] = useState<'teams' | 'individuals'>('teams');
+
+  const SQUADS = [
+    { id: 'team-red', name: 'Red Dragons', color: '#E21B3C', icon: '🐉', border: 'border-[#E21B3C]', bg: 'bg-[#E21B3C]/15', badge: 'bg-[#E21B3C] text-white', text: 'text-[#E21B3C]' },
+    { id: 'team-blue', name: 'Blue Titans', color: '#1368CE', icon: '⚡', border: 'border-[#1368CE]', bg: 'bg-[#1368CE]/15', badge: 'bg-[#1368CE] text-white', text: 'text-[#1368CE]' },
+    { id: 'team-green', name: 'Emerald Knights', color: '#26890C', icon: '🛡️', border: 'border-[#26890C]', bg: 'bg-[#26890C]/15', badge: 'bg-[#26890C] text-white', text: 'text-[#26890C]' },
+    { id: 'team-yellow', name: 'Golden Eagles', color: '#D89E00', icon: '🦅', border: 'border-[#D89E00]', bg: 'bg-[#D89E00]/15', badge: 'bg-[#D89E00] text-slate-900', text: 'text-[#D89E00]' },
+  ];
+
   // Computed authoritative active learner count (always non-zero if players are connected)
   const displayLearnerCount = Math.max(totalLearners, players.length);
 
@@ -132,6 +144,7 @@ export const HostPage: React.FC = () => {
             quizTitle,
             subject,
             courseCode,
+            gameMode,
           } as any);
         }
       };
@@ -149,9 +162,14 @@ export const HostPage: React.FC = () => {
         if (data.sessionId) {
           setActiveSessionId(data.sessionId);
         }
+        if (data.gameMode) {
+          setGameMode(data.gameMode);
+        }
       });
 
       socket.on('player-joined', (data: any) => {
+        if (data.gameMode) setGameMode(data.gameMode);
+        if (Array.isArray(data.teamLeaderboard)) setTeamLeaderboard(data.teamLeaderboard);
         if (data.player) {
           setPlayers((prev) => {
             const playerKey = (p: any) =>
@@ -198,6 +216,8 @@ export const HostPage: React.FC = () => {
       });
 
       socket.on('leaderboard-update', (data: any) => {
+        if (data.gameMode) setGameMode(data.gameMode);
+        if (Array.isArray(data.teamLeaderboard)) setTeamLeaderboard(data.teamLeaderboard);
         if (data.questionResults?.totalCount !== undefined) {
           setAnswersSubmitted(data.questionResults.totalCount);
         }
@@ -221,6 +241,9 @@ export const HostPage: React.FC = () => {
                 streak: lb.streak || 0,
                 avatar: match?.avatar || 'fox',
                 rollNo: match?.rollNo,
+                teamId: lb.teamId || match?.teamId,
+                teamName: lb.teamName || match?.teamName,
+                teamColor: lb.teamColor || match?.teamColor,
               };
             });
           });
@@ -229,6 +252,8 @@ export const HostPage: React.FC = () => {
       });
 
       socket.on('game-ended', (data: any) => {
+        if (data.gameMode) setGameMode(data.gameMode);
+        if (Array.isArray(data.teamLeaderboard)) setTeamLeaderboard(data.teamLeaderboard);
         if (Array.isArray(data?.finalLeaderboard)) {
           setPlayers((prev) => {
             return data.finalLeaderboard.map((lb: any) => {
@@ -246,6 +271,9 @@ export const HostPage: React.FC = () => {
                 streak: lb.streak || 0,
                 avatar: match?.avatar || 'fox',
                 rollNo: match?.rollNo,
+                teamId: lb.teamId || match?.teamId,
+                teamName: lb.teamName || match?.teamName,
+                teamColor: lb.teamColor || match?.teamColor,
               };
             });
           });
@@ -440,6 +468,23 @@ export const HostPage: React.FC = () => {
     }
   };
 
+  const handleToggleGameMode = (mode: 'classic' | 'team') => {
+    setGameMode(mode);
+    setLeaderboardTab(mode === 'team' ? 'teams' : 'individuals');
+    try {
+      const socket = getSocket();
+      socket.emit('create-session', {
+        quizId: sessionId || 'default',
+        hostId: user?.id || 'host-teacher',
+        questions: questions.length > 0 ? questions : undefined,
+        quizTitle,
+        subject,
+        courseCode,
+        gameMode: mode,
+      } as any);
+    } catch {}
+  };
+
   return (
     <div className="min-h-screen bg-[#1B0A3C] text-white flex flex-col justify-between selection:bg-violet-500 selection:text-white relative overflow-hidden select-none">
       {/* Background ambient lighting */}
@@ -585,6 +630,33 @@ export const HostPage: React.FC = () => {
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-heading font-black text-white tracking-tight drop-shadow-md">
                 {quizTitle}
               </h1>
+
+              {/* Game Mode Selector: Classic vs Team Mode */}
+              <div className="inline-flex p-1 rounded-2xl bg-black/40 border border-white/15 backdrop-blur-md shadow-lg mt-2">
+                <button
+                  type="button"
+                  onClick={() => handleToggleGameMode('classic')}
+                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-heading font-black transition-all flex items-center gap-2 cursor-pointer ${
+                    gameMode === 'classic'
+                      ? 'bg-alix-violet-600 text-white shadow-md'
+                      : 'text-white/70 hover:text-white'
+                  }`}
+                >
+                  <span>👤 Classic (Solo)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleGameMode('team')}
+                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-heading font-black transition-all flex items-center gap-2 cursor-pointer ${
+                    gameMode === 'team'
+                      ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md ring-2 ring-amber-300/40'
+                      : 'text-white/70 hover:text-white'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  <span>👥 Team Mode (Squad vs Squad)</span>
+                </button>
+              </div>
             </div>
 
             {/* Giant Kahoot-Style Join & PIN Billboard */}
@@ -638,8 +710,8 @@ export const HostPage: React.FC = () => {
               )}
             </div>
 
-            {/* Animated Player Mascots Lounge */}
-            <div className="p-6 sm:p-8 rounded-3xl bg-black/30 border-2 border-white/10 backdrop-blur-md min-h-[170px] max-w-2xl mx-auto w-full flex flex-col justify-center items-center shadow-inner">
+            {/* Animated Player Mascots / Squads Lounge */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-black/30 border-2 border-white/10 backdrop-blur-md min-h-[170px] max-w-4xl mx-auto w-full flex flex-col justify-center items-center shadow-inner">
               {players.length === 0 ? (
                 <div className="text-center py-6 space-y-3">
                   <div className="w-14 h-14 rounded-2xl bg-white/10 text-cyan-400 flex items-center justify-center mx-auto animate-bounce">
@@ -649,6 +721,51 @@ export const HostPage: React.FC = () => {
                     Scan the QR code or visit <strong className="text-cyan-300">{origin.replace(/^https?:\/\//, '')}/join</strong>
                   </p>
                   <p className="text-xs text-white/40">Learner nicknames and mascot avatars pop up here live!</p>
+                </div>
+              ) : gameMode === 'team' ? (
+                <div className="w-full space-y-3">
+                  <div className="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center justify-center gap-2 mb-2">
+                    <Users className="w-4 h-4" />
+                    <span>Active Squad Rosters (Team vs Team)</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-left">
+                    {SQUADS.map((sq) => {
+                      const squadMembers = players.filter((p) => p.teamId === sq.id);
+                      return (
+                        <div
+                          key={sq.id}
+                          className={`p-3.5 rounded-2xl border-2 ${sq.border} ${sq.bg} backdrop-blur-md flex flex-col justify-between min-h-[130px]`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between pb-1.5 border-b border-white/10">
+                              <span className="text-lg">{sq.icon}</span>
+                              <span className="text-xs font-black text-white px-2 py-0.5 rounded-full bg-black/40">
+                                {squadMembers.length} {squadMembers.length === 1 ? 'member' : 'members'}
+                              </span>
+                            </div>
+                            <div className="font-heading font-black text-sm text-white mt-1">
+                              {sq.name}
+                            </div>
+                          </div>
+
+                          <div className="pt-2 flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
+                            {squadMembers.length === 0 ? (
+                              <span className="text-[10px] text-white/40 italic">Waiting for recruits...</span>
+                            ) : (
+                              squadMembers.map((m, mIdx) => (
+                                <span
+                                  key={m.id || mIdx}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-black/40 text-[10px] font-bold text-white border border-white/10"
+                                >
+                                  <span>{m.name}</span>
+                                </span>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-3 sm:gap-4 justify-center w-full">
@@ -935,42 +1052,148 @@ export const HostPage: React.FC = () => {
 
         {/* Stage 3: Live Session Leaderboard */}
         {stage === 'leaderboard' && (
-          <div className="max-w-2xl mx-auto w-full animate-fade-in space-y-6">
-            <div className="text-center mb-6">
+          <div className="max-w-3xl mx-auto w-full animate-fade-in space-y-6">
+            <div className="text-center mb-4">
               <span className="text-xs font-bold uppercase tracking-wider text-alix-cyan-400">
                 Auditorium Standings
               </span>
-              <h2 className="text-2xl sm:text-3xl font-heading font-extrabold text-white">
+              <h2 className="text-2xl sm:text-4xl font-heading font-black text-white mt-1">
                 Live Leaderboard
               </h2>
-            </div>
 
-            <div className="bg-slate-800/90 rounded-2xl border border-slate-700 p-4 divide-y divide-slate-700/60">
-              {players.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 text-sm">
-                  Learners will appear here once scores are tabulated.
+              {/* Mode Tabs if Team Mode */}
+              {gameMode === 'team' && (
+                <div className="inline-flex p-1 rounded-2xl bg-black/40 border border-white/15 backdrop-blur-md shadow-lg mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setLeaderboardTab('teams')}
+                    className={`px-4 py-1.5 rounded-xl text-xs sm:text-sm font-heading font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                      leaderboardTab === 'teams'
+                        ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md'
+                        : 'text-white/70 hover:text-white'
+                    }`}
+                  >
+                    <Users className="w-4 h-4" />
+                    <span>👥 Squad Standings</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLeaderboardTab('individuals')}
+                    className={`px-4 py-1.5 rounded-xl text-xs sm:text-sm font-heading font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                      leaderboardTab === 'individuals'
+                        ? 'bg-alix-violet-600 text-white shadow-md'
+                        : 'text-white/70 hover:text-white'
+                    }`}
+                  >
+                    <span>👤 Individual MVPs</span>
+                  </button>
                 </div>
-              ) : (
-                players.map((p, idx) => (
-                  <div key={idx} className="p-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center font-bold text-xs">
-                        {p.rank || idx + 1}
-                      </span>
-                      <div>
-                        <span className="font-bold text-white text-sm">{p.name}</span>
-                        {p.rollNo && (
-                          <span className="text-xs text-slate-400 font-mono ml-2">({p.rollNo})</span>
-                        )}
-                      </div>
-                    </div>
-                    <span className="font-mono text-sm font-bold text-alix-cyan-400">
-                      {(p.score ?? 0).toLocaleString()} pts
-                    </span>
-                  </div>
-                ))
               )}
             </div>
+
+            {gameMode === 'team' && leaderboardTab === 'teams' ? (
+              <div className="space-y-3">
+                {(teamLeaderboard.length > 0
+                  ? teamLeaderboard
+                  : SQUADS.map((s, i) => ({
+                      teamId: s.id,
+                      teamName: s.name,
+                      color: s.color,
+                      icon: s.icon,
+                      score: 0,
+                      rank: i + 1,
+                      memberCount: players.filter((p) => p.teamId === s.id).length,
+                    }))
+                ).map((t, idx) => {
+                  const maxScore = Math.max(
+                    ...(teamLeaderboard.length > 0 ? teamLeaderboard.map((x) => x.score) : [1]),
+                    100
+                  );
+                  const pct = Math.min(100, Math.round((t.score / maxScore) * 100));
+                  const squadDef = SQUADS.find((s) => s.id === t.teamId) || SQUADS[idx % SQUADS.length];
+                  return (
+                    <div
+                      key={t.teamId || idx}
+                      className="p-4 sm:p-5 rounded-2xl bg-slate-900/90 border border-white/15 backdrop-blur-md shadow-xl flex items-center justify-between gap-4 relative overflow-hidden"
+                    >
+                      <div
+                        className="absolute left-0 top-0 bottom-0 opacity-15 pointer-events-none transition-all duration-700"
+                        style={{ width: `${Math.max(8, pct)}%`, backgroundColor: squadDef.color }}
+                      />
+
+                      <div className="flex items-center gap-3 sm:gap-4 relative z-10 min-w-0">
+                        <span
+                          className={`w-9 h-9 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center font-heading font-black text-sm sm:text-base shadow-md shrink-0 ${
+                            idx === 0
+                              ? 'bg-gradient-to-tr from-amber-400 to-yellow-300 text-slate-950 ring-2 ring-amber-300'
+                              : idx === 1
+                              ? 'bg-slate-300 text-slate-950 font-black'
+                              : idx === 2
+                              ? 'bg-amber-700 text-white font-black'
+                              : 'bg-white/10 text-white/80'
+                          }`}
+                        >
+                          #{t.rank || idx + 1}
+                        </span>
+                        <span className="text-2xl sm:text-3xl shrink-0">{squadDef.icon}</span>
+                        <div className="min-w-0">
+                          <div className="font-heading font-black text-base sm:text-xl text-white truncate flex items-center gap-2">
+                            <span>{t.teamName}</span>
+                            {idx === 0 && (
+                              <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-amber-400 text-slate-950">
+                                Leading
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-white/60 font-semibold">
+                            {t.memberCount} teammates active
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right relative z-10 shrink-0">
+                        <div className="font-mono text-xl sm:text-3xl font-black text-amber-300">
+                          {t.score.toLocaleString()}
+                        </div>
+                        <div className="text-[10px] font-bold text-white/60 uppercase tracking-wider">
+                          TEAM POINTS
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bg-slate-800/90 rounded-2xl border border-slate-700 p-4 divide-y divide-slate-700/60">
+                {players.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 text-sm">
+                    Learners will appear here once scores are tabulated.
+                  </div>
+                ) : (
+                  players.map((p, idx) => (
+                    <div key={idx} className="p-3 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center font-bold text-xs">
+                          {p.rank || idx + 1}
+                        </span>
+                        <div>
+                          <span className="font-bold text-white text-sm">{p.name}</span>
+                          {p.teamName && (
+                            <span className="text-xs text-amber-300 font-semibold ml-2">[{p.teamName}]</span>
+                          )}
+                          {p.rollNo && (
+                            <span className="text-xs text-slate-400 font-mono ml-2">({p.rollNo})</span>
+                          )}
+                        </div>
+                      </div>
+                      <span className="font-mono text-sm font-bold text-alix-cyan-400">
+                        {(p.score ?? 0).toLocaleString()} pts
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
 
             {/* Leaderboard Action Button */}
             <div className="pt-4 flex justify-center">
@@ -993,26 +1216,127 @@ export const HostPage: React.FC = () => {
         {/* Stage 4: Victory Podium & Export */}
         {stage === 'victory' && (
           <div className="w-full max-w-4xl mx-auto space-y-6 animate-scale-in flex flex-col items-center">
-            {/* 3D Animated Victory Podium with Confetti */}
-            <VictoryPodium
-              winners={
-                [...players]
-                  .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-                  .slice(0, 3)
-                  .map((p, idx) => ({
-                    rank: idx + 1,
-                    name: p.name,
-                    score: p.score ?? 0,
-                    avatarId: p.avatar || (idx === 0 ? 'fox' : idx === 1 ? 'bot' : 'owl'),
-                    streak: p.streak ?? 0,
-                  }))
-              }
-              onRestart={() => {
-                setStage('lobby');
-                setCurrentQuestionIdx(0);
-                setAnswersSubmitted(0);
-              }}
-            />
+            {gameMode === 'team' && (teamLeaderboard.length > 0 || players.length > 0) ? (
+              <div className="w-full space-y-6 text-center">
+                {/* Team Mode Grand Champion Banner */}
+                {(() => {
+                  const sortedSquads =
+                    teamLeaderboard.length > 0
+                      ? teamLeaderboard
+                      : SQUADS.map((s, i) => ({
+                          teamId: s.id,
+                          teamName: s.name,
+                          color: s.color,
+                          icon: s.icon,
+                          score: 0,
+                          rank: i + 1,
+                          memberCount: players.filter((p) => p.teamId === s.id).length,
+                        }));
+                  const champion = sortedSquads[0];
+                  const runnerUp = sortedSquads[1];
+                  const bronze = sortedSquads[2];
+                  const individualMvp = [...players].sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0];
+
+                  return (
+                    <div className="space-y-6 animate-fade-in">
+                      <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-black uppercase tracking-wider">
+                        <Trophy className="w-4 h-4 text-amber-400 fill-current" />
+                        <span>Team Mode Tournament Championship</span>
+                      </div>
+
+                      <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-amber-500/30 via-slate-900/90 to-purple-900/40 border-2 border-amber-400 shadow-2xl backdrop-blur-md max-w-2xl mx-auto">
+                        <div className="text-4xl sm:text-6xl mb-2 animate-bounce">
+                          {champion?.icon || '🏆'}
+                        </div>
+                        <div className="text-xs sm:text-sm font-black uppercase tracking-widest text-amber-300">
+                          GRAND CHAMPION SQUAD
+                        </div>
+                        <h2 className="text-3xl sm:text-5xl font-heading font-black text-white mt-1">
+                          {champion?.teamName || 'Team Champion'}
+                        </h2>
+                        <div className="mt-2 font-mono text-xl sm:text-2xl font-black text-amber-300">
+                          {champion?.score?.toLocaleString() || 0} TEAM PTS
+                        </div>
+                        <div className="text-xs text-white/70 mt-1">
+                          {champion?.memberCount || 0} Teammates Contributed to Victory
+                        </div>
+                      </div>
+
+                      {/* 2nd & 3rd Podium Cards */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                        {runnerUp && (
+                          <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-700 text-left flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl">🥈</span>
+                              <div>
+                                <div className="text-[10px] uppercase font-bold text-slate-400">Runner-Up Squad</div>
+                                <div className="text-base font-black text-white">{runnerUp.teamName}</div>
+                              </div>
+                            </div>
+                            <div className="font-mono text-base font-bold text-slate-300">
+                              {runnerUp.score.toLocaleString()} pts
+                            </div>
+                          </div>
+                        )}
+                        {bronze && (
+                          <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-700 text-left flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl">🥉</span>
+                              <div>
+                                <div className="text-[10px] uppercase font-bold text-amber-600">3rd Place Squad</div>
+                                <div className="text-base font-black text-white">{bronze.teamName}</div>
+                              </div>
+                            </div>
+                            <div className="font-mono text-base font-bold text-amber-400">
+                              {bronze.score.toLocaleString()} pts
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tournament Individual MVP */}
+                      {individualMvp && (
+                        <div className="p-3.5 rounded-xl bg-black/40 border border-cyan-400/30 max-w-md mx-auto flex items-center justify-between text-left">
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-xl">🌟</span>
+                            <div>
+                              <div className="text-[10px] font-black uppercase text-cyan-300">Tournament Individual MVP</div>
+                              <div className="text-sm font-black text-white">
+                                {individualMvp.name} {individualMvp.teamName && `[${individualMvp.teamName}]`}
+                              </div>
+                            </div>
+                          </div>
+                          <span className="font-mono text-sm font-black text-cyan-300">
+                            {(individualMvp.score ?? 0).toLocaleString()} pts
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              /* 3D Animated Victory Podium with Confetti (Classic Mode) */
+              <VictoryPodium
+                winners={
+                  [...players]
+                    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+                    .slice(0, 3)
+                    .map((p, idx) => ({
+                      rank: idx + 1,
+                      name: p.name,
+                      score: p.score ?? 0,
+                      avatarId: p.avatar || (idx === 0 ? 'fox' : idx === 1 ? 'bot' : 'owl'),
+                      streak: p.streak ?? 0,
+                    }))
+                }
+                onRestart={() => {
+                  setStage('lobby');
+                  setCurrentQuestionIdx(0);
+                  setAnswersSubmitted(0);
+                }}
+              />
+            )}
 
             {/* Bottom Actions */}
             <div className="flex flex-wrap items-center justify-center gap-3 pt-4">

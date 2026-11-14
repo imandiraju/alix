@@ -82,6 +82,8 @@ router.get('/:pin', async (req: Request, res: Response) => {
         quizTitle,
         playerCount,
         status,
+        gameMode: memorySession?.gameMode || (doc as any)?.gameMode || 'classic',
+        teams: memorySession?.teams || [],
         isLocked,
         requireRoster,
         roster: rosterInfo,

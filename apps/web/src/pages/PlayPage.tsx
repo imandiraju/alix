@@ -43,6 +43,13 @@ interface ActiveQuestion {
   points?: number;
 }
 
+export const SQUADS = [
+  { id: 'team-red', name: 'Red Dragons', color: '#E21B3C', icon: '🐉', border: 'border-[#E21B3C]', bg: 'bg-[#E21B3C]/20', badge: 'bg-[#E21B3C] text-white', text: 'text-[#E21B3C]' },
+  { id: 'team-blue', name: 'Blue Titans', color: '#1368CE', icon: '⚡', border: 'border-[#1368CE]', bg: 'bg-[#1368CE]/20', badge: 'bg-[#1368CE] text-white', text: 'text-[#1368CE]' },
+  { id: 'team-green', name: 'Emerald Knights', color: '#26890C', icon: '🛡️', border: 'border-[#26890C]', bg: 'bg-[#26890C]/20', badge: 'bg-[#26890C] text-white', text: 'text-[#26890C]' },
+  { id: 'team-yellow', name: 'Golden Eagles', color: '#D89E00', icon: '🦅', border: 'border-[#D89E00]', bg: 'bg-[#D89E00]/20', badge: 'bg-[#D89E00] text-slate-900', text: 'text-[#D89E00]' },
+];
+
 export const PlayPage: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
@@ -51,7 +58,13 @@ export const PlayPage: React.FC = () => {
   const rollNo = searchParams.get('rollNo') || '';
   const avatarId = searchParams.get('avatar') || 'fox';
   const urlQuizId = searchParams.get('quizId') || '';
+  const initialTeamId = searchParams.get('teamId') || 'team-red';
   const avatar = getAvatarById(avatarId);
+
+  // Team Mode State
+  const [selectedTeamId, setSelectedTeamId] = useState(initialTeamId);
+  const [isTeamMode, setIsTeamMode] = useState(false);
+  const [teamLeaderboard, setTeamLeaderboard] = useState<any[]>([]);
 
   // Game Phases: 'waiting' | 'answering' | 'submitted' | 'score' | 'leaderboard' | 'ended'
   const [phase, setPhase] = useState<'waiting' | 'answering' | 'submitted' | 'score' | 'leaderboard' | 'ended'>('waiting');
@@ -171,6 +184,7 @@ export const PlayPage: React.FC = () => {
           playerName: studentName,
           rollNo: rollNo || undefined,
           avatarId: avatar.id,
+          teamId: selectedTeamId,
         } as any);
       };
       const onDisconnect = () => setIsSocketConnected(false);
@@ -178,6 +192,15 @@ export const PlayPage: React.FC = () => {
       socket.on('connect', onConnect);
       socket.on('disconnect', onDisconnect);
       if (socket.connected) onConnect();
+
+      // Listen for player-joined updates (team mode sync and squad balance)
+      socket.on('player-joined', (data: any) => {
+        if (data?.gameMode === 'team') setIsTeamMode(true);
+        if (Array.isArray(data?.teamLeaderboard)) setTeamLeaderboard(data.teamLeaderboard);
+        if (data?.player && (data.player.id === socket.id || data.player.name?.trim().toLowerCase() === studentName.trim().toLowerCase())) {
+          if (data.player.teamId) setSelectedTeamId(data.player.teamId);
+        }
+      });
 
       // Listen for session status updates from host (case-insensitive check for 'playing' / 'PLAYING')
       socket.on('session-status', (data: any) => {
@@ -285,6 +308,10 @@ export const PlayPage: React.FC = () => {
 
       // Listen for host presenting the live leaderboard
       socket.on('show-leaderboard', (data: any) => {
+        if (data?.gameMode === 'team') setIsTeamMode(true);
+        if (Array.isArray(data?.teamLeaderboard)) {
+          setTeamLeaderboard(data.teamLeaderboard);
+        }
         if (Array.isArray(data?.leaderboard)) {
           setLeaderboardList(data.leaderboard);
         }
@@ -293,6 +320,10 @@ export const PlayPage: React.FC = () => {
 
       // Listen for leaderboard update (periodic score tabulation)
       socket.on('leaderboard-update', (data: any) => {
+        if (data?.gameMode === 'team') setIsTeamMode(true);
+        if (Array.isArray(data?.teamLeaderboard)) {
+          setTeamLeaderboard(data.teamLeaderboard);
+        }
         if (Array.isArray(data?.leaderboard)) {
           setLeaderboardList(data.leaderboard);
         }
@@ -300,6 +331,10 @@ export const PlayPage: React.FC = () => {
 
       // Listen for game end
       socket.on('game-ended', (data: any) => {
+        if (data?.gameMode === 'team') setIsTeamMode(true);
+        if (Array.isArray(data?.teamLeaderboard)) {
+          setTeamLeaderboard(data.teamLeaderboard);
+        }
         if (Array.isArray(data?.finalLeaderboard)) {
           setLeaderboardList(data.finalLeaderboard);
         }
@@ -345,6 +380,19 @@ export const PlayPage: React.FC = () => {
   const isPoll =
     (currentQuestion as any).type === 'POLL' ||
     (currentQuestion as any).questionType === 'poll';
+
+  const currentSquad = SQUADS.find((s) => s.id === selectedTeamId) || SQUADS[0];
+
+  const handleSwitchTeam = (tId: string) => {
+    setSelectedTeamId(tId);
+    try {
+      const socket = getSocket();
+      socket.emit('select-team', {
+        code: sessionId || '842915',
+        teamId: tId,
+      });
+    } catch {}
+  };
 
   // Multi-Select Option Toggle
   const handleToggleMultiOption = (idx: number) => {
@@ -463,6 +511,12 @@ export const PlayPage: React.FC = () => {
                 <span className="font-heading font-black text-xs sm:text-sm text-white leading-tight truncate max-w-[130px]">
                   {studentName}
                 </span>
+                {isTeamMode && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${currentSquad.badge} flex items-center gap-1 shadow-sm`}>
+                    <span>{currentSquad.icon}</span>
+                    <span className="hidden xs:inline">{currentSquad.name}</span>
+                  </span>
+                )}
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white/10 text-alix-cyan-300 inline-flex items-center gap-1">
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${
@@ -521,6 +575,47 @@ export const PlayPage: React.FC = () => {
               </p>
             </div>
 
+            {/* Team / Squad Selector (When Team Mode is enabled) */}
+            {isTeamMode && (
+              <div className="p-4 rounded-2xl bg-black/40 border border-white/15 backdrop-blur-md text-left space-y-3 animate-fade-in shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                    <span>👥</span>
+                    <span>Your Squad:</span>
+                  </div>
+                  <span className="text-[10px] text-white/60">Tap to change squad</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {SQUADS.map((sq) => {
+                    const isSelected = selectedTeamId === sq.id;
+                    return (
+                      <button
+                        key={sq.id}
+                        type="button"
+                        onClick={() => handleSwitchTeam(sq.id)}
+                        className={`p-2.5 rounded-xl border-2 text-left transition-all flex items-center gap-2 cursor-pointer ${
+                          isSelected
+                            ? `${sq.border} ${sq.bg} ring-2 ring-white/50 shadow-lg scale-[1.02]`
+                            : 'border-white/10 bg-white/5 hover:bg-white/10 opacity-70 hover:opacity-100'
+                        }`}
+                      >
+                        <span className="text-xl shrink-0">{sq.icon}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className={`text-xs font-black truncate ${isSelected ? 'text-white' : 'text-white/80'}`}>
+                            {sq.name}
+                          </div>
+                          <div className="text-[9px] font-bold text-white/50">
+                            {isSelected ? '✓ Your Squad' : 'Join'}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="p-4 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md shadow-xl flex items-center justify-between text-left">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-alix-cyan-400">
@@ -546,9 +641,17 @@ export const PlayPage: React.FC = () => {
           <div className="w-full space-y-4 animate-scale-in">
             {/* Header: Progress & Timer */}
             <div className="flex items-center justify-between">
-              <span className="px-3 py-1 rounded-full bg-white/15 border border-white/20 text-xs font-black text-white tracking-wider">
-                Question {currentQuestion.index} of {currentQuestion.total}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 rounded-full bg-white/15 border border-white/20 text-xs font-black text-white tracking-wider">
+                  Question {currentQuestion.index} of {currentQuestion.total}
+                </span>
+                {isTeamMode && (
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider ${currentSquad.badge} flex items-center gap-1 shadow-md`}>
+                    <span>{currentSquad.icon}</span>
+                    <span className="hidden xs:inline">{currentSquad.name}</span>
+                  </span>
+                )}
+              </div>
               <Countdown
                 secondsRemaining={secondsRemaining}
                 totalSeconds={currentQuestion.timeLimit}
@@ -747,6 +850,58 @@ export const PlayPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Team / Squad Standings (When Team Mode is Active) */}
+            {isTeamMode && teamLeaderboard.length > 0 && (
+              <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-white/15 p-3 space-y-2 text-left">
+                <div className="text-[11px] font-black uppercase tracking-wider text-amber-300 flex items-center justify-between px-1">
+                  <span className="flex items-center gap-1.5">
+                    <span>👥</span>
+                    <span>Squad Standings</span>
+                  </span>
+                  <span className="text-[10px] text-white/50">Combined Score</span>
+                </div>
+                <div className="space-y-1.5">
+                  {teamLeaderboard.map((t, tIdx) => {
+                    const isMyTeam = t.teamId === selectedTeamId;
+                    return (
+                      <div
+                        key={t.teamId || tIdx}
+                        className={`p-2.5 rounded-xl border flex items-center justify-between transition-all ${
+                          isMyTeam
+                            ? 'bg-white/15 border-amber-400 ring-2 ring-amber-300/40 shadow-md'
+                            : 'bg-white/5 border-white/10'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-black/40 text-white font-mono text-[10px] font-black flex items-center justify-center">
+                            #{t.rank || tIdx + 1}
+                          </span>
+                          <span className="text-lg">{t.icon || '🛡️'}</span>
+                          <div>
+                            <div className="text-xs font-black text-white flex items-center gap-1">
+                              <span>{t.teamName}</span>
+                              {isMyTeam && (
+                                <span className="text-[9px] bg-amber-400 text-slate-900 font-black px-1.5 rounded">
+                                  YOU
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-white/60">{t.memberCount} players</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-mono text-sm font-black text-amber-300">
+                            {t.score.toLocaleString()}
+                          </div>
+                          <div className="text-[9px] text-white/50">PTS</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Top Standings List */}
             <div className="bg-black/30 backdrop-blur-md rounded-2xl border border-white/10 p-3 divide-y divide-white/10 text-left space-y-1 max-h-60 overflow-y-auto">
               {leaderboardList.length === 0 ? (
@@ -831,6 +986,42 @@ export const PlayPage: React.FC = () => {
                 The live classroom round has ended. Here is your final summary!
               </p>
             </div>
+
+            {/* Team Mode Final Championship Card */}
+            {isTeamMode && teamLeaderboard.length > 0 && (() => {
+              const winningTeam = teamLeaderboard[0];
+              const isMyTeamWinner = winningTeam?.teamId === selectedTeamId;
+              const myTeamEntry = teamLeaderboard.find((t) => t.teamId === selectedTeamId);
+              return (
+                <div
+                  className={`p-4 sm:p-5 rounded-2xl border-2 backdrop-blur-md shadow-2xl text-center space-y-2 ${
+                    isMyTeamWinner
+                      ? 'bg-gradient-to-r from-amber-500/30 via-yellow-400/20 to-amber-600/30 border-amber-400 ring-2 ring-amber-300/40'
+                      : 'bg-white/10 border-white/20'
+                  }`}
+                >
+                  <div className="text-xs font-black uppercase tracking-widest text-amber-300 flex items-center justify-center gap-1.5">
+                    <Trophy className="w-4 h-4 text-amber-300 fill-current" />
+                    <span>{isMyTeamWinner ? 'VICTORY! YOUR SQUAD WON 1ST PLACE!' : `Winning Squad: ${winningTeam.teamName}`}</span>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-heading font-black text-white flex items-center justify-center gap-2">
+                    <span className="text-3xl">{winningTeam.icon || '🏆'}</span>
+                    <span>{winningTeam.teamName}</span>
+                  </div>
+                  <div className="font-mono text-sm text-amber-200">
+                    {winningTeam.score.toLocaleString()} Team PTS • {winningTeam.memberCount} Teammates
+                  </div>
+                  {!isMyTeamWinner && myTeamEntry && (
+                    <div className="pt-2 text-xs text-white/80 border-t border-white/10 flex items-center justify-between">
+                      <span>Your Squad ({myTeamEntry.teamName}):</span>
+                      <span className="font-bold text-amber-300">
+                        Rank #{myTeamEntry.rank} ({myTeamEntry.score.toLocaleString()} pts)
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Final Achievement & Rank Card */}
             <div className="p-4 sm:p-5 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-md shadow-2xl space-y-3">

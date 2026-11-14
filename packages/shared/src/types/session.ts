@@ -16,6 +16,15 @@ export interface PlayerAnswer {
   points: number;
 }
 
+export interface Team {
+  id: string;
+  name: string;
+  color: string;
+  icon?: string;
+  score: number;
+  memberCount: number;
+}
+
 export interface Player {
   id: string;
   name: string;
@@ -25,6 +34,10 @@ export interface Player {
   rank: number;
   avatar?: string;
   isConnected: boolean;
+  rollNo?: string;
+  teamId?: string;
+  teamName?: string;
+  teamColor?: string;
 }
 
 export interface SessionSettings {
@@ -32,6 +45,7 @@ export interface SessionSettings {
   autoAdvance: boolean;
   autoAdvanceDelay: number; // seconds
   showLeaderboardAfterEach: boolean;
+  gameMode?: 'classic' | 'team';
 }
 
 export interface GameSession {
@@ -43,6 +57,8 @@ export interface GameSession {
   players: Player[];
   currentQuestionIndex: number;
   settings: SessionSettings;
+  gameMode?: 'classic' | 'team';
+  teams?: Team[];
   startedAt?: string;
   finishedAt?: string;
 }

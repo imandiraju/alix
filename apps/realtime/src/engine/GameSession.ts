@@ -1,9 +1,16 @@
 // ─── Game Session Manager ───────────────────────────────────────────────────
 
 import { v4 as uuidv4 } from 'uuid';
-import type { Player, PlayerAnswer, Quiz } from '@alix/shared';
+import type { Player, PlayerAnswer, Quiz, Team, TeamLeaderboardEntry } from '@alix/shared';
 import { SESSION_CONSTANTS, SessionStatus } from '@alix/shared';
 import type { LeaderboardEntry } from '@alix/shared';
+
+export const DEFAULT_TEAMS: Team[] = [
+  { id: 'team-red', name: 'Red Dragons', color: '#E21B3C', icon: '🐉', score: 0, memberCount: 0 },
+  { id: 'team-blue', name: 'Blue Titans', color: '#1368CE', icon: '⚡', score: 0, memberCount: 0 },
+  { id: 'team-green', name: 'Emerald Knights', color: '#26890C', icon: '🛡️', score: 0, memberCount: 0 },
+  { id: 'team-yellow', name: 'Golden Eagles', color: '#D89E00', icon: '🦅', score: 0, memberCount: 0 },
+];
 
 interface InternalSession {
   id: string;
@@ -13,6 +20,8 @@ interface InternalSession {
   quizId: string;
   quiz: Quiz | null;
   status: SessionStatus;
+  gameMode: 'classic' | 'team';
+  teams: Team[];
   players: Player[];
   currentQuestionIndex: number;
   settings: {
@@ -33,7 +42,7 @@ export class GameSessionManager {
 
   // ─── Session Lifecycle ──────────────────────────────────────────────
 
-  createSession(quizId: string, hostId: string): InternalSession {
+  createSession(quizId: string, hostId: string, gameMode: 'classic' | 'team' = 'classic'): InternalSession {
     const id = uuidv4();
     const code = this.generateCode();
 
@@ -44,6 +53,8 @@ export class GameSessionManager {
       quizId,
       quiz: null, // Loaded when game starts
       status: SessionStatus.WAITING,
+      gameMode,
+      teams: DEFAULT_TEAMS.map((t) => ({ ...t })),
       players: [],
       currentQuestionIndex: -1,
       settings: {
@@ -95,13 +106,52 @@ export class GameSessionManager {
     socketId: string,
     name: string,
     avatar?: string,
-    rollNo?: string
+    rollNo?: string,
+    teamId?: string,
+    teamName?: string,
+    teamColor?: string
   ): Player | null {
     const session = this.sessions.get(sessionId);
     if (!session) return null;
 
     const cleanName = (name || '').trim();
     const cleanRoll = rollNo ? rollNo.trim().toUpperCase() : undefined;
+
+    // Resolve team for Team Mode
+    let assignedTeamId = teamId;
+    let assignedTeamName = teamName;
+    let assignedTeamColor = teamColor;
+
+    if (session.gameMode === 'team') {
+      const availableTeams = session.teams.length > 0 ? session.teams : DEFAULT_TEAMS;
+      if (!assignedTeamId) {
+        // Auto-balance: select team with fewest members
+        const counts: Record<string, number> = {};
+        availableTeams.forEach((t) => { counts[t.id] = 0; });
+        session.players.forEach((p) => {
+          if (p.teamId && counts[p.teamId] !== undefined) {
+            counts[p.teamId]++;
+          }
+        });
+        let minTeam = availableTeams[0];
+        let minCount = counts[minTeam.id] || 0;
+        for (const t of availableTeams) {
+          if ((counts[t.id] || 0) < minCount) {
+            minTeam = t;
+            minCount = counts[t.id] || 0;
+          }
+        }
+        assignedTeamId = minTeam.id;
+        assignedTeamName = minTeam.name;
+        assignedTeamColor = minTeam.color;
+      } else {
+        const found = availableTeams.find((t) => t.id === assignedTeamId);
+        if (found) {
+          assignedTeamName = found.name;
+          assignedTeamColor = found.color;
+        }
+      }
+    }
 
     // Check if player already exists (reconnection / page refresh)
     const existingPlayer = session.players.find((p) => {
@@ -117,6 +167,11 @@ export class GameSessionManager {
       existingPlayer.isConnected = true;
       if (avatar) existingPlayer.avatar = avatar;
       if (cleanRoll) (existingPlayer as any).rollNo = cleanRoll;
+      if (assignedTeamId) {
+        existingPlayer.teamId = assignedTeamId;
+        existingPlayer.teamName = assignedTeamName;
+        existingPlayer.teamColor = assignedTeamColor;
+      }
 
       if (oldId && session.previousRanks.has(oldId)) {
         const prev = session.previousRanks.get(oldId);
@@ -135,10 +190,29 @@ export class GameSessionManager {
       rank: session.players.length + 1,
       avatar: avatar || 'fox',
       isConnected: true,
+      teamId: assignedTeamId,
+      teamName: assignedTeamName,
+      teamColor: assignedTeamColor,
       ...(cleanRoll ? { rollNo: cleanRoll } : {}),
     } as any;
 
     session.players.push(player);
+    return player;
+  }
+
+  setPlayerTeam(sessionId: string, playerId: string, teamId: string): Player | null {
+    const session = this.sessions.get(sessionId);
+    if (!session) return null;
+    const player = session.players.find((p) => p.id === playerId);
+    if (!player) return null;
+
+    const availableTeams = session.teams.length > 0 ? session.teams : DEFAULT_TEAMS;
+    const targetTeam = availableTeams.find((t) => t.id === teamId);
+    if (targetTeam) {
+      player.teamId = targetTeam.id;
+      player.teamName = targetTeam.name;
+      player.teamColor = targetTeam.color;
+    }
     return player;
   }
 
@@ -231,6 +305,50 @@ export class GameSessionManager {
     }
 
     return leaderboard;
+  }
+
+  getTeamLeaderboard(sessionId: string): TeamLeaderboardEntry[] {
+    const session = this.sessions.get(sessionId);
+    if (!session) return [];
+
+    const teams = session.teams.length > 0 ? session.teams : DEFAULT_TEAMS;
+    const teamMap = new Map<
+      string,
+      { id: string; name: string; color: string; icon: string; score: number; memberCount: number }
+    >();
+
+    for (const t of teams) {
+      teamMap.set(t.id, {
+        id: t.id,
+        name: t.name,
+        color: t.color,
+        icon: t.icon || '🛡️',
+        score: 0,
+        memberCount: 0,
+      });
+    }
+
+    for (const p of session.players) {
+      if (p.teamId && teamMap.has(p.teamId)) {
+        const t = teamMap.get(p.teamId)!;
+        t.score += p.score;
+        t.memberCount += 1;
+      }
+    }
+
+    const sortedTeams = Array.from(teamMap.values()).sort(
+      (a, b) => b.score - a.score || b.memberCount - a.memberCount
+    );
+
+    return sortedTeams.map((t, idx) => ({
+      teamId: t.id,
+      teamName: t.name,
+      color: t.color,
+      icon: t.icon,
+      score: t.score,
+      rank: idx + 1,
+      memberCount: t.memberCount,
+    }));
   }
 
   // ─── Cleanup ────────────────────────────────────────────────────────
