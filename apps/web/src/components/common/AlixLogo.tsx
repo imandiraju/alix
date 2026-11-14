@@ -180,14 +180,18 @@ export const AlixLogo: React.FC<AlixLogoProps> = ({
           )}
         </div>
 
-        {/* Company Subtitle: RKGlobal EdTech */}
+        {/* Brand Subtitle: RKGlobal EdTech & Academic Learning Platform */}
         {(withCompanyTag || withTagline) && (
           <div
             className={`font-heading font-black tracking-wider uppercase mt-0.5 ${
               isWhite ? 'text-cyan-300/90' : 'text-[#46178F]'
             } ${size === 'sm' ? 'text-[7px]' : 'text-[9px]'}`}
           >
-            RKGlobal EdTech
+            {withTagline && !withCompanyTag
+              ? 'Academic Learning Platform'
+              : withTagline && withCompanyTag
+              ? 'Academic Learning Platform • RKGlobal EdTech'
+              : 'RKGlobal EdTech'}
           </div>
         )}
       </div>

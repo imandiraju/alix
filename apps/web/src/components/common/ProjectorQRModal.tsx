@@ -154,7 +154,7 @@ export const ProjectorQRModal: React.FC<ProjectorQRModalProps> = ({
 
         {/* Footer info */}
         <div className="w-full mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-[#E5E5E5] flex items-center justify-between text-[10px] sm:text-xs text-[#626262]">
-          <span>ALIX – Active Learning & Interactive Experience</span>
+          <span>ALIX – Academic Learning Platform · RKGlobal EdTech</span>
           <span className="text-[#626262]">Press Esc or Close to resume</span>
         </div>
       </div>

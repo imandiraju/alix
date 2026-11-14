@@ -35,7 +35,7 @@ export const VictoryPodium: React.FC<VictoryPodiumProps> = ({
       <div className="text-center mb-8 space-y-2">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 text-xs font-bold uppercase tracking-wider">
           <Trophy className="w-4 h-4 text-amber-400" />
-          <span>Active Learning Champions</span>
+          <span>Academic Learning Champions • RKGlobal EdTech</span>
         </div>
         <h2 className="text-3xl sm:text-5xl font-heading font-black tracking-tight text-white">
           Classroom Victory Podium

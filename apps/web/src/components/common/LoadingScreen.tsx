@@ -8,7 +8,7 @@ export interface LoadingScreenProps {
 
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({
   message = 'Connecting to ALIX Live...',
-  subMessage = 'Active Learning & Interactive Experience',
+  subMessage = 'Academic Learning Platform • RKGlobal EdTech',
 }) => {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-alix-slate-50 text-alix-slate-900 px-4">

@@ -83,7 +83,7 @@ app.get('/', (_req, res) => {
   res.json({
     name: 'ALIX Realtime Server',
     version: '0.1.0',
-    description: 'Active Learning & Interactive Experience — Realtime Engine',
+    description: 'ALIX (Academic Learning Platform) by RKGlobal EdTech — Realtime Engine',
   });
 });
 
@@ -106,7 +106,7 @@ httpServer.listen(PORT, () => {
   console.log('  ╔══════════════════════════════════════════════╗');
   console.log('  ║                                              ║');
   console.log('  ║   🎓  ALIX Realtime Server                  ║');
-  console.log('  ║   Active Learning & Interactive Experience   ║');
+  console.log('  ║   Academic Learning Platform • RKGlobal      ║');
   console.log('  ║                                              ║');
   console.log(`  ║   🚀  Running on port ${PORT}                  ║`);
   console.log('  ║                                              ║');

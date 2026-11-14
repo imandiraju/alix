@@ -191,7 +191,7 @@ export const LandingPage: React.FC = () => {
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E5E5E5] shadow-xs mb-6 animate-fade-in">
             <span className="w-2 h-2 rounded-full bg-[#00A6A6] animate-pulse" />
             <span className="text-xs font-semibold text-[#46178F] tracking-wide uppercase">
-              RKGlobal EdTech • Active Learning Intelligence
+              RKGlobal EdTech • Academic Learning Platform
             </span>
           </div>
 
@@ -326,7 +326,7 @@ export const LandingPage: React.FC = () => {
       <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-14">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-[#46178F] mb-2">
-            Active Learning Modules
+            Academic Learning Modules
           </h2>
           <h3 className="text-3xl sm:text-4xl font-heading font-bold text-[#252525] tracking-tight">
             Built for High-Energy Classrooms

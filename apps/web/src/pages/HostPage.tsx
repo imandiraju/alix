@@ -820,7 +820,7 @@ export const HostPage: React.FC = () => {
             <div className="space-y-3">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-[#E5E5E5] text-xs font-bold text-[#46178F] shadow-xs">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>{subject || 'Classroom Active Learning'}</span>
+                <span>{subject || 'Academic Learning Platform'}</span>
                 {courseCode && <span className="text-[#626262]">• {courseCode}</span>}
               </div>
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-heading font-black text-[#252525] tracking-tight">

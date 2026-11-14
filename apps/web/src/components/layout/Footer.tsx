@@ -10,12 +10,12 @@ export const Footer: React.FC = () => {
         <div className="md:col-span-2 space-y-4">
           <AlixLogo size="md" withTagline={true} withCompanyTag={true} />
           <p className="text-sm text-alix-slate-500 max-w-sm leading-relaxed">
-            A premium, modern, interactive classroom learning platform designed to
+            A premium, modern academic learning platform designed by RKGlobal EdTech to
             transform traditional lectures into engaging, collaborative and measurable
             learning experiences.
           </p>
           <div className="text-xs text-alix-slate-400">
-            &copy; {new Date().getFullYear()} ALIX (Active Learning & Interactive Experience) · RKGlobal EdTech. All rights reserved.
+            &copy; {new Date().getFullYear()} ALIX (Academic Learning Platform) · RKGlobal EdTech. All rights reserved.
           </div>
         </div>
 

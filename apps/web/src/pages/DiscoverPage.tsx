@@ -207,8 +207,8 @@ const DISCOVER_ACTIVITIES: DiscoverActivity[] = [
     title: 'Morning Energizer: Speed Trivia & STEM Facts',
     subject: 'General STEM',
     courseCode: 'ICE 101',
-    category: 'Active Learning',
-    description: 'High-speed active learning energizer to kick off your morning lecture and awaken student minds.',
+    category: 'Academic Learning',
+    description: 'High-speed academic learning energizer to kick off your morning lecture and awaken student minds.',
     questionCount: 3,
     timeEstimate: '2 mins',
     gradient: 'from-[#26890C] to-[#124505]',
@@ -263,7 +263,7 @@ export const DiscoverPage: React.FC = () => {
     'Computer Science',
     'Mathematics',
     'Engineering',
-    'Active Learning',
+    'Academic Learning',
   ];
 
   const filteredActivities = DISCOVER_ACTIVITIES.filter((a) => {
@@ -348,7 +348,7 @@ export const DiscoverPage: React.FC = () => {
                     if (dp.name.includes('Computer')) setActiveCategory('Computer Science');
                     else if (dp.name.includes('Math')) setActiveCategory('Mathematics');
                     else if (dp.name.includes('Engineering')) setActiveCategory('Engineering');
-                    else if (dp.name.includes('Social') || dp.name.includes('Energizer')) setActiveCategory('Active Learning');
+                    else if (dp.name.includes('Social') || dp.name.includes('Energizer')) setActiveCategory('Academic Learning');
                     else setActiveCategory('All');
                   }}
                   className={`p-3.5 rounded-2xl bg-gradient-to-br ${dp.gradient} text-white shadow-xs hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between min-h-[90px]`}

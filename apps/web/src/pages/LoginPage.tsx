@@ -241,7 +241,7 @@ export const LoginPage: React.FC = () => {
             Log in
           </h1>
           <p className="text-xs text-[#626262] text-center mb-5 font-normal">
-            Create, host, and analyze active learning sessions
+            Create, host, and analyze academic learning sessions
           </p>
 
           {/* Auth redirect notice */}
@@ -473,7 +473,7 @@ export const LoginPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="p-4 text-center text-xs text-[#626262] z-10 flex flex-wrap items-center justify-center gap-2">
-        <span>ALIX Platform • RKGlobal EdTech</span>
+        <span>Academic Learning Platform • RKGlobal EdTech</span>
         <span>•</span>
         <Link to="/" className="hover:text-[#252525] transition-colors">Terms</Link>
         <span>•</span>

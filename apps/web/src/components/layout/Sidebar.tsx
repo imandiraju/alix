@@ -140,7 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span>Help & Tutorial</span>
         </NavLink>
         <div className="px-3 pt-1 text-[11px] text-[#626262] font-normal">
-          ALIX Platform • RKGlobal EdTech
+          Academic Learning Platform • RKGlobal EdTech
         </div>
       </div>
     </aside>

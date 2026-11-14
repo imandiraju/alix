@@ -303,7 +303,7 @@ export const JoinPage: React.FC = () => {
             <span className="text-alix-cyan-400 animate-bounce">!</span>
           </h1>
           <p className="text-xs sm:text-sm text-white/80 font-semibold tracking-wider mt-1 uppercase">
-            Active Learning & Interactive Experience
+            Academic Learning Platform • RKGlobal EdTech
           </p>
         </div>
 
@@ -526,7 +526,7 @@ export const JoinPage: React.FC = () => {
 
       {/* Bottom Footer */}
       <footer className="p-4 text-center text-xs text-white/60 z-10 flex flex-wrap items-center justify-center gap-4">
-        <span>Active Learning Platform • ALIX</span>
+        <span>Academic Learning Platform • ALIX • RKGlobal EdTech</span>
         <span>•</span>
         <Link to="/" className="hover:text-white transition-colors">Privacy</Link>
         <span>•</span>
