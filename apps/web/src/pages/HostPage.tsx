@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import AlixLogo from '../components/common/AlixLogo';
 import Countdown from '../components/game/Countdown';
 import Leaderboard from '../components/game/Leaderboard';
 import ProjectorQRModal from '../components/common/ProjectorQRModal';
 import VictoryPodium from '../components/game/VictoryPodium';
+import { RenderAvatarSvg } from '../components/game/AlixSvgAvatars';
 import { getSocket, REALTIME_URL } from '../services/socket';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -21,6 +22,7 @@ import {
   ChevronRight,
   Clock,
   RotateCw,
+  Radio,
 } from 'lucide-react';
 
 interface QuizQuestion {
@@ -79,6 +81,8 @@ export const HostPage: React.FC = () => {
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://alix-alp.vercel.app';
   const joinUrl = `${origin}/join?pin=${pin}&t=${rollingToken}`;
 
+  const sessionCreatedRef = useRef(false);
+
   // 1. Fetch real quiz from MongoDB if sessionId is provided
   useEffect(() => {
     if (!sessionId) return;
@@ -113,14 +117,17 @@ export const HostPage: React.FC = () => {
 
       const onConnect = () => {
         setIsRealtimeActive(true);
-        socket.emit('create-session', {
-          quizId: sessionId || 'default',
-          hostId: user?.id || 'host-teacher',
-          questions: questions.length > 0 ? questions : undefined,
-          quizTitle,
-          subject,
-          courseCode,
-        } as any);
+        if (!sessionCreatedRef.current) {
+          sessionCreatedRef.current = true;
+          socket.emit('create-session', {
+            quizId: sessionId || 'default',
+            hostId: user?.id || 'host-teacher',
+            questions: questions.length > 0 ? questions : undefined,
+            quizTitle,
+            subject,
+            courseCode,
+          } as any);
+        }
       };
 
       const onDisconnect = () => setIsRealtimeActive(false);
@@ -141,7 +148,7 @@ export const HostPage: React.FC = () => {
       socket.on('player-joined', (data: any) => {
         if (data.player) {
           setPlayers((prev) => {
-            const exists = prev.some((p) => p.id === data.player.id);
+            const exists = prev.some((p) => p.id === data.player.id || (p.name === data.player.name && data.player.name));
             return exists ? prev : [...prev, data.player];
           });
         }
@@ -197,7 +204,7 @@ export const HostPage: React.FC = () => {
     } catch (err) {
       console.warn('Socket connection error:', err);
     }
-  }, [sessionId, user, questions, quizTitle, subject, courseCode]);
+  }, [sessionId, user]);
 
   // Timer countdown when stage is 'question'
   useEffect(() => {
@@ -214,6 +221,24 @@ export const HostPage: React.FC = () => {
 
   const currentQ = questions[currentQuestionIdx] || questions[0];
 
+  const rawOptions: string[] = (currentQ?.options || []).map((o: any) =>
+    typeof o === 'string' ? o : o?.text || ''
+  );
+  const validOptionsWithIndex = rawOptions
+    .map((text, idx) => ({ text, originalIdx: idx }))
+    .filter((item) => item.text && item.text.trim().length > 0);
+  const displayOptions =
+    validOptionsWithIndex.length >= 2
+      ? validOptionsWithIndex
+      : rawOptions.map((text, idx) => ({ text, originalIdx: idx }));
+
+  const themes = [
+    { shape: '▲', bg: 'bg-[#E21B3C]', border: 'border-[#9E1329]' },
+    { shape: '◆', bg: 'bg-[#1368CE]', border: 'border-[#0D4589]' },
+    { shape: '●', bg: 'bg-[#D89E00]', border: 'border-[#8C6700]' },
+    { shape: '■', bg: 'bg-[#26890C]', border: 'border-[#175407]' },
+  ];
+
   const handleStartSession = () => {
     setStage('question');
     setTimer(currentQ.timeLimit || 30);
@@ -221,8 +246,9 @@ export const HostPage: React.FC = () => {
     try {
       const socket = getSocket();
       socket.emit('start-game', {
-        sessionId: activeSessionId || sessionId,
+        sessionId: activeSessionId || pin,
         code: pin,
+        quizId: sessionId,
         questions,
         quizTitle,
       } as any);
@@ -241,8 +267,9 @@ export const HostPage: React.FC = () => {
       try {
         const socket = getSocket();
         socket.emit('next-question', {
-          sessionId: activeSessionId || sessionId,
+          sessionId: activeSessionId || pin,
           code: pin,
+          quizId: sessionId,
         } as any);
       } catch (err) {
         console.warn('Could not emit next-question:', err);
@@ -252,8 +279,9 @@ export const HostPage: React.FC = () => {
       try {
         const socket = getSocket();
         socket.emit('end-game', {
-          sessionId: activeSessionId || sessionId,
+          sessionId: activeSessionId || pin,
           code: pin,
+          quizId: sessionId,
         } as any);
       } catch (err) {
         console.warn('Could not emit end-game:', err);
@@ -433,45 +461,123 @@ export const HostPage: React.FC = () => {
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-8 flex flex-col justify-center z-10">
         {/* Lobby Waiting Screen */}
         {stage === 'lobby' && (
-          <div className="text-center max-w-2xl mx-auto space-y-6 animate-fade-in">
-            <h1 className="text-3xl sm:text-5xl font-heading font-black text-white">
-              {quizTitle}
-            </h1>
+          <div className="text-center max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-fade-in py-2">
+            {/* Title & Subject Header */}
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold text-cyan-300">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>{subject || 'Classroom Active Learning'}</span>
+                {courseCode && <span className="text-white/60">• {courseCode}</span>}
+              </div>
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-heading font-black text-white tracking-tight drop-shadow-md">
+                {quizTitle}
+              </h1>
+            </div>
 
-            <p className="text-white/70 text-sm sm:text-base">
-              Join at <span className="text-white font-bold">{origin}/join</span> with PIN{' '}
-              <strong className="text-cyan-400 font-mono text-lg">{pin}</strong>
-            </p>
+            {/* Giant Kahoot-Style Join & PIN Billboard */}
+            <div className="relative bg-white text-slate-900 rounded-3xl p-6 sm:p-8 shadow-2xl border-4 border-white/20 max-w-2xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 overflow-hidden">
+              <div className="text-left space-y-1">
+                <div className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Radio className="w-4 h-4 text-emerald-500 animate-pulse" />
+                  <span>Join on any phone or browser:</span>
+                </div>
+                <div className="text-2xl sm:text-3xl font-heading font-black text-indigo-950 tracking-tight">
+                  {origin.replace(/^https?:\/\//, '')}/join
+                </div>
+                <p className="text-xs text-slate-400 font-semibold">Point camera at projector or enter PIN</p>
+              </div>
 
-            {/* Waiting for players grid */}
-            <div className="p-6 rounded-2xl bg-white/5 border border-white/10 min-h-[140px] flex flex-col justify-center items-center">
+              {/* Giant PIN Badge with Instant Projector QR trigger */}
+              <div className="flex items-center gap-3">
+                <div className="px-6 py-3 rounded-2xl bg-[#1368CE] text-white text-center shadow-lg border-b-4 border-[#0D4589]">
+                  <span className="block text-[10px] font-black uppercase tracking-widest text-cyan-200">GAME PIN</span>
+                  <span className="font-mono font-black text-3xl sm:text-4xl tracking-widest">
+                    {pin.length === 6 ? `${pin.slice(0, 3)} ${pin.slice(3)}` : pin}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsQRExpanded(true)}
+                  className="p-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-indigo-950 font-bold transition-all shadow-md hover:scale-105 active:scale-95 flex flex-col items-center gap-1 cursor-pointer border border-slate-200"
+                  title="Expand Projector QR Code"
+                >
+                  <QrCode className="w-7 h-7 text-indigo-700" />
+                  <span className="text-[10px] font-black uppercase tracking-wide">QR Code</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Live Player Status Counter */}
+            <div className="flex items-center justify-between max-w-2xl mx-auto px-2">
+              <div className="flex items-center gap-2 text-sm font-bold text-white/90">
+                <Users className="w-5 h-5 text-cyan-400" />
+                <span>
+                  {players.length === 0
+                    ? 'Waiting for players to join...'
+                    : `${players.length} ${players.length === 1 ? 'Learner' : 'Learners'} in Lobby`}
+                </span>
+              </div>
+              {players.length > 0 && (
+                <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 animate-pulse">
+                  ● Live Session Ready
+                </span>
+              )}
+            </div>
+
+            {/* Animated Player Mascots Lounge */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-black/30 border-2 border-white/10 backdrop-blur-md min-h-[170px] max-w-2xl mx-auto w-full flex flex-col justify-center items-center shadow-inner">
               {players.length === 0 ? (
-                <div className="text-white/50 text-sm flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                  <span>Waiting for players...</span>
+                <div className="text-center py-6 space-y-3">
+                  <div className="w-14 h-14 rounded-2xl bg-white/10 text-cyan-400 flex items-center justify-center mx-auto animate-bounce">
+                    <Sparkles className="w-7 h-7" />
+                  </div>
+                  <p className="text-sm sm:text-base font-semibold text-white/80">
+                    Scan the QR code or visit <strong className="text-cyan-300">{origin.replace(/^https?:\/\//, '')}/join</strong>
+                  </p>
+                  <p className="text-xs text-white/40">Learner nicknames and mascot avatars pop up here live!</p>
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {players.map((p, idx) => (
-                    <span
-                      key={idx}
-                      className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-cyan-300 text-xs font-bold animate-scale-in"
-                    >
-                      {p.name}
-                    </span>
-                  ))}
+                <div className="flex flex-wrap gap-3 sm:gap-4 justify-center w-full">
+                  {players.map((p, idx) => {
+                    const avatarList = ['fox', 'tiger', 'panda', 'owl', 'koala', 'lion', 'rabbit', 'bear'];
+                    const chosenAvatar = p.avatar || avatarList[idx % avatarList.length];
+                    return (
+                      <div
+                        key={p.id || idx}
+                        className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/20 backdrop-blur-md shadow-lg transition-transform hover:scale-105 animate-scale-in text-white"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-violet-500 to-cyan-400 p-0.5 flex items-center justify-center shrink-0 shadow-md ring-2 ring-white/30">
+                          <RenderAvatarSvg avatarId={chosenAvatar} size={36} />
+                        </div>
+                        <div className="text-left">
+                          <div className="font-heading font-black text-sm text-white leading-tight">
+                            {p.name}
+                          </div>
+                          {p.rollNo && (
+                            <div className="text-[10px] font-mono font-bold text-cyan-300">
+                              {p.rollNo}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            <button
-              type="button"
-              onClick={handleStartSession}
-              className="px-8 py-3.5 rounded-xl bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#1a5e08] active:border-b-0 active:translate-y-1 text-white font-bold text-base shadow-lg transition-all duration-100 inline-flex items-center gap-2 cursor-pointer"
-            >
-              <span>Start ({questions.length} questions)</span>
-              <ArrowRight className="w-5 h-5" />
-            </button>
+            {/* Giant 3D Launchpad Start Button */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleStartSession}
+                className="px-10 py-4 sm:py-5 rounded-2xl bg-[#26890C] hover:bg-[#20740A] border-b-6 border-[#175407] active:border-b-0 active:translate-y-1.5 text-white font-heading font-black text-lg sm:text-2xl shadow-2xl transition-all duration-100 inline-flex items-center gap-3 cursor-pointer group"
+              >
+                <span>Start Game ({questions.length} questions)</span>
+                <ArrowRight className="w-6 h-6 stroke-[3] group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
           </div>
         )}
 
@@ -506,25 +612,27 @@ export const HostPage: React.FC = () => {
               </h1>
             </div>
 
-            {/* Answer Options Grid (Kahoot 4-quadrant arcade style) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-              {currentQ.options.map((opt, idx) => {
-                const themes = [
-                  { shape: '▲', bg: 'bg-[#E21B3C]', border: 'border-[#9E1329]' },
-                  { shape: '◆', bg: 'bg-[#1368CE]', border: 'border-[#0D4589]' },
-                  { shape: '●', bg: 'bg-[#D89E00]', border: 'border-[#8C6700]' },
-                  { shape: '■', bg: 'bg-[#26890C]', border: 'border-[#175407]' },
-                ];
-                const t = themes[idx % themes.length];
+            {/* Answer Options Grid (Filtered for valid non-empty options only) */}
+            <div
+              className={`grid gap-4 sm:gap-6 ${
+                displayOptions.length === 2
+                  ? 'grid-cols-1 sm:grid-cols-2 max-w-5xl mx-auto'
+                  : displayOptions.length === 3
+                  ? 'grid-cols-1 sm:grid-cols-3'
+                  : 'grid-cols-1 sm:grid-cols-2'
+              }`}
+            >
+              {displayOptions.map((item, displayIdx) => {
+                const t = themes[displayIdx % themes.length];
                 return (
                   <div
-                    key={idx}
-                    className={`p-5 sm:p-7 rounded-2xl ${t.bg} border-b-6 ${t.border} text-white font-heading font-black text-xl sm:text-2xl flex items-center gap-4 sm:gap-5 shadow-2xl transition-transform active:scale-[0.99]`}
+                    key={item.originalIdx}
+                    className={`p-6 sm:p-8 rounded-2xl ${t.bg} border-b-6 ${t.border} text-white font-heading font-black text-xl sm:text-2xl lg:text-3xl flex items-center gap-4 sm:gap-6 shadow-2xl transition-transform active:scale-[0.99]`}
                   >
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-black/20 flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-inner">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-black/20 flex items-center justify-center text-2xl sm:text-4xl shrink-0 shadow-inner">
                       {t.shape}
                     </div>
-                    <span className="flex-1 drop-shadow leading-snug">{opt}</span>
+                    <span className="flex-1 drop-shadow leading-snug">{item.text}</span>
                   </div>
                 );
               })}
@@ -547,24 +655,28 @@ export const HostPage: React.FC = () => {
               <div className="text-right">
                 <div className="text-sm font-black text-emerald-400 flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                  <span>Correct: {currentQ.options[currentQ.correctIndex]}</span>
+                  <span>
+                    Correct: {rawOptions[currentQ.correctIndex] || `Option ${currentQ.correctIndex + 1}`}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* 4 Colorful Bars */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 items-end min-h-[220px] pt-4">
-              {currentQ.options.map((opt, idx) => {
-                const themes = [
-                  { shape: '▲', bg: 'bg-[#E21B3C]', border: 'border-[#9E1329]' },
-                  { shape: '◆', bg: 'bg-[#1368CE]', border: 'border-[#0D4589]' },
-                  { shape: '●', bg: 'bg-[#D89E00]', border: 'border-[#8C6700]' },
-                  { shape: '■', bg: 'bg-[#26890C]', border: 'border-[#175407]' },
-                ];
-                const t = themes[idx % themes.length];
-                const isCorrect = idx === currentQ.correctIndex;
+            {/* Filtered Response Distribution Bars */}
+            <div
+              className={`grid gap-4 sm:gap-6 items-end min-h-[220px] pt-4 ${
+                displayOptions.length === 2
+                  ? 'grid-cols-2 max-w-xl mx-auto'
+                  : displayOptions.length === 3
+                  ? 'grid-cols-3 max-w-3xl mx-auto'
+                  : 'grid-cols-2 sm:grid-cols-4'
+              }`}
+            >
+              {displayOptions.map((item, displayIdx) => {
+                const t = themes[displayIdx % themes.length];
+                const isCorrect = item.originalIdx === currentQ.correctIndex;
                 return (
-                  <div key={idx} className="flex flex-col items-center gap-2 h-full justify-end">
+                  <div key={item.originalIdx} className="flex flex-col items-center gap-2 h-full justify-end">
                     {/* Checkmark badge */}
                     {isCorrect ? (
                       <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg animate-bounce mb-1">
@@ -576,14 +688,14 @@ export const HostPage: React.FC = () => {
 
                     {/* Arcade Option Bar */}
                     <div
-                      className={`w-full rounded-2xl ${t.bg} border-b-6 ${t.border} p-4 sm:p-5 text-center text-white font-black shadow-lg transition-all flex flex-col justify-between items-center ${
+                      className={`w-full rounded-2xl ${t.bg} border-b-6 ${t.border} p-5 sm:p-6 text-center text-white font-black shadow-lg transition-all flex flex-col justify-between items-center ${
                         isCorrect ? 'ring-4 ring-white shadow-2xl scale-[1.02]' : 'opacity-60'
                       }`}
-                      style={{ minHeight: isCorrect ? '150px' : '100px' }}
+                      style={{ minHeight: isCorrect ? '160px' : '110px' }}
                     >
                       <span className="text-3xl sm:text-4xl drop-shadow">{t.shape}</span>
-                      <span className="text-xs sm:text-sm font-black line-clamp-2 mt-2 leading-tight drop-shadow">
-                        {opt}
+                      <span className="text-sm sm:text-base font-black line-clamp-2 mt-2 leading-tight drop-shadow">
+                        {item.text}
                       </span>
                     </div>
                   </div>
@@ -693,6 +805,7 @@ export const HostPage: React.FC = () => {
         onClose={() => setIsQRExpanded(false)}
         pin={pin}
         joinUrl={joinUrl}
+        participantCount={totalLearners}
       />
     </div>
   );

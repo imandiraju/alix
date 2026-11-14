@@ -55,6 +55,43 @@ function adaptQuestionsToSharedQuiz(rawQuestions: any[]): any[] {
   });
 }
 
+function resolveSession(socket: IOSocket, payload: any): any {
+  // 1. Try 6-digit code explicitly provided
+  const candidateCode =
+    (payload as any)?.code ||
+    (typeof payload?.sessionId === 'string' && payload.sessionId.trim().length === 6
+      ? payload.sessionId.trim()
+      : undefined);
+  if (candidateCode) {
+    const s = sessionManager.findByCode(String(candidateCode).toUpperCase());
+    if (s) return s;
+  }
+
+  // 2. Try sessionId as UUID or secondary lookup
+  if (payload?.sessionId) {
+    const s = sessionManager.getSession(payload.sessionId);
+    if (s) return s;
+    const sByCode = sessionManager.findByCode(String(payload.sessionId).toUpperCase());
+    if (sByCode) return sByCode;
+    const sByQuiz = sessionManager.findByQuizId(payload.sessionId);
+    if (sByQuiz) return sByQuiz;
+  }
+
+  // 3. Try quizId
+  if ((payload as any)?.quizId) {
+    const s = sessionManager.findByQuizId((payload as any).quizId);
+    if (s) return s;
+  }
+
+  // 4. Try socket.data.sessionId from socket session state
+  if (socket.data.sessionId) {
+    const s = sessionManager.getSession(socket.data.sessionId);
+    if (s) return s;
+  }
+
+  return undefined;
+}
+
 export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
   // ─── Create Session ───────────────────────────────────────────────────
 
@@ -238,7 +275,14 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       return;
     }
 
-    const player = sessionManager.addPlayer(session.id, socket.id, payload.playerName);
+    const chosenAvatar = (payload as any).avatarId || (payload as any).avatar || 'fox';
+    const player = sessionManager.addPlayer(
+      session.id,
+      socket.id,
+      payload.playerName,
+      chosenAvatar,
+      rollNo || undefined
+    );
 
     if (!player) {
       socket.emit('error', { message: 'Could not join session', code: 'JOIN_FAILED' });
@@ -261,7 +305,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
               socketId: socket.id,
               name: payload.playerName,
               rollNo: rollNo || undefined,
-              avatarId: (payload as any).avatarId || 'fox',
+              avatarId: chosenAvatar,
               score: 0,
               streak: 0,
               joinedAt: new Date(),
@@ -309,12 +353,10 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
   // ─── Start Game ───────────────────────────────────────────────────────
 
   socket.on('start-game', (payload: StartGamePayload) => {
-    const sessionIdOrCode = payload.sessionId || (payload as any).code;
-    const session =
-      sessionManager.getSession(sessionIdOrCode) ||
-      sessionManager.findByCode(sessionIdOrCode);
+    const session = resolveSession(socket, payload);
 
     if (!session) {
+      console.warn('[ALIX Realtime] Session not found for launch with payload:', payload);
       socket.emit('error', { message: 'Session not found for launch', code: 'SESSION_NOT_FOUND' });
       return;
     }
@@ -324,25 +366,23 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     socket.data.sessionId = session.id;
     socket.data.role = 'host';
 
-    // If payload contains questions and session.quiz is currently empty, load them
+    // If payload contains questions, update session.quiz so latest questions from host are always live
     const incomingQuestions = (payload as any).questions;
-    if (
-      (!session.quiz || !session.quiz.questions || session.quiz.questions.length === 0) &&
-      Array.isArray(incomingQuestions) &&
-      incomingQuestions.length > 0
-    ) {
+    if (Array.isArray(incomingQuestions) && incomingQuestions.length > 0) {
       const adapted = adaptQuestionsToSharedQuiz(incomingQuestions);
-      sessionManager.setQuiz(session.id, {
-        id: session.quizId || 'session-quiz',
-        title: (payload as any).quizTitle || 'Interactive Classroom Quiz',
-        description: '',
-        questions: adapted,
-        createdBy: session.hostId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        tags: ['Active Learning'],
-        settings: DEFAULT_QUIZ_SETTINGS,
-      });
+      if (adapted.length > 0) {
+        sessionManager.setQuiz(session.id, {
+          id: session.quizId || 'session-quiz',
+          title: (payload as any).quizTitle || session.quiz?.title || 'Interactive Classroom Quiz',
+          description: '',
+          questions: adapted,
+          createdBy: session.hostId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          tags: ['Active Learning'],
+          settings: DEFAULT_QUIZ_SETTINGS,
+        });
+      }
     }
 
     sessionManager.startGame(session.id);
@@ -359,10 +399,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
   // ─── Next Question ────────────────────────────────────────────────────
 
   socket.on('next-question', (payload: NextQuestionPayload) => {
-    const sessionIdOrCode = payload.sessionId || (payload as any).code;
-    const session =
-      sessionManager.getSession(sessionIdOrCode) ||
-      sessionManager.findByCode(sessionIdOrCode);
+    const session = resolveSession(socket, payload);
 
     if (!session) return;
     session.hostSocketId = socket.id;
@@ -374,10 +411,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
   // ─── Submit Answer ────────────────────────────────────────────────────
 
   socket.on('submit-answer', async (payload: SubmitAnswerPayload) => {
-    const session =
-      sessionManager.getSession(payload.sessionId) ||
-      sessionManager.findByCode(payload.sessionId) ||
-      (socket.data.sessionId ? sessionManager.getSession(socket.data.sessionId) : undefined);
+    const session = resolveSession(socket, payload);
 
     if (!session) {
       socket.emit('error', { message: 'Session not found for answer submission', code: 'SESSION_NOT_FOUND' });
@@ -407,7 +441,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       points,
     });
 
-    const player = session.players.find((p) => p.id === socket.id);
+    const player = session.players.find((p: any) => p.id === socket.id);
 
     try {
       await GameSessionModel.findOneAndUpdate(
@@ -442,9 +476,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
   // ─── End Game ─────────────────────────────────────────────────────────
 
   socket.on('end-game', async (payload: EndGamePayload) => {
-    const session =
-      sessionManager.getSession(payload.sessionId) ||
-      sessionManager.findByCode(payload.sessionId);
+    const session = resolveSession(socket, payload);
 
     if (!session) {
       socket.emit('error', { message: 'Session not found for conclusion', code: 'SESSION_NOT_FOUND' });
@@ -472,9 +504,9 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
         totalPlayers: players.length,
         averageScore:
           players.length > 0
-            ? Math.round(players.reduce((sum, p) => sum + p.score, 0) / players.length)
+            ? Math.round(players.reduce((sum: number, p: any) => sum + p.score, 0) / players.length)
             : 0,
-        highestScore: players.length > 0 ? Math.max(...players.map((p) => p.score)) : 0,
+        highestScore: players.length > 0 ? Math.max(...players.map((p: any) => p.score)) : 0,
         completionRate: 1,
       },
     });
@@ -491,7 +523,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     const session = sessionManager.getSession(sessionId);
     if (!session) return;
 
-    const player = session.players.find((p) => p.id === socket.id);
+    const player = session.players.find((p: any) => p.id === socket.id);
     if (player) {
       player.isConnected = false;
       io.to(sessionId).emit('player-disconnected', {

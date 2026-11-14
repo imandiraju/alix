@@ -82,9 +82,21 @@ export class GameSessionManager {
     return sessionId ? this.sessions.get(sessionId) : undefined;
   }
 
+  findByQuizId(quizId: string): InternalSession | undefined {
+    return Array.from(this.sessions.values()).find(
+      (s) => s.quizId === quizId && s.status !== SessionStatus.FINISHED
+    );
+  }
+
   // ─── Player Management ──────────────────────────────────────────────
 
-  addPlayer(sessionId: string, socketId: string, name: string): Player | null {
+  addPlayer(
+    sessionId: string,
+    socketId: string,
+    name: string,
+    avatar?: string,
+    rollNo?: string
+  ): Player | null {
     const session = this.sessions.get(sessionId);
     if (!session) return null;
 
@@ -101,8 +113,10 @@ export class GameSessionManager {
       streak: 0,
       answers: [],
       rank: session.players.length + 1,
+      avatar: avatar || 'fox',
       isConnected: true,
-    };
+      ...(rollNo ? { rollNo } : {}),
+    } as any;
 
     session.players.push(player);
     return player;
