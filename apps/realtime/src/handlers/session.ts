@@ -474,6 +474,60 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     }
   });
 
+  // ─── Teacher Configure Teams (Team Mode Capacity & Count) ─────────────
+
+  socket.on('configure-teams', (payload: any) => {
+    const session = resolveSession(socket, payload);
+    if (!session) return;
+    const teamCount = Number(payload?.teamCount) || 4;
+    const maxMembersPerTeam = Number(payload?.maxMembersPerTeam) || 0;
+    const customTeams = payload?.teams;
+
+    const updatedTeams = sessionManager.configureTeams(session.id, teamCount, maxMembersPerTeam, customTeams);
+
+    // Sync with MongoDB
+    GameSessionModel.findOneAndUpdate(
+      { pin: session.code },
+      { teamCount, maxMembersPerTeam }
+    ).catch(() => {});
+
+    const teamsPayload = {
+      teams: updatedTeams,
+      teamCount,
+      maxMembersPerTeam,
+      teamLeaderboard: sessionManager.getTeamLeaderboard(session.id),
+    };
+    io.to(session.id).emit('teams-updated', teamsPayload as any);
+    io.to(session.code).emit('teams-updated', teamsPayload as any);
+    console.log(`[ALIX] Teams configured for PIN ${session.code}: ${teamCount} squads, cap: ${maxMembersPerTeam || 'unlimited'}`);
+  });
+
+  // ─── Active Learning: Mazur Peer Instruction Consensus Round ──────────
+
+  socket.on('trigger-peer-instruction', (payload: any) => {
+    const session = resolveSession(socket, payload);
+    if (!session) return;
+    const duration = Number(payload?.duration) || 45;
+    const questionIndex = session.currentQuestionIndex;
+
+    io.to(session.id).emit('peer-instruction-started', { duration, questionIndex });
+    io.to(session.code).emit('peer-instruction-started', { duration, questionIndex });
+    console.log(`[ALIX] Peer Instruction (Mazur ConcepTest) triggered for Q${questionIndex + 1} (${duration}s) in PIN ${session.code}`);
+  });
+
+  // ─── Active Learning: Broadcast AI Misconception Flashcard ────────────
+
+  socket.on('broadcast-concept-card', (payload: any) => {
+    const session = resolveSession(socket, payload);
+    if (!session) return;
+    const concept = payload?.concept;
+    if (!concept) return;
+
+    io.to(session.id).emit('concept-card-received', { concept });
+    io.to(session.code).emit('concept-card-received', { concept });
+    console.log(`[ALIX] AI Concept Card broadcasted to all students in PIN ${session.code}: "${concept.title}"`);
+  });
+
   // ─── Start Game ───────────────────────────────────────────────────────
 
   socket.on('start-game', (payload: StartGamePayload) => {

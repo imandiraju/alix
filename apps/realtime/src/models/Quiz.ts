@@ -17,6 +17,7 @@ export interface IQuiz extends Document {
   title: string;
   subject: string;
   courseCode: string;
+  section: string;
   description: string;
   questions: IQuestion[];
   isPublished: boolean;
@@ -45,6 +46,7 @@ const QuizSchema = new Schema<IQuiz>(
     title: { type: String, required: true, trim: true },
     subject: { type: String, required: true, trim: true },
     courseCode: { type: String, default: '', trim: true },
+    section: { type: String, default: '', trim: true },
     description: { type: String, default: '', trim: true },
     questions: { type: [QuestionSchema], default: [] },
     isPublished: { type: Boolean, default: true },

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Sidebar from '../components/layout/Sidebar';
 import Footer from '../components/layout/Footer';
+import AlixLogo from '../components/common/AlixLogo';
 import { REALTIME_URL } from '../services/socket';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -32,6 +33,8 @@ import {
   EyeOff,
   Layers,
   X,
+  SlidersHorizontal,
+  Settings2,
 } from 'lucide-react';
 
 interface QuestionDraft {
@@ -47,14 +50,42 @@ interface QuestionDraft {
 
 export const CreatePage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editQuizId = searchParams.get('edit');
+  const isEditMode = Boolean(editQuizId);
   const { user } = useAuth();
 
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState(user?.department || '');
   const [courseCode, setCourseCode] = useState('');
+  const [section, setSection] = useState('');
   const [description, setDescription] = useState('');
   const [rosters, setRosters] = useState<any[]>([]);
   const [selectedRosterId, setSelectedRosterId] = useState<string>('');
+  const [showProperties, setShowProperties] = useState(true);
+
+  // Load existing quiz if in Edit mode
+  React.useEffect(() => {
+    if (editQuizId) {
+      fetch(`${REALTIME_URL}/api/quizzes/${editQuizId}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.quiz) {
+            setTitle(d.quiz.title || '');
+            setSubject(d.quiz.subject || '');
+            setCourseCode(d.quiz.courseCode || '');
+            setSection(d.quiz.section || '');
+            setDescription(d.quiz.description || '');
+            if (d.quiz.rosterId) setSelectedRosterId(d.quiz.rosterId);
+            if (Array.isArray(d.quiz.questions) && d.quiz.questions.length > 0) {
+              setQuestions(d.quiz.questions);
+              setActiveQuestionId(d.quiz.questions[0].id || 'q-1');
+            }
+          }
+        })
+        .catch((err) => console.warn('[ALIX Edit Activity] Load error:', err));
+    }
+  }, [editQuizId]);
 
   React.useEffect(() => {
     if (user?.id) {
@@ -270,8 +301,13 @@ export const CreatePage: React.FC = () => {
 
     setIsSaving(true);
     try {
-      const res = await fetch(`${REALTIME_URL}/api/quizzes`, {
-        method: 'POST',
+      const endpoint = isEditMode
+        ? `${REALTIME_URL}/api/quizzes/${editQuizId}`
+        : `${REALTIME_URL}/api/quizzes`;
+      const method = isEditMode ? 'PUT' : 'POST';
+
+      const res = await fetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           teacherId: user?.id,
@@ -279,6 +315,7 @@ export const CreatePage: React.FC = () => {
           title: title.trim(),
           subject: subject.trim(),
           courseCode: courseCode.trim(),
+          section: section.trim(),
           description: description.trim(),
           questions,
         }),
@@ -314,11 +351,11 @@ export const CreatePage: React.FC = () => {
                 <span>ALIX Create • Authoring Studio</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-heading font-extrabold text-alix-indigo">
-                Create Classroom Activity
+                {isEditMode ? 'Edit Classroom Activity' : 'Create Classroom Activity'}
               </h1>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <button
                 type="button"
                 onClick={() => {
@@ -348,7 +385,7 @@ export const CreatePage: React.FC = () => {
                 className="px-5 py-2 rounded-xl bg-alix-violet-600 hover:bg-alix-violet-700 text-white font-bold text-sm shadow-sm flex items-center gap-2 transition-all cursor-pointer disabled:opacity-70"
               >
                 <Save className="w-4 h-4" />
-                <span>{isSaving ? 'Saving to Database...' : 'Save Activity'}</span>
+                <span>{isSaving ? 'Saving to Database...' : isEditMode ? 'Update Activity' : 'Save Activity'}</span>
               </button>
             </div>
           </div>
@@ -376,7 +413,7 @@ export const CreatePage: React.FC = () => {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
                   Subject / Discipline *
@@ -386,19 +423,31 @@ export const CreatePage: React.FC = () => {
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   className="w-full text-sm text-alix-indigo font-semibold border-b border-alix-slate-200 focus:border-alix-violet-600 outline-none pb-1"
-                  placeholder="e.g. Computer Science, Mechanical, Electronics..."
+                  placeholder="e.g. Computer Science, Mechanical..."
                 />
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
-                  Course Code / Section (Optional)
+                  Course Code (Optional)
                 </label>
                 <input
                   type="text"
                   value={courseCode}
                   onChange={(e) => setCourseCode(e.target.value)}
                   className="w-full text-sm text-alix-indigo font-semibold border-b border-alix-slate-200 focus:border-alix-violet-600 outline-none pb-1"
-                  placeholder="e.g. CS 301 - Sec A"
+                  placeholder="e.g. CS 301, CSE 102"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
+                  Section (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={section}
+                  onChange={(e) => setSection(e.target.value)}
+                  className="w-full text-sm text-alix-indigo font-semibold border-b border-alix-slate-200 focus:border-alix-violet-600 outline-none pb-1"
+                  placeholder="e.g. Sec A, Section 1, Batch B"
                 />
               </div>
             </div>
@@ -564,8 +613,8 @@ export const CreatePage: React.FC = () => {
               </div>
             </div>
 
-            {/* 2. Center Panel: 16:9 Presentation Slide Canvas (Col span 6) */}
-            <div className="lg:col-span-6 bg-gradient-to-br from-[#1E0B36] via-[#2A104E] to-[#140626] rounded-3xl border-2 border-slate-700 p-4 sm:p-6 shadow-2xl relative flex flex-col justify-between min-h-[580px] text-white">
+            {/* 2. Center Panel: 16:9 Presentation Slide Canvas */}
+            <div className={`${showProperties ? 'lg:col-span-6' : 'lg:col-span-9'} bg-gradient-to-br from-[#1E0B36] via-[#2A104E] to-[#140626] rounded-3xl border-2 border-slate-700 p-4 sm:p-6 shadow-2xl relative flex flex-col justify-between min-h-[580px] text-white transition-all duration-300`}>
               {/* Slide Format Indicator Badge */}
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
                 <div className="flex items-center gap-2">
@@ -576,20 +625,33 @@ export const CreatePage: React.FC = () => {
                     {activeQuestion.type === 'true_false' ? 'True / False' : activeQuestion.type === 'multi_select' ? 'Multi-Select' : activeQuestion.type === 'poll' ? 'Opinion Poll' : 'Quiz (Single)'}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const activeIdx = questions.findIndex((q) => q.id === activeQuestion.id);
-                    setPresentationSlideIdx(Math.max(0, activeIdx));
-                    setRevealSolution(false);
-                    setIsFullscreenPresentation(true);
-                  }}
-                  className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-all flex items-center gap-1 cursor-pointer"
-                  title="Present this slide fullscreen"
-                >
-                  <Maximize2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Fullscreen</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  {!showProperties && (
+                    <button
+                      type="button"
+                      onClick={() => setShowProperties(true)}
+                      className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                      title="Open Question Properties"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-300" />
+                      <span>Properties</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const activeIdx = questions.findIndex((q) => q.id === activeQuestion.id);
+                      setPresentationSlideIdx(Math.max(0, activeIdx));
+                      setRevealSolution(false);
+                      setIsFullscreenPresentation(true);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-all flex items-center gap-1 cursor-pointer"
+                    title="Present this slide fullscreen"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Fullscreen</span>
+                  </button>
+                </div>
               </div>
 
               {/* Slide Top: Prominent Question Prompt Input */}
@@ -725,13 +787,21 @@ export const CreatePage: React.FC = () => {
               </div>
             </div>
 
-            {/* 3. Right Panel: Properties Inspector (Col span 3) */}
-            <div className="lg:col-span-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+            {/* 3. Right Panel: Properties Inspector */}
+            <div className={`${showProperties ? 'lg:col-span-3' : 'hidden'} bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-5 animate-fade-in`}>
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-                  Question Properties
+                <span className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Settings2 className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Question Properties</span>
                 </span>
-                <span className="text-[10px] font-bold text-slate-400">Settings</span>
+                <button
+                  type="button"
+                  onClick={() => setShowProperties(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                  title="Close Properties (Widescreen Mode)"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
               {/* Question Type Selector */}
@@ -906,7 +976,7 @@ export const CreatePage: React.FC = () => {
             {/* Top Presentation Bar */}
             <div className="w-full flex items-center justify-between pb-4 border-b border-white/10">
               <div className="flex items-center gap-3">
-                <span className="font-heading font-black text-xl text-white">ALIX!</span>
+                <AlixLogo variant="white" size="sm" showEduBadge={true} />
                 <span className="px-3 py-1 rounded-full bg-white/15 text-xs font-bold text-cyan-300">
                   Slide {presentationSlideIdx + 1} of {questions.length}
                 </span>

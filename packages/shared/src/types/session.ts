@@ -23,6 +23,7 @@ export interface Team {
   icon?: string;
   score: number;
   memberCount: number;
+  maxMembers?: number; // capacity cap (e.g. 5, 10 or 0 = unlimited)
 }
 
 export interface Player {
@@ -46,6 +47,9 @@ export interface SessionSettings {
   autoAdvanceDelay: number; // seconds
   showLeaderboardAfterEach: boolean;
   gameMode?: 'classic' | 'team';
+  teamCount?: number;
+  maxMembersPerTeam?: number; // 0 or undefined = unlimited
+  teams?: Team[];
 }
 
 export interface GameSession {
@@ -59,6 +63,8 @@ export interface GameSession {
   settings: SessionSettings;
   gameMode?: 'classic' | 'team';
   teams?: Team[];
+  section?: string;
+  courseCode?: string;
   startedAt?: string;
   finishedAt?: string;
 }

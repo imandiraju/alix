@@ -10,6 +10,10 @@ export const DEFAULT_TEAMS: Team[] = [
   { id: 'team-blue', name: 'Blue Titans', color: '#1368CE', icon: '⚡', score: 0, memberCount: 0 },
   { id: 'team-green', name: 'Emerald Knights', color: '#26890C', icon: '🛡️', score: 0, memberCount: 0 },
   { id: 'team-yellow', name: 'Golden Eagles', color: '#D89E00', icon: '🦅', score: 0, memberCount: 0 },
+  { id: 'team-purple', name: 'Purple Phantoms', color: '#864CBF', icon: '🔮', score: 0, memberCount: 0 },
+  { id: 'team-orange', name: 'Orange Blaze', color: '#E65100', icon: '🔥', score: 0, memberCount: 0 },
+  { id: 'team-cyan', name: 'Cyan Comets', color: '#00A896', icon: '☄️', score: 0, memberCount: 0 },
+  { id: 'team-silver', name: 'Silver Wolves', color: '#546E7A', icon: '🐺', score: 0, memberCount: 0 },
 ];
 
 interface InternalSession {
@@ -30,6 +34,8 @@ interface InternalSession {
     autoAdvanceDelay: number;
     showLeaderboardAfterEach: boolean;
     allowLateJoin: boolean;
+    teamCount?: number;
+    maxMembersPerTeam?: number;
   };
   startedAt?: string;
   finishedAt?: string;
@@ -99,6 +105,39 @@ export class GameSessionManager {
     );
   }
 
+  configureTeams(
+    sessionId: string,
+    teamCount: number,
+    maxMembersPerTeam: number = 0,
+    customTeams?: Team[]
+  ): Team[] {
+    const session = this.sessions.get(sessionId);
+    if (!session) return DEFAULT_TEAMS;
+
+    session.settings.teamCount = teamCount;
+    session.settings.maxMembersPerTeam = maxMembersPerTeam;
+
+    if (customTeams && customTeams.length > 0) {
+      session.teams = customTeams.map((t) => ({ ...t, maxMembers: maxMembersPerTeam }));
+    } else {
+      const count = Math.max(2, Math.min(teamCount, DEFAULT_TEAMS.length));
+      session.teams = DEFAULT_TEAMS.slice(0, count).map((t) => ({ ...t, maxMembers: maxMembersPerTeam }));
+    }
+
+    // Reassign players whose team was removed
+    const validTeamIds = new Set(session.teams.map((t) => t.id));
+    session.players.forEach((p) => {
+      if (p.teamId && !validTeamIds.has(p.teamId)) {
+        const fallback = session.teams[0];
+        p.teamId = fallback.id;
+        p.teamName = fallback.name;
+        p.teamColor = fallback.color;
+      }
+    });
+
+    return session.teams;
+  }
+
   // ─── Player Management ──────────────────────────────────────────────
 
   addPlayer(
@@ -124,18 +163,29 @@ export class GameSessionManager {
 
     if (session.gameMode === 'team') {
       const availableTeams = session.teams.length > 0 ? session.teams : DEFAULT_TEAMS;
-      if (!assignedTeamId) {
-        // Auto-balance: select team with fewest members
-        const counts: Record<string, number> = {};
-        availableTeams.forEach((t) => { counts[t.id] = 0; });
-        session.players.forEach((p) => {
-          if (p.teamId && counts[p.teamId] !== undefined) {
-            counts[p.teamId]++;
-          }
-        });
-        let minTeam = availableTeams[0];
+      const maxCap = session.settings.maxMembersPerTeam || 0;
+
+      // Count existing members per team
+      const counts: Record<string, number> = {};
+      availableTeams.forEach((t) => { counts[t.id] = 0; });
+      session.players.forEach((p) => {
+        if (p.teamId && counts[p.teamId] !== undefined) {
+          counts[p.teamId]++;
+        }
+      });
+
+      // Filter teams that haven't reached capacity
+      const eligibleTeams = maxCap > 0
+        ? availableTeams.filter((t) => (counts[t.id] || 0) < maxCap)
+        : availableTeams;
+
+      const viableTeams = eligibleTeams.length > 0 ? eligibleTeams : availableTeams;
+
+      if (!assignedTeamId || (maxCap > 0 && (counts[assignedTeamId] || 0) >= maxCap)) {
+        // Auto-balance: select viable team with fewest members
+        let minTeam = viableTeams[0];
         let minCount = counts[minTeam.id] || 0;
-        for (const t of availableTeams) {
+        for (const t of viableTeams) {
           if ((counts[t.id] || 0) < minCount) {
             minTeam = t;
             minCount = counts[t.id] || 0;
@@ -208,11 +258,20 @@ export class GameSessionManager {
 
     const availableTeams = session.teams.length > 0 ? session.teams : DEFAULT_TEAMS;
     const targetTeam = availableTeams.find((t) => t.id === teamId);
-    if (targetTeam) {
-      player.teamId = targetTeam.id;
-      player.teamName = targetTeam.name;
-      player.teamColor = targetTeam.color;
+    if (!targetTeam) return null;
+
+    // Check capacity cap
+    const maxCap = session.settings.maxMembersPerTeam || 0;
+    if (maxCap > 0) {
+      const currentCount = session.players.filter((p) => p.id !== playerId && p.teamId === teamId).length;
+      if (currentCount >= maxCap) {
+        return null; // Team is full
+      }
     }
+
+    player.teamId = targetTeam.id;
+    player.teamName = targetTeam.name;
+    player.teamColor = targetTeam.color;
     return player;
   }
 

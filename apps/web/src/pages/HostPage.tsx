@@ -24,6 +24,12 @@ import {
   Clock,
   RotateCw,
   Radio,
+  Lightbulb,
+  Brain,
+  Share2,
+  Send,
+  MessageSquare,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 interface QuizQuestion {
@@ -68,15 +74,30 @@ export const HostPage: React.FC = () => {
 
   // Team Mode State
   const [gameMode, setGameMode] = useState<'classic' | 'team'>('classic');
+  const [teamCount, setTeamCount] = useState<number>(4);
+  const [maxMembersPerTeam, setMaxMembersPerTeam] = useState<number>(0); // 0 = unlimited
   const [teamLeaderboard, setTeamLeaderboard] = useState<any[]>([]);
   const [leaderboardTab, setLeaderboardTab] = useState<'teams' | 'individuals'>('teams');
 
-  const SQUADS = [
+  // Active Learning & AI Pedagogical Insights
+  const [showAiConcept, setShowAiConcept] = useState<boolean>(false);
+  const [isConceptPushed, setIsConceptPushed] = useState<boolean>(false);
+  const [isPeerInstructionActive, setIsPeerInstructionActive] = useState<boolean>(false);
+  const [peerTimer, setPeerTimer] = useState<number>(45);
+
+  const ALL_SQUADS = [
     { id: 'team-red', name: 'Red Dragons', color: '#E21B3C', icon: '🐉', border: 'border-[#E21B3C]', bg: 'bg-[#E21B3C]/15', badge: 'bg-[#E21B3C] text-white', text: 'text-[#E21B3C]' },
     { id: 'team-blue', name: 'Blue Titans', color: '#1368CE', icon: '⚡', border: 'border-[#1368CE]', bg: 'bg-[#1368CE]/15', badge: 'bg-[#1368CE] text-white', text: 'text-[#1368CE]' },
     { id: 'team-green', name: 'Emerald Knights', color: '#26890C', icon: '🛡️', border: 'border-[#26890C]', bg: 'bg-[#26890C]/15', badge: 'bg-[#26890C] text-white', text: 'text-[#26890C]' },
     { id: 'team-yellow', name: 'Golden Eagles', color: '#D89E00', icon: '🦅', border: 'border-[#D89E00]', bg: 'bg-[#D89E00]/15', badge: 'bg-[#D89E00] text-slate-900', text: 'text-[#D89E00]' },
+    { id: 'team-purple', name: 'Purple Phantoms', color: '#864CBF', icon: '🔮', border: 'border-[#864CBF]', bg: 'bg-[#864CBF]/15', badge: 'bg-[#864CBF] text-white', text: 'text-[#864CBF]' },
+    { id: 'team-orange', name: 'Orange Blaze', color: '#E65100', icon: '🔥', border: 'border-[#E65100]', bg: 'bg-[#E65100]/15', badge: 'bg-[#E65100] text-white', text: 'text-[#E65100]' },
+    { id: 'team-cyan', name: 'Cyan Comets', color: '#00A896', icon: '☄️', border: 'border-[#00A896]', bg: 'bg-[#00A896]/15', badge: 'bg-[#00A896] text-white', text: 'text-[#00A896]' },
+    { id: 'team-silver', name: 'Silver Wolves', color: '#546E7A', icon: '🐺', border: 'border-[#546E7A]', bg: 'bg-[#546E7A]/15', badge: 'bg-[#546E7A] text-white', text: 'text-[#546E7A]' },
   ];
+
+  const activeSquads = ALL_SQUADS.slice(0, Math.max(2, Math.min(teamCount, ALL_SQUADS.length)));
+  const SQUADS = activeSquads;
 
   // Computed authoritative active learner count (always non-zero if players are connected)
   const displayLearnerCount = Math.max(totalLearners, players.length);
@@ -485,6 +506,77 @@ export const HostPage: React.FC = () => {
     } catch {}
   };
 
+  const handleConfigureTeams = (newCount: number, newCap: number) => {
+    setTeamCount(newCount);
+    setMaxMembersPerTeam(newCap);
+    const selected = ALL_SQUADS.slice(0, newCount);
+    try {
+      const socket = getSocket();
+      socket.emit('configure-teams', {
+        sessionId: activeSessionId || sessionId || pin,
+        code: pin,
+        teamCount: newCount,
+        maxMembersPerTeam: newCap,
+        teams: selected,
+      });
+    } catch (err) {
+      console.warn('Could not emit configure-teams:', err);
+    }
+  };
+
+  // Peer instruction timer countdown
+  useEffect(() => {
+    if (!isPeerInstructionActive || peerTimer <= 0) return;
+    const interval = setInterval(() => {
+      setPeerTimer((prev) => {
+        if (prev <= 1) {
+          setIsPeerInstructionActive(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isPeerInstructionActive, peerTimer]);
+
+  const handleTriggerPeerInstruction = () => {
+    setIsPeerInstructionActive(true);
+    setPeerTimer(45);
+    try {
+      const socket = getSocket();
+      socket.emit('trigger-peer-instruction', {
+        sessionId: activeSessionId || sessionId || pin,
+        code: pin,
+        duration: 45,
+        questionIndex: currentQuestionIdx,
+      });
+    } catch (err) {
+      console.warn('Could not emit trigger-peer-instruction:', err);
+    }
+  };
+
+  const handlePushConceptCard = () => {
+    setIsConceptPushed(true);
+    const correctIdx = currentQ.correctIndex ?? 0;
+    const correctOptionText = currentQ.options[correctIdx] || 'Verified Solution';
+    try {
+      const socket = getSocket();
+      socket.emit('broadcast-concept-card', {
+        sessionId: activeSessionId || sessionId || pin,
+        code: pin,
+        concept: {
+          title: currentQ.text,
+          takeaway: `The authoritative principle is "${correctOptionText}". Always isolate constraints before finalizing your answer.`,
+          trap: `Common misconception: jumping to distractors without verifying boundary values or edge conditions.`,
+          formula: `Active Recall Tip: Re-read prompt → verify prerequisites → eliminate traps.`,
+        },
+      });
+    } catch (err) {
+      console.warn('Could not emit broadcast-concept-card:', err);
+    }
+    setTimeout(() => setIsConceptPushed(false), 3000);
+  };
+
   return (
     <div className="min-h-screen bg-[#1B0A3C] text-white flex flex-col justify-between selection:bg-violet-500 selection:text-white relative overflow-hidden select-none">
       {/* Background ambient lighting */}
@@ -495,8 +587,7 @@ export const HostPage: React.FC = () => {
       <header className="p-2.5 sm:p-4 bg-[#0F0524]/90 backdrop-blur-md border-b border-white/10 flex items-center justify-between z-20">
         <div className="flex items-center gap-3 sm:gap-5">
           <Link to="/dashboard" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
-            <span className="text-lg font-heading font-black text-white">ALIX</span>
-            <span className="text-cyan-400 font-heading font-black text-lg">!</span>
+            <AlixLogo variant="white" size="sm" showEduBadge={true} />
           </Link>
           <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] font-bold text-emerald-400">
             <span
@@ -657,6 +748,64 @@ export const HostPage: React.FC = () => {
                   <span>👥 Team Mode (Squad vs Squad)</span>
                 </button>
               </div>
+
+              {/* Dynamic Team Settings: Number of Squads & Capacity Limit */}
+              {gameMode === 'team' && (
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-black/40 border border-white/15 backdrop-blur-md max-w-xl mx-auto space-y-3 animate-fade-in text-xs">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="font-bold text-white/80 flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-amber-300" />
+                      <span>Number of Squads:</span>
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {[2, 3, 4, 5, 6, 8].map((count) => (
+                        <button
+                          key={count}
+                          type="button"
+                          onClick={() => handleConfigureTeams(count, maxMembersPerTeam)}
+                          className={`px-2.5 py-1 rounded-lg font-black transition-all cursor-pointer ${
+                            teamCount === count
+                              ? 'bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-300'
+                              : 'bg-white/10 hover:bg-white/20 text-white'
+                          }`}
+                        >
+                          {count}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 pt-2 border-t border-white/10">
+                    <span className="font-bold text-white/80 flex items-center gap-1.5">
+                      <SlidersHorizontal className="w-4 h-4 text-cyan-300" />
+                      <span>Max Members / Squad:</span>
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                      {[
+                        { label: 'Unlimited', val: 0 },
+                        { label: '2', val: 2 },
+                        { label: '4', val: 4 },
+                        { label: '5', val: 5 },
+                        { label: '8', val: 8 },
+                        { label: '10', val: 10 },
+                      ].map((item) => (
+                        <button
+                          key={item.val}
+                          type="button"
+                          onClick={() => handleConfigureTeams(teamCount, item.val)}
+                          className={`px-2 py-1 rounded-lg font-black transition-all cursor-pointer ${
+                            maxMembersPerTeam === item.val
+                              ? 'bg-cyan-400 text-slate-950 shadow-md ring-2 ring-cyan-200'
+                              : 'bg-white/10 hover:bg-white/20 text-white'
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Giant Kahoot-Style Join & PIN Billboard */}
@@ -729,8 +878,9 @@ export const HostPage: React.FC = () => {
                     <span>Active Squad Rosters (Team vs Team)</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-left">
-                    {SQUADS.map((sq) => {
+                    {activeSquads.map((sq) => {
                       const squadMembers = players.filter((p) => p.teamId === sq.id);
+                      const isFull = maxMembersPerTeam > 0 && squadMembers.length >= maxMembersPerTeam;
                       return (
                         <div
                           key={sq.id}
@@ -739,9 +889,16 @@ export const HostPage: React.FC = () => {
                           <div>
                             <div className="flex items-center justify-between pb-1.5 border-b border-white/10">
                               <span className="text-lg">{sq.icon}</span>
-                              <span className="text-xs font-black text-white px-2 py-0.5 rounded-full bg-black/40">
-                                {squadMembers.length} {squadMembers.length === 1 ? 'member' : 'members'}
-                              </span>
+                              <div className="flex items-center gap-1">
+                                {isFull && (
+                                  <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-rose-500 text-white animate-pulse">
+                                    FULL
+                                  </span>
+                                )}
+                                <span className="text-xs font-black text-white px-2 py-0.5 rounded-full bg-black/40">
+                                  {squadMembers.length} {maxMembersPerTeam > 0 ? `/ ${maxMembersPerTeam}` : squadMembers.length === 1 ? 'member' : 'members'}
+                                </span>
+                              </div>
                             </div>
                             <div className="font-heading font-black text-sm text-white mt-1">
                               {sq.name}
@@ -1011,6 +1168,126 @@ export const HostPage: React.FC = () => {
                   );
                 })}
               </div>
+
+              {/* Active Learning & AI Pedagogy Toolbar */}
+              <div className="pt-6 border-t border-white/10 flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAiConcept((prev) => !prev)}
+                  className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-heading font-black transition-all flex items-center gap-2 cursor-pointer shadow-lg ${
+                    showAiConcept
+                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white ring-2 ring-indigo-300'
+                      : 'bg-white/10 hover:bg-white/20 text-white border border-white/15'
+                  }`}
+                >
+                  <Brain className="w-4 h-4 text-cyan-300" />
+                  <span>{showAiConcept ? 'Hide AI Diagnostic' : '🧠 Reveal AI Misconception Insight'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleTriggerPeerInstruction}
+                  disabled={isPeerInstructionActive}
+                  className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-heading font-black transition-all flex items-center gap-2 cursor-pointer shadow-lg ${
+                    isPeerInstructionActive
+                      ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-300 animate-pulse'
+                      : 'bg-gradient-to-r from-amber-500/80 to-rose-500/80 hover:from-amber-500 hover:to-rose-500 text-white'
+                  }`}
+                  title="Eric Mazur's Harvard Peer Instruction: 45s squad debate & revote"
+                >
+                  <Users className="w-4 h-4" />
+                  <span>
+                    {isPeerInstructionActive
+                      ? `🤝 Peer Debate Active (${peerTimer}s)`
+                      : '🤝 Mazur Peer Discussion Round (45s)'}
+                  </span>
+                </button>
+              </div>
+
+              {/* Mazur Peer Discussion Active Banner */}
+              {isPeerInstructionActive && (
+                <div className="mt-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/25 via-rose-500/25 to-purple-500/25 border-2 border-amber-400/50 flex items-center justify-between text-left animate-pulse">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black text-xl shadow-md">
+                      🤝
+                    </div>
+                    <div>
+                      <div className="text-xs font-black uppercase tracking-wider text-amber-300">
+                        Peer Discussion Round Active • Harvard STEM Active Learning
+                      </div>
+                      <div className="text-sm font-black text-white">
+                        Turn to your squad or neighbor! Explain your reasoning and reconcile differences.
+                      </div>
+                    </div>
+                  </div>
+                  <div className="px-4 py-2 rounded-xl bg-black/60 border border-amber-400 font-mono font-black text-2xl text-amber-300 shadow-inner">
+                    {peerTimer}s
+                  </div>
+                </div>
+              )}
+
+              {/* AI Pedagogical Concept & Misconception Breakdown */}
+              {showAiConcept && (
+                <div className="mt-6 p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-indigo-950/90 via-purple-950/85 to-slate-900 border-2 border-indigo-400/40 shadow-2xl space-y-4 text-left animate-scale-in relative overflow-hidden">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/10 flex-wrap gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
+                        <Brain className="w-5 h-5 text-cyan-300" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-black uppercase tracking-wider text-cyan-400">
+                          ALIX AI Pedagogy Diagnostic
+                        </div>
+                        <h3 className="font-heading font-black text-base sm:text-lg text-white">
+                          Concept Breakdown & Misconception Analysis
+                        </h3>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handlePushConceptCard}
+                      disabled={isConceptPushed}
+                      className="px-3.5 py-1.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-80"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>{isConceptPushed ? '✓ Broadcasted to Students!' : 'Broadcast to Student Phones'}</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1.5">
+                      <div className="font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Core Principle</span>
+                      </div>
+                      <p className="text-white/80 leading-relaxed font-medium">
+                        The authoritative solution is derived by strictly isolating constraints and matching the fundamental definition.
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1.5">
+                      <div className="font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                        <Lightbulb className="w-3.5 h-3.5" />
+                        <span>Cognitive Trap (Misconception)</span>
+                      </div>
+                      <p className="text-white/80 leading-relaxed font-medium">
+                        Students who picked distractors often overlooked boundary values or evaluated sub-expressions before applying precedence.
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1.5">
+                      <div className="font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Exam Recall Anchor</span>
+                      </div>
+                      <p className="text-white/80 leading-relaxed font-medium">
+                        Quick Mental Check: Re-read prompt → verify prerequisites → eliminate traps.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="pt-8 flex flex-wrap items-center justify-center gap-4">

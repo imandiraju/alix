@@ -24,6 +24,7 @@ import {
   Radio,
   ArrowRight,
   Edit3,
+  Copy,
   Layers,
   Code,
   Cpu,
@@ -35,6 +36,7 @@ interface QuizItem {
   title: string;
   subject: string;
   courseCode?: string;
+  section?: string;
   description?: string;
   questions: any[];
   createdAt: string;
@@ -153,6 +155,27 @@ export const DashboardPage: React.FC = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [user]);
+
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+
+  const handleDuplicateQuiz = async (quizId: string) => {
+    setDuplicatingId(quizId);
+    try {
+      const res = await fetch(`${REALTIME_URL}/api/quizzes/${quizId}/duplicate`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (res.ok && data.quiz) {
+        setQuizzes((prev) => [data.quiz, ...prev]);
+      } else {
+        alert(data.error || 'Failed to duplicate activity');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Network error duplicating activity');
+    } finally {
+      setDuplicatingId(null);
+    }
+  };
 
   const handleDeleteQuiz = async (quizId: string) => {
     if (!window.confirm('Are you sure you want to delete this activity?')) return;
@@ -505,14 +528,19 @@ export const DashboardPage: React.FC = () => {
                     className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
                   >
                     <div>
-                      {/* Subject and Course Code tags */}
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      {/* Subject, Course Code, and Section tags */}
+                      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
                         <span className="px-2 py-0.5 rounded text-[10px] font-black bg-alix-violet-50 text-alix-violet-800 border border-alix-violet-200">
                           {quiz.subject || 'Activity'}
                         </span>
                         {quiz.courseCode && (
                           <span className="px-2 py-0.5 rounded text-[10px] font-black bg-alix-cyan-50 text-alix-cyan-900 border border-alix-cyan-200 font-mono">
                             {quiz.courseCode}
+                          </span>
+                        )}
+                        {quiz.section && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono">
+                            {quiz.section}
                           </span>
                         )}
                       </div>
@@ -527,22 +555,40 @@ export const DashboardPage: React.FC = () => {
                       </p>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between">
+                    {/* Action Buttons: Host, Edit, Duplicate, Delete */}
+                    <div className="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
                       <Link
                         to={`/host/${quiz._id}`}
-                        className="px-4 py-2 rounded-xl bg-[#1368CE] hover:bg-[#105AB3] text-white font-black text-xs shadow-sm flex items-center gap-1.5 active:scale-95 transition-all"
+                        className="px-3.5 py-1.5 rounded-xl bg-[#1368CE] hover:bg-[#105AB3] text-white font-black text-xs shadow-sm flex items-center gap-1.5 active:scale-95 transition-all"
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />
                         <span>Host Live</span>
                       </Link>
 
                       <div className="flex items-center gap-1">
+                        <Link
+                          to={`/create?edit=${quiz._id}`}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                          title="Edit Activity"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </Link>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicateQuiz(quiz._id)}
+                          disabled={duplicatingId === quiz._id}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-cyan-600 hover:bg-cyan-50 transition-colors cursor-pointer disabled:opacity-50"
+                          title="Make a Copy (Duplicate)"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => handleDeleteQuiz(quiz._id)}
                           disabled={deletingId === quiz._id}
-                          className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                           title="Delete Activity"
                         >
                           <Trash2 className="w-4 h-4" />

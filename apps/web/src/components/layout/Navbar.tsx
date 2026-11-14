@@ -45,10 +45,7 @@ export const Navbar: React.FC = () => {
             to={isAuthenticated ? '/dashboard' : '/'}
             className="flex items-center gap-1.5 group transition-transform active:scale-95 shrink-0"
           >
-            <AlixLogo variant="white" size="md" />
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-alix-cyan-400 text-slate-900 tracking-wider hidden sm:inline">
-              EDU
-            </span>
+            <AlixLogo variant="white" size="md" showEduBadge={true} withCompanyTag={false} />
           </Link>
 
           {/* Kahoot-style Mode Switcher Buttons */}

@@ -29,6 +29,10 @@ import {
   Sparkles,
   ArrowRight,
   Zap,
+  Brain,
+  Lightbulb,
+  X,
+  MessageSquare,
 } from 'lucide-react';
 
 interface ActiveQuestion {
@@ -43,12 +47,18 @@ interface ActiveQuestion {
   points?: number;
 }
 
-export const SQUADS = [
+export const DEFAULT_SQUADS = [
   { id: 'team-red', name: 'Red Dragons', color: '#E21B3C', icon: '🐉', border: 'border-[#E21B3C]', bg: 'bg-[#E21B3C]/20', badge: 'bg-[#E21B3C] text-white', text: 'text-[#E21B3C]' },
   { id: 'team-blue', name: 'Blue Titans', color: '#1368CE', icon: '⚡', border: 'border-[#1368CE]', bg: 'bg-[#1368CE]/20', badge: 'bg-[#1368CE] text-white', text: 'text-[#1368CE]' },
   { id: 'team-green', name: 'Emerald Knights', color: '#26890C', icon: '🛡️', border: 'border-[#26890C]', bg: 'bg-[#26890C]/20', badge: 'bg-[#26890C] text-white', text: 'text-[#26890C]' },
   { id: 'team-yellow', name: 'Golden Eagles', color: '#D89E00', icon: '🦅', border: 'border-[#D89E00]', bg: 'bg-[#D89E00]/20', badge: 'bg-[#D89E00] text-slate-900', text: 'text-[#D89E00]' },
+  { id: 'team-purple', name: 'Purple Phantoms', color: '#864CBF', icon: '🔮', border: 'border-[#864CBF]', bg: 'bg-[#864CBF]/20', badge: 'bg-[#864CBF] text-white', text: 'text-[#864CBF]' },
+  { id: 'team-orange', name: 'Orange Blaze', color: '#E65100', icon: '🔥', border: 'border-[#E65100]', bg: 'bg-[#E65100]/20', badge: 'bg-[#E65100] text-white', text: 'text-[#E65100]' },
+  { id: 'team-cyan', name: 'Cyan Comets', color: '#00A896', icon: '☄️', border: 'border-[#00A896]', bg: 'bg-[#00A896]/20', badge: 'bg-[#00A896] text-white', text: 'text-[#00A896]' },
+  { id: 'team-silver', name: 'Silver Wolves', color: '#546E7A', icon: '🐺', border: 'border-[#546E7A]', bg: 'bg-[#546E7A]/20', badge: 'bg-[#546E7A] text-white', text: 'text-[#546E7A]' },
 ];
+
+export const SQUADS = DEFAULT_SQUADS;
 
 export const PlayPage: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -65,6 +75,18 @@ export const PlayPage: React.FC = () => {
   const [selectedTeamId, setSelectedTeamId] = useState(initialTeamId);
   const [isTeamMode, setIsTeamMode] = useState(false);
   const [teamLeaderboard, setTeamLeaderboard] = useState<any[]>([]);
+  const [customTeams, setCustomTeams] = useState<any[] | null>(null);
+  const [maxMembersPerTeam, setMaxMembersPerTeam] = useState<number>(0);
+
+  // Active Learning & AI Pedagogy Flashcard
+  const [isPeerInstruction, setIsPeerInstruction] = useState<boolean>(false);
+  const [peerTimer, setPeerTimer] = useState<number>(45);
+  const [receivedConcept, setReceivedConcept] = useState<{
+    title: string;
+    takeaway: string;
+    trap: string;
+    formula?: string;
+  } | null>(null);
 
   // Game Phases: 'waiting' | 'answering' | 'submitted' | 'score' | 'leaderboard' | 'ended'
   const [phase, setPhase] = useState<'waiting' | 'answering' | 'submitted' | 'score' | 'leaderboard' | 'ended'>('waiting');
@@ -342,6 +364,24 @@ export const PlayPage: React.FC = () => {
         triggerVictoryPodiumCelebration();
       });
 
+      // Listen for team configuration updates from host
+      socket.on('teams-updated', (data: any) => {
+        if (Array.isArray(data?.teams)) setCustomTeams(data.teams);
+        if (typeof data?.maxMembersPerTeam === 'number') setMaxMembersPerTeam(data.maxMembersPerTeam);
+        if (Array.isArray(data?.teamLeaderboard)) setTeamLeaderboard(data.teamLeaderboard);
+      });
+
+      // Listen for Mazur Peer Instruction round trigger
+      socket.on('peer-instruction-started', (data: any) => {
+        setIsPeerInstruction(true);
+        setPeerTimer(data?.duration || 45);
+      });
+
+      // Listen for AI Concept Flashcard broadcast
+      socket.on('concept-card-received', (data: any) => {
+        if (data?.concept) setReceivedConcept(data.concept);
+      });
+
       return () => {
         socket.off('connect', onConnect);
         socket.off('disconnect', onDisconnect);
@@ -381,9 +421,31 @@ export const PlayPage: React.FC = () => {
     (currentQuestion as any).type === 'POLL' ||
     (currentQuestion as any).questionType === 'poll';
 
-  const currentSquad = SQUADS.find((s) => s.id === selectedTeamId) || SQUADS[0];
+  const activeSquadList = customTeams && customTeams.length > 0 ? customTeams : DEFAULT_SQUADS;
+  const currentSquad = activeSquadList.find((s: any) => s.id === selectedTeamId) || activeSquadList[0];
+
+  useEffect(() => {
+    if (!isPeerInstruction || peerTimer <= 0) return;
+    const interval = setInterval(() => {
+      setPeerTimer((prev) => {
+        if (prev <= 1) {
+          setIsPeerInstruction(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isPeerInstruction, peerTimer]);
 
   const handleSwitchTeam = (tId: string) => {
+    if (maxMembersPerTeam > 0) {
+      const standing = teamLeaderboard.find((t: any) => t.teamId === tId);
+      if (standing && standing.memberCount >= maxMembersPerTeam && tId !== selectedTeamId) {
+        alert(`This squad is full (Capacity: ${maxMembersPerTeam} members). Please select another squad!`);
+        return;
+      }
+    }
     setSelectedTeamId(tId);
     try {
       const socket = getSocket();
@@ -493,8 +555,7 @@ export const PlayPage: React.FC = () => {
       <header className="sticky top-0 z-30 bg-black/25 backdrop-blur-md border-b border-white/10 px-4 py-2.5 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
           <Link to="/" className="flex items-center gap-1.5 group">
-            <span className="font-heading font-black text-lg text-white">ALIX</span>
-            <span className="text-alix-cyan-400 font-black text-lg">!</span>
+            <AlixLogo variant="white" size="sm" showEduBadge={true} />
           </Link>
 
           <div className="flex items-center gap-2 pl-2 border-l border-white/15">
@@ -587,17 +648,24 @@ export const PlayPage: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  {SQUADS.map((sq) => {
+                  {activeSquadList.map((sq: any) => {
                     const isSelected = selectedTeamId === sq.id;
+                    const standing = teamLeaderboard.find((t: any) => t.teamId === sq.id);
+                    const memberCount = standing?.memberCount || 0;
+                    const isFull = maxMembersPerTeam > 0 && memberCount >= maxMembersPerTeam && !isSelected;
+
                     return (
                       <button
                         key={sq.id}
                         type="button"
-                        onClick={() => handleSwitchTeam(sq.id)}
-                        className={`p-2.5 rounded-xl border-2 text-left transition-all flex items-center gap-2 cursor-pointer ${
-                          isSelected
-                            ? `${sq.border} ${sq.bg} ring-2 ring-white/50 shadow-lg scale-[1.02]`
-                            : 'border-white/10 bg-white/5 hover:bg-white/10 opacity-70 hover:opacity-100'
+                        onClick={() => !isFull && handleSwitchTeam(sq.id)}
+                        disabled={isFull}
+                        className={`p-2.5 rounded-xl border-2 text-left transition-all flex items-center gap-2 ${
+                          isFull
+                            ? 'border-white/5 bg-black/40 opacity-40 cursor-not-allowed'
+                            : isSelected
+                            ? `${sq.border} ${sq.bg} ring-2 ring-white/50 shadow-lg scale-[1.02] cursor-pointer`
+                            : 'border-white/10 bg-white/5 hover:bg-white/10 opacity-70 hover:opacity-100 cursor-pointer'
                         }`}
                       >
                         <span className="text-xl shrink-0">{sq.icon}</span>
@@ -605,8 +673,15 @@ export const PlayPage: React.FC = () => {
                           <div className={`text-xs font-black truncate ${isSelected ? 'text-white' : 'text-white/80'}`}>
                             {sq.name}
                           </div>
-                          <div className="text-[9px] font-bold text-white/50">
-                            {isSelected ? '✓ Your Squad' : 'Join'}
+                          <div className="text-[9px] font-bold text-white/50 flex items-center justify-between">
+                            <span>
+                              {isFull ? 'FULL' : isSelected ? '✓ Your Squad' : 'Join'}
+                            </span>
+                            {maxMembersPerTeam > 0 && (
+                              <span className="font-mono text-cyan-300">
+                                {memberCount}/{maxMembersPerTeam}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </button>
@@ -1130,6 +1205,100 @@ export const PlayPage: React.FC = () => {
 
       {/* Floating Reaction Stream */}
       <ReactionStream />
+
+      {/* Mazur Peer Discussion Active Notification Banner */}
+      {isPeerInstruction && (
+        <div className="fixed top-16 left-4 right-4 z-40 max-w-lg mx-auto p-4 rounded-2xl bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 text-white shadow-2xl border-2 border-white/30 animate-bounce">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="text-2xl">🤝</span>
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-200">
+                  Active Learning • Peer Discussion Round
+                </div>
+                <div className="text-xs font-black text-white">
+                  Turn to your squad! Debate your choice and prepare to revote.
+                </div>
+              </div>
+            </div>
+            <div className="px-3 py-1.5 rounded-xl bg-black/40 font-mono font-black text-lg text-amber-300">
+              {peerTimer}s
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Pedagogical Concept Flashcard Broadcast Modal */}
+      {receivedConcept && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-md bg-gradient-to-br from-[#1E0938] via-[#2D1050] to-[#120422] rounded-3xl border-2 border-cyan-400/40 p-6 text-white shadow-2xl space-y-4 animate-scale-in text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-cyan-400/20 text-cyan-300 border border-cyan-400/40">
+                  <Brain className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-cyan-300">
+                    Teacher Broadcasted Concept
+                  </span>
+                  <h3 className="font-heading font-black text-sm text-white">
+                    AI Pedagogical Flashcard
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReceivedConcept(null)}
+                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                <div className="font-bold text-emerald-400 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Core Principle</span>
+                </div>
+                <p className="text-white/80 leading-relaxed font-medium">
+                  {receivedConcept.takeaway}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                <div className="font-bold text-amber-400 flex items-center gap-1">
+                  <Lightbulb className="w-3.5 h-3.5" />
+                  <span>Misconception (Cognitive Trap)</span>
+                </div>
+                <p className="text-white/80 leading-relaxed font-medium">
+                  {receivedConcept.trap}
+                </p>
+              </div>
+
+              {receivedConcept.formula && (
+                <div className="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                  <div className="font-bold text-cyan-400 flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Memory Anchor</span>
+                  </div>
+                  <p className="text-white/80 leading-relaxed font-medium">
+                    {receivedConcept.formula}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setReceivedConcept(null)}
+              className="w-full py-3 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black text-xs shadow-md transition-all cursor-pointer"
+            >
+              Got It, Save To My Flashcards ✓
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

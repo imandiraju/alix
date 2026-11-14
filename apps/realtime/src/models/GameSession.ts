@@ -34,6 +34,9 @@ export interface IGameSessionDoc extends Document {
   rosterId?: mongoose.Types.ObjectId;
   status: 'waiting' | 'active' | 'completed';
   gameMode?: 'classic' | 'team';
+  teamCount?: number;
+  maxMembersPerTeam?: number;
+  section?: string;
   isLocked: boolean;
   requireRoster: boolean;
   rollingToken?: string;
@@ -83,6 +86,9 @@ const GameSessionDocSchema = new Schema<IGameSessionDoc>(
     rosterId: { type: Schema.Types.ObjectId, ref: 'Roster' },
     status: { type: String, enum: ['waiting', 'active', 'completed'], default: 'waiting' },
     gameMode: { type: String, enum: ['classic', 'team'], default: 'classic' },
+    teamCount: { type: Number, default: 4 },
+    maxMembersPerTeam: { type: Number, default: 0 },
+    section: { type: String, default: '' },
     isLocked: { type: Boolean, default: false },
     requireRoster: { type: Boolean, default: false },
     rollingToken: { type: String, default: '' },

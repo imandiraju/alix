@@ -133,6 +133,9 @@ export interface ClientToServerEvents {
   'create-session': (payload: CreateSessionPayload) => void;
   'join-session': (payload: JoinSessionPayload) => void;
   'select-team': (payload: { sessionId?: string; code?: string; teamId: string }) => void;
+  'configure-teams': (payload: { sessionId?: string; code?: string; teamCount: number; maxMembersPerTeam?: number; teams?: any[] }) => void;
+  'trigger-peer-instruction': (payload: { sessionId?: string; code?: string; duration?: number; questionIndex?: number }) => void;
+  'broadcast-concept-card': (payload: { sessionId?: string; code?: string; concept: { title: string; trap: string; takeaway: string; formula?: string } }) => void;
   'start-game': (payload: StartGamePayload) => void;
   'next-question': (payload: NextQuestionPayload) => void;
   'submit-answer': (payload: SubmitAnswerPayload) => void;
@@ -144,6 +147,9 @@ export interface ServerToClientEvents {
   'session-created': (payload: SessionCreatedPayload) => void;
   'player-joined': (payload: PlayerJoinedPayload) => void;
   'player-disconnected': (payload: PlayerDisconnectedPayload) => void;
+  'teams-updated': (payload: { teams: any[]; maxMembersPerTeam?: number; teamCount?: number }) => void;
+  'peer-instruction-started': (payload: { duration: number; questionIndex: number }) => void;
+  'concept-card-received': (payload: { concept: { title: string; trap: string; takeaway: string; formula?: string } }) => void;
   'question-started': (payload: QuestionStartedPayload) => void;
   'timer-tick': (payload: TimerTickPayload) => void;
   'answer-result': (payload: AnswerResultPayload) => void;

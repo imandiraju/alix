@@ -43,12 +43,20 @@ export const JoinPage: React.FC = () => {
   const [isTeamMode, setIsTeamMode] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState('team-red');
 
-  const SQUADS = [
+  const [sessionTeams, setSessionTeams] = useState<any[] | null>(null);
+
+  const DEFAULT_JOIN_SQUADS = [
     { id: 'team-red', name: 'Red Dragons', color: '#E21B3C', icon: '🐉', border: 'border-[#E21B3C]', bg: 'bg-[#E21B3C]/10', text: 'text-[#E21B3C]' },
     { id: 'team-blue', name: 'Blue Titans', color: '#1368CE', icon: '⚡', border: 'border-[#1368CE]', bg: 'bg-[#1368CE]/10', text: 'text-[#1368CE]' },
     { id: 'team-green', name: 'Emerald Knights', color: '#26890C', icon: '🛡️', border: 'border-[#26890C]', bg: 'bg-[#26890C]/10', text: 'text-[#26890C]' },
     { id: 'team-yellow', name: 'Golden Eagles', color: '#D89E00', icon: '🦅', border: 'border-[#D89E00]', bg: 'bg-[#D89E00]/10', text: 'text-[#D89E00]' },
+    { id: 'team-purple', name: 'Purple Phantoms', color: '#864CBF', icon: '🔮', border: 'border-[#864CBF]', bg: 'bg-[#864CBF]/10', text: 'text-[#864CBF]' },
+    { id: 'team-orange', name: 'Orange Blaze', color: '#E65100', icon: '🔥', border: 'border-[#E65100]', bg: 'bg-[#E65100]/10', text: 'text-[#E65100]' },
+    { id: 'team-cyan', name: 'Cyan Comets', color: '#00A896', icon: '☄️', border: 'border-[#00A896]', bg: 'bg-[#00A896]/10', text: 'text-[#00A896]' },
+    { id: 'team-silver', name: 'Silver Wolves', color: '#546E7A', icon: '🐺', border: 'border-[#546E7A]', bg: 'bg-[#546E7A]/10', text: 'text-[#546E7A]' },
   ];
+
+  const SQUADS = sessionTeams && sessionTeams.length > 0 ? sessionTeams : DEFAULT_JOIN_SQUADS;
 
   // Check URL query parameters (e.g. from camera QR scan: /join?pin=842915)
   useEffect(() => {
@@ -71,6 +79,7 @@ export const JoinPage: React.FC = () => {
           setIsLocked(!!data.session.isLocked);
           setRequiresRoster(!!data.session.requireRoster);
           setIsTeamMode(data.session.gameMode === 'team');
+          if (Array.isArray(data.session.teams)) setSessionTeams(data.session.teams);
           if (data.session.quizId) setSessionQuizId(data.session.quizId);
           setSessionCourseName(
             data.session.roster

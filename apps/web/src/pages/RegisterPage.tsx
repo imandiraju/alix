@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import AlixLogo from '../components/common/AlixLogo';
 import { useAuth } from '../context/AuthContext';
 import {
   Building2,
@@ -108,9 +109,7 @@ export const RegisterPage: React.FC = () => {
       {/* Top bar */}
       <header className="p-4 sm:p-6 flex items-center justify-between max-w-5xl mx-auto w-full z-10">
         <Link to="/" className="transition-transform active:scale-95">
-          <span className="text-xl font-heading font-black text-white tracking-tight flex items-center">
-            ALIX<span className="text-cyan-400">!</span>
-          </span>
+          <AlixLogo variant="white" size="md" showEduBadge={true} withCompanyTag={true} />
         </Link>
         <Link
           to="/login"
