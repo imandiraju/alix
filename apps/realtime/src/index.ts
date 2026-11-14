@@ -14,6 +14,7 @@ import quizRouter from './routes/quizzes.js';
 import sessionRouter from './routes/sessions.js';
 import rosterRouter from './routes/rosters.js';
 import aiRouter from './routes/ai.js';
+import adminRouter from './routes/admin.js';
 
 dotenv.config();
 
@@ -43,6 +44,7 @@ app.use('/api/quizzes', quizRouter);
 app.use('/api/sessions', sessionRouter);
 app.use('/api/rosters', rosterRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/admin', adminRouter);
 
 // ─── Socket.IO ──────────────────────────────────────────────────────────────
 

@@ -25,6 +25,7 @@ export interface AuthContextType {
   verifyOtp: (email: string, code: string) => Promise<VerifyOtpResult>;
   pendingOtpCode: string | null;
   register: (data: Omit<UserProfile, 'id' | 'role' | 'avatarInitials'> & { password?: string }) => Promise<boolean>;
+  updateUser: (updatedUser: UserProfile, token?: string) => void;
   logout: () => void;
 }
 
@@ -138,6 +139,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     throw new Error(resData.error || 'Registration failed.');
   };
 
+  const updateUser = (updatedUser: UserProfile, token?: string) => {
+    setUser(updatedUser);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updatedUser));
+    if (token) localStorage.setItem(AUTH_TOKEN_KEY, token);
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -154,6 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         verifyOtp,
         pendingOtpCode,
         register,
+        updateUser,
         logout,
       }}
     >

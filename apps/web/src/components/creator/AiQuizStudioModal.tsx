@@ -233,7 +233,11 @@ export const AiQuizStudioModal: React.FC<AiQuizStudioModalProps> = ({
               </button>
             </div>
             <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
-              Default server configuration automatically fails over: <strong>Grok 2 ➡️ Gemini 2.0 Flash ➡️ Free Model Candidates</strong>. You can provide your personal key for high-rate quota.
+              Default server configuration automatically fails over: <strong>Grok 2 ➡️ Gemini 2.0 Flash ➡️ Free Model Candidates</strong>.
+              Keys can also be managed platform-wide in the cloud by the Platform Admin in{' '}
+              <a href="/admin" target="_blank" rel="noreferrer" className="text-cyan-300 font-bold underline">
+                Platform Admin Settings ↗
+              </a> without needing individual teacher keys.
             </p>
           </div>
         )}

@@ -15,6 +15,7 @@ const InsightsPage = lazy(() => import('./pages/InsightsPage'));
 const DiscoverPage = lazy(() => import('./pages/DiscoverPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
 
 export const App: React.FC = () => {
   return (
@@ -62,6 +63,14 @@ export const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <DiscoverPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminPage />
                 </ProtectedRoute>
               }
             />

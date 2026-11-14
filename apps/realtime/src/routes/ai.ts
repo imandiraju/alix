@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { SystemConfig } from '../models/SystemConfig.js';
 
 const router = Router();
 
@@ -131,11 +132,37 @@ router.post('/generate', async (req: Request, res: Response) => {
     apiKey: userApiKey,
   } = req.body;
 
-  const effectiveApiKey =
-    userApiKey ||
-    process.env.OPENROUTER_API_KEY ||
-    process.env.AI_API_KEY ||
-    '';
+  // 1. Resolve Effective OpenRouter API Key
+  // Priority: Teacher custom override -> Admin Cloud Database Vault -> Environment Variable
+  let effectiveApiKey = userApiKey;
+  let keySource = 'user_custom';
+
+  if (!effectiveApiKey) {
+    try {
+      const dbConfig = await SystemConfig.findOne({ key: 'openrouter_api_key' });
+      if (dbConfig && dbConfig.value) {
+        effectiveApiKey = dbConfig.value;
+        keySource = 'platform_admin_database';
+      }
+    } catch (err) {
+      console.warn('[ALIX AI] SystemConfig DB key lookup error:', err);
+    }
+  }
+
+  if (!effectiveApiKey) {
+    effectiveApiKey = process.env.OPENROUTER_API_KEY || process.env.AI_API_KEY || '';
+    if (effectiveApiKey) keySource = 'server_environment';
+  }
+
+  // 2. Resolve Dynamic Model Preferences from Database
+  let adminPrimaryModel = '';
+  let adminFallbackModel = '';
+  try {
+    const pModel = await SystemConfig.findOne({ key: 'ai_primary_model' });
+    if (pModel && pModel.value) adminPrimaryModel = pModel.value;
+    const fModel = await SystemConfig.findOne({ key: 'ai_fallback_model' });
+    if (fModel && fModel.value) adminFallbackModel = fModel.value;
+  } catch {}
 
   const count = Math.min(10, Math.max(1, Number(questionCount) || 4));
 
@@ -183,12 +210,16 @@ Difficulty: ${difficulty}
 Ensure the questions test practical problem solving and identify common student misconceptions.`;
   }
 
-  // Model Failover Sequence: Grok -> Gemini -> Free Models
-  const candidateModels = [
+  // Dynamic Model Failover Sequence: Admin Primary -> Grok -> Admin Fallback -> Gemini -> Free Models
+  const rawCandidates = [
+    ...(adminPrimaryModel ? [adminPrimaryModel] : []),
     ...GROK_MODELS,
+    ...(adminFallbackModel ? [adminFallbackModel] : []),
     ...GEMINI_MODELS,
     ...FALLBACK_MODELS,
   ];
+  // Remove duplicates while preserving priority order
+  const candidateModels = Array.from(new Set(rawCandidates));
 
   if (!effectiveApiKey) {
     console.log('[ALIX AI] Notice: No OPENROUTER_API_KEY set. Using heuristic pedagogical generator.');
@@ -285,6 +316,14 @@ Ensure the questions test practical problem solving and identify common student 
         });
 
         console.log(`[ALIX AI] ✅ Generation successful with ${modelName} (${sanitizedQuestions.length} questions)!`);
+
+        // Record health status in background if using platform key
+        if (keySource === 'platform_admin_database') {
+          SystemConfig.findOneAndUpdate(
+            { key: 'openrouter_api_key' },
+            { status: 'active', lastTestedAt: new Date() }
+          ).catch(() => {});
+        }
 
         return res.json({
           success: true,

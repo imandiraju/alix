@@ -128,6 +128,27 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {isAuthenticated && user ? (
             <>
+              {/* Admin Portal Button */}
+              {user.role === 'admin' ? (
+                <Link
+                  to="/admin"
+                  className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md transition-all active:scale-95 ring-1 ring-amber-300"
+                  title="Platform Admin & OpenRouter Key Vault"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-slate-950" />
+                  <span>Admin Portal</span>
+                </Link>
+              ) : (
+                <Link
+                  to="/admin"
+                  className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/90 font-bold text-xs transition-all active:scale-95"
+                  title="Platform Admin Configuration"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Admin</span>
+                </Link>
+              )}
+
               {/* Blue Primary Create Button */}
               <Link
                 to="/create"
@@ -188,6 +209,19 @@ export const Navbar: React.FC = () => {
                         className="block px-2 py-1.5 text-xs text-slate-700 hover:bg-slate-50 rounded-lg font-medium"
                       >
                         Classroom Insights
+                      </Link>
+                      <Link
+                        to="/admin"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center justify-between px-2 py-1.5 text-xs text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg font-bold transition-colors"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Platform Admin & Keys</span>
+                        </span>
+                        <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-amber-200 text-amber-950 font-black">
+                          {user.role === 'admin' ? 'Active' : 'Setup'}
+                        </span>
                       </Link>
                     </div>
 
