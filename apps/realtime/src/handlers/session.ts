@@ -601,7 +601,24 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       (session as any).questionTotal = payload.total || 30;
       io.to(session.id).emit('timer-tick', { remaining: payload.remaining, total: payload.total || 30 });
       io.to(session.code).emit('timer-tick', { remaining: payload.remaining, total: payload.total || 30 });
+
+      if (payload.remaining <= 0) {
+        (io.to(session.id) as any).emit('answers-revealed', { questionIndex: session.currentQuestionIndex });
+        (io.to(session.code) as any).emit('answers-revealed', { questionIndex: session.currentQuestionIndex });
+      }
     }
+  });
+
+  // ─── Host Reveal Answers (Timer ended or "Show Answers" clicked) ───────
+
+  (socket as any).on('reveal-answers', (payload: any) => {
+    const session = resolveSession(socket, payload);
+    if (!session) return;
+    (session as any).questionRemaining = 0;
+    io.to(session.id).emit('timer-tick', { remaining: 0, total: 30 });
+    io.to(session.code).emit('timer-tick', { remaining: 0, total: 30 });
+    (io.to(session.id) as any).emit('answers-revealed', { questionIndex: session.currentQuestionIndex });
+    (io.to(session.code) as any).emit('answers-revealed', { questionIndex: session.currentQuestionIndex });
   });
 
   // ─── Host Instant Question Advance ────────────────────────────────────
@@ -939,6 +956,9 @@ function sendNextQuestion(io: IOServer, sessionId: string): void {
     if (remaining <= 0) {
       clearInterval(timerInterval);
       activeTimers.delete(sessionId);
+
+      (io.to(session.id) as any).emit('answers-revealed', { questionIndex: session.currentQuestionIndex });
+      (io.to(session.code) as any).emit('answers-revealed', { questionIndex: session.currentQuestionIndex });
 
       // Send leaderboard update
       const leaderboard = sessionManager.getLeaderboard(sessionId);

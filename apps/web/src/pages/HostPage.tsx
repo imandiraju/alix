@@ -329,6 +329,15 @@ export const HostPage: React.FC = () => {
     if (stage !== 'question') return;
     if (timer <= 0) {
       setStage('chart');
+      try {
+        const socket = getSocket();
+        (socket as any).emit('sync-timer', {
+          code: pin,
+          remaining: 0,
+          total: currentQ.timeLimit || 30,
+        });
+        (socket as any).emit('reveal-answers', { code: pin });
+      } catch {}
       return;
     }
     const interval = setInterval(() => {
@@ -667,7 +676,19 @@ export const HostPage: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                if (stage === 'question') setStage('chart');
+                if (stage === 'question') {
+                  setStage('chart');
+                  setTimer(0);
+                  try {
+                    const socket = getSocket();
+                    (socket as any).emit('sync-timer', {
+                      code: pin,
+                      remaining: 0,
+                      total: currentQ.timeLimit || 30,
+                    });
+                    (socket as any).emit('reveal-answers', { code: pin });
+                  } catch {}
+                }
                 else if (stage === 'chart') handleShowLeaderboard();
                 else if (stage === 'leaderboard') handleNextQuestion();
                 else if (stage === 'victory') navigate('/dashboard');

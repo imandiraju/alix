@@ -266,6 +266,8 @@ export const PlayPage: React.FC = () => {
             points: data.question.points || 1000,
           });
           setSecondsRemaining(remainingSeconds);
+          setIsLastAnswerCorrect(false);
+          setLastPointsAwarded(0);
 
           // Restore submission if player already locked answer before refresh
           const subKey = `alix_sub_${sessionId}_q${qIdx}`;
@@ -276,7 +278,11 @@ export const PlayPage: React.FC = () => {
             } else {
               setSelectedIndex(Number(existingSub));
             }
-            setPhase('submitted');
+            if (remainingSeconds <= 0) {
+              setPhase('score');
+            } else {
+              setPhase('submitted');
+            }
           } else {
             setSelectedIndex(null);
             setSelectedIndices([]);
@@ -295,6 +301,11 @@ export const PlayPage: React.FC = () => {
         }
       });
 
+      // Listen for teacher/host revealing answers or timer reaching 0
+      (socket as any).on('answers-revealed', () => {
+        setPhase((prev) => (prev === 'answering' || prev === 'submitted' ? 'score' : prev));
+      });
+
       // Listen for errors (such as room already closed / finished)
       socket.on('error', (err: any) => {
         console.warn('[ALIX Student Play Error]:', err);
@@ -303,9 +314,8 @@ export const PlayPage: React.FC = () => {
         }
       });
 
-      // Listen for answer verification from server
+      // Listen for answer verification from server (Anti-Copy Rule: DO NOT reveal score immediately!)
       socket.on('answer-result', (data: any) => {
-        setPhase('score');
         const correct = !!data.correct;
         setIsLastAnswerCorrect(correct);
         setLastPointsAwarded(data.points || 0);
@@ -318,10 +328,6 @@ export const PlayPage: React.FC = () => {
           const newStreak = data.streak ?? (streak + 1);
           setStreak(newStreak);
           try { sessionStorage.setItem(`alix_streak_${sessionId}`, newStreak.toString()); } catch {}
-          triggerCorrectAnswerConfetti();
-          if (newStreak >= 3) {
-            setTimeout(() => triggerStreakBurst(), 400);
-          }
         } else {
           setStreak(0);
           try { sessionStorage.setItem(`alix_streak_${sessionId}`, '0'); } catch {}
@@ -342,6 +348,7 @@ export const PlayPage: React.FC = () => {
 
       // Listen for leaderboard update (periodic score tabulation)
       socket.on('leaderboard-update', (data: any) => {
+        setPhase((prev) => (prev === 'answering' || prev === 'submitted' ? 'score' : prev));
         if (data?.gameMode === 'team') setIsTeamMode(true);
         if (Array.isArray(data?.teamLeaderboard)) {
           setTeamLeaderboard(data.teamLeaderboard);
@@ -389,6 +396,7 @@ export const PlayPage: React.FC = () => {
         socket.off('question-started');
         socket.off('timer-tick');
         socket.off('answer-result');
+        (socket as any).off('answers-revealed');
         socket.off('show-leaderboard');
         socket.off('leaderboard-update');
         socket.off('game-ended');
@@ -412,6 +420,16 @@ export const PlayPage: React.FC = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, [secondsRemaining, phase, isLastAnswerCorrect, lastPointsAwarded, streak, sessionId]);
+
+  // Trigger celebration effects ONLY when score is revealed (after timer ends)
+  useEffect(() => {
+    if (phase === 'score' && isLastAnswerCorrect) {
+      triggerCorrectAnswerConfetti();
+      if (streak >= 3) {
+        setTimeout(() => triggerStreakBurst(), 400);
+      }
+    }
+  }, [phase, isLastAnswerCorrect, streak]);
 
   const isMultiSelect =
     (currentQuestion as any).type === 'MULTI_SELECT' ||
@@ -819,9 +837,21 @@ export const PlayPage: React.FC = () => {
               <p className="text-xs sm:text-sm text-white/70 font-medium mt-1">
                 {isPoll
                   ? 'Your opinion has been registered. Results will show live when the timer ends.'
-                  : 'Hang tight! Solution breakdown will appear as soon as the timer closes.'}
+                  : 'Hang tight! Results will be revealed on the host screen as soon as the timer ends.'}
               </p>
             </div>
+
+            {/* Countdown pill so the student knows when the answer will be revealed */}
+            <div className="p-3.5 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-md shadow-md text-xs font-heading font-black text-white flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-cyan-300 animate-pulse" />
+                <span>Revealing Results In:</span>
+              </span>
+              <span className="px-3 py-1 rounded-xl bg-white/20 font-mono text-cyan-300 font-black text-sm">
+                {secondsRemaining}s
+              </span>
+            </div>
+
             <div className="p-4 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md shadow-md text-sm font-heading font-black text-white flex items-center justify-between">
               <span>{isMultiSelect ? 'Selected Choices:' : 'Selected Choice:'}</span>
               <span className="px-3 py-1 rounded-lg bg-alix-cyan-400 text-slate-950 font-black truncate max-w-[200px]">
