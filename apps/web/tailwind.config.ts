@@ -92,8 +92,9 @@ const config: Config = {
         },
       },
       fontFamily: {
+        display: ['"Bricolage Grotesque"', 'Montserrat', 'system-ui', '-apple-system', 'sans-serif'],
         sans: ['Montserrat', 'system-ui', '-apple-system', 'sans-serif'],
-        heading: ['Montserrat', 'system-ui', '-apple-system', 'sans-serif'],
+        heading: ['"Bricolage Grotesque"', 'Montserrat', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
       boxShadow: {
