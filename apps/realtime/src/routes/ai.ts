@@ -1,7 +1,10 @@
 import { Router, Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
 import { SystemConfig } from '../models/SystemConfig.js';
+import { Teacher } from '../models/Teacher.js';
 
 const router = Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'alix-edtech-secret-jwt-key-2026';
 
 // Model failover priority list
 // 1. Grok (x-ai) -> 2. Gemini (Google) -> 3. Llama / OpenRouter Free
@@ -136,6 +139,30 @@ router.post('/generate', async (req: Request, res: Response) => {
   // Priority: Teacher custom override -> Admin Cloud Database Vault -> Environment Variable
   let effectiveApiKey = userApiKey;
   let keySource = 'user_custom';
+
+  // Premium Access Guard: If using platform keys, teacher must be granted access by Platform Admin
+  if (!userApiKey) {
+    const authHeader = req.headers.authorization;
+    let isAuthorized = false;
+
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET) as { id: string };
+        const teacher = await Teacher.findById(decoded.id);
+        if (teacher && (teacher.role === 'admin' || teacher.aiEnabled)) {
+          isAuthorized = true;
+        }
+      } catch {}
+    }
+
+    if (!isAuthorized) {
+      return res.status(403).json({
+        success: false,
+        error:
+          '🔒 AI Quiz Studio is a Premium feature. Your instructor account has not been activated by the Platform Administrator. Please contact alixadmin@gmail.com to enable your Enterprise AI License, or provide your personal OpenRouter API key.',
+      });
+    }
+  }
 
   if (!effectiveApiKey) {
     try {

@@ -278,4 +278,100 @@ router.get('/overview', async (req: Request, res: Response) => {
   }
 });
 
+// ─── GET /api/admin/teachers ──────────────────────────────────────────────────
+// List all registered teachers with their AI entitlement status (Admin only)
+
+router.get('/teachers', async (req: Request, res: Response) => {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
+
+    const teachers = await Teacher.find()
+      .select('-passwordHash')
+      .sort({ createdAt: -1 });
+
+    const list = teachers.map((t) => ({
+      id: t._id,
+      name: t.name,
+      email: t.email,
+      institution: t.institution,
+      department: t.department,
+      role: t.role,
+      aiEnabled: t.role === 'admin' ? true : Boolean(t.aiEnabled),
+      createdAt: t.createdAt,
+    }));
+
+    return res.json({ success: true, teachers: list });
+  } catch (err: any) {
+    console.error('[Admin Get Teachers Error]:', err);
+    return res.status(500).json({ error: 'Failed to retrieve teachers list.' });
+  }
+});
+
+// ─── POST /api/admin/teachers/:id/toggle-ai ───────────────────────────────────
+// Toggle or set AI access for a specific teacher (Admin only)
+
+router.post('/teachers/:id/toggle-ai', async (req: Request, res: Response) => {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
+
+    const { id } = req.params;
+    const { enabled } = req.body;
+
+    const target = await Teacher.findById(id);
+    if (!target) {
+      return res.status(404).json({ error: 'Teacher profile not found.' });
+    }
+
+    if (typeof enabled === 'boolean') {
+      target.aiEnabled = enabled;
+    } else {
+      target.aiEnabled = !target.aiEnabled;
+    }
+
+    await target.save();
+
+    return res.json({
+      success: true,
+      message: `AI access for ${target.name} is now ${target.aiEnabled ? 'ENABLED (Premium)' : 'DISABLED'}.`,
+      teacher: {
+        id: target._id,
+        name: target.name,
+        email: target.email,
+        aiEnabled: target.aiEnabled,
+      },
+    });
+  } catch (err: any) {
+    console.error('[Admin Toggle AI Error]:', err);
+    return res.status(500).json({ error: 'Failed to update teacher AI access.' });
+  }
+});
+
+// ─── POST /api/admin/teachers/bulk-ai ─────────────────────────────────────────
+// Bulk enable or disable AI for all teachers (Admin only)
+
+router.post('/teachers/bulk-ai', async (req: Request, res: Response) => {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
+
+    const { enabled } = req.body;
+    const targetState = Boolean(enabled);
+
+    await Teacher.updateMany(
+      { role: { $ne: 'admin' } },
+      { $set: { aiEnabled: targetState } }
+    );
+
+    return res.json({
+      success: true,
+      message: `All educators have been ${targetState ? 'granted' : 'revoked'} AI Quiz Studio access.`,
+    });
+  } catch (err: any) {
+    console.error('[Admin Bulk AI Error]:', err);
+    return res.status(500).json({ error: 'Failed to bulk update AI permissions.' });
+  }
+});
+
 export default router;

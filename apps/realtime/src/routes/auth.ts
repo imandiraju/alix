@@ -77,6 +77,7 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
           department: teacher.department,
           subjects: teacher.subjects,
           role: teacher.role,
+          aiEnabled: teacher.role === 'admin' ? true : Boolean(teacher.aiEnabled),
           avatarInitials: teacher.name
             .split(' ')
             .map((n: string) => n[0])
@@ -142,6 +143,7 @@ router.post('/register', async (req: Request, res: Response) => {
         department: teacher.department,
         subjects: teacher.subjects,
         role: teacher.role,
+        aiEnabled: false,
         avatarInitials: teacher.name
           .split(' ')
           .map((n: string) => n[0])
@@ -208,6 +210,7 @@ router.post('/login', async (req: Request, res: Response) => {
           department: admin.department,
           subjects: admin.subjects,
           role: 'admin',
+          aiEnabled: true,
           avatarInitials: 'PA',
         },
       });
@@ -240,6 +243,7 @@ router.post('/login', async (req: Request, res: Response) => {
         department: teacher.department,
         subjects: teacher.subjects,
         role: teacher.role,
+        aiEnabled: false,
         avatarInitials: teacher.name
           .split(' ')
           .map((n: string) => n[0])
@@ -281,6 +285,7 @@ router.get('/me', async (req: Request, res: Response) => {
         department: teacher.department,
         subjects: teacher.subjects,
         role: teacher.role,
+        aiEnabled: false,
         avatarInitials: teacher.name
           .split(' ')
           .map((n: string) => n[0])

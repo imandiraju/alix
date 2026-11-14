@@ -9,6 +9,7 @@ export interface UserProfile {
   department: string;
   subjects?: string[];
   role: 'teacher' | 'admin';
+  aiEnabled?: boolean;
   avatarInitials: string;
 }
 
@@ -46,6 +47,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const [pendingOtpCode, setPendingOtpCode] = useState<string | null>(null);
+
+  // Sync profile state with server on mount
+  useEffect(() => {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (token) {
+      fetch(`${REALTIME_URL}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && d.user) {
+            setUser(d.user);
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(d.user));
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   const login = async (email: string, password?: string): Promise<boolean> => {
     const cleanEmail = email.toLowerCase().trim();

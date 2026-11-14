@@ -8,6 +8,7 @@ export interface ITeacher extends Document {
   department: string;
   subjects: string[];
   role: 'teacher' | 'admin';
+  aiEnabled: boolean;
   createdAt: Date;
 }
 
@@ -20,6 +21,7 @@ const TeacherSchema = new Schema<ITeacher>(
     department: { type: String, default: 'Academic Department' },
     subjects: { type: [String], default: [] },
     role: { type: String, enum: ['teacher', 'admin'], default: 'teacher' },
+    aiEnabled: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true }

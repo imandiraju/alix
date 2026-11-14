@@ -20,6 +20,7 @@ export async function seedPlatformAdmin() {
         department: 'Executive Governance',
         subjects: ['System Administration'],
         role: 'admin',
+        aiEnabled: true,
       });
       await admin.save();
       console.log('[ALIX DB] 👑 Platform Admin account initialized: alixadmin@gmail.com');

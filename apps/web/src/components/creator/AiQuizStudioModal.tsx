@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { REALTIME_URL } from '../../services/socket';
+import { useAuth } from '../../context/AuthContext';
 import {
   Sparkles,
   Upload,
@@ -17,6 +18,7 @@ import {
   RefreshCw,
   Clock,
   HelpCircle,
+  Lock,
 } from 'lucide-react';
 
 export interface AiQuizStudioModalProps {
@@ -60,6 +62,19 @@ export const AiQuizStudioModal: React.FC<AiQuizStudioModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [generatedQuiz, setGeneratedQuiz] = useState<any | null>(null);
   const [modelUsed, setModelUsed] = useState<string | null>(null);
+
+  const { user } = useAuth();
+  const hasAiLicense = user?.role === 'admin' || user?.aiEnabled === true || Boolean(apiKey.trim());
+
+  // Close modal on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -156,7 +171,12 @@ export const AiQuizStudioModal: React.FC<AiQuizStudioModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fade-in overflow-y-auto select-none">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fade-in overflow-y-auto select-none"
+    >
       <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] animate-scale-in">
         {/* Modal Top Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-[#1E0938] via-[#2F1054] to-[#140626] text-white flex items-center justify-between border-b border-white/10 shrink-0">
@@ -243,7 +263,70 @@ export const AiQuizStudioModal: React.FC<AiQuizStudioModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-5">
-          {!generatedQuiz ? (
+          {!hasAiLicense ? (
+            <div className="p-6 sm:p-8 text-center space-y-5 max-w-lg mx-auto animate-fade-in">
+              <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto shadow-inner border border-amber-200">
+                <Lock className="w-8 h-8" />
+              </div>
+
+              <div className="space-y-2">
+                <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 font-black text-xs uppercase tracking-wider">
+                  👑 Premium Feature • Institutional License
+                </span>
+                <h3 className="text-xl sm:text-2xl font-heading font-black text-slate-900">
+                  AI Studio License Required
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Automatic question synthesis using <strong>Grok-2 & Gemini 2.0 Flash</strong> is controlled by the Platform Administrator. Your educator account (<strong>{user?.email}</strong>) has not yet been assigned an AI license.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-2">
+                <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>How to activate AI Question Generation:</span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  1. Contact the Platform Administrator at <strong className="text-slate-800">alixadmin@gmail.com</strong> to enable AI Studio on your profile.
+                </p>
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  2. <strong>Or unlock instantly with personal key:</strong> If you have an OpenRouter API key, enter it below to generate quizzes immediately using your personal quota.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-200 text-left space-y-2">
+                <label className="block text-xs font-black uppercase tracking-wider text-indigo-950">
+                  Enter Personal OpenRouter API Key (Instant Unlock)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="sk-or-v1-..."
+                    className="flex-1 px-3 py-2 rounded-xl bg-white border border-indigo-200 text-slate-900 text-xs font-mono outline-none focus:border-indigo-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveApiKey}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs cursor-pointer transition-all active:scale-95 whitespace-nowrap"
+                  >
+                    Save & Unlock
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-center">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-6 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                  Close & Return to Creator Studio
+                </button>
+              </div>
+            </div>
+          ) : !generatedQuiz ? (
             <>
               {/* Tab Selector: Upload Material vs Generate from Topic */}
               <div className="flex items-center bg-slate-100 p-1 rounded-2xl max-w-md mx-auto">
@@ -527,33 +610,45 @@ export const AiQuizStudioModal: React.FC<AiQuizStudioModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-bold transition-all cursor-pointer"
-            >
-              Cancel
-            </button>
-
-            {!generatedQuiz ? (
+            {!hasAiLicense ? (
               <button
                 type="button"
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#1368CE] to-indigo-600 hover:from-[#105AB3] hover:to-indigo-700 text-white font-heading font-black text-xs shadow-md flex items-center gap-2 transition-all cursor-pointer disabled:opacity-70 active:scale-95"
+                onClick={onClose}
+                className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all cursor-pointer"
               >
-                <Sparkles className="w-4 h-4" />
-                <span>{isGenerating ? 'Generating Slides...' : 'Generate with AI'}</span>
+                Close Dialog
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={handleConfirmImport}
-                className="px-6 py-2.5 rounded-xl bg-[#26890C] hover:bg-[#20740A] text-white font-heading font-black text-xs shadow-md flex items-center gap-2 transition-all cursor-pointer active:scale-95"
-              >
-                <Layers className="w-4 h-4" />
-                <span>Import into Presentation Studio ({generatedQuiz.questions?.length} Slides)</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-bold transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                {!generatedQuiz ? (
+                  <button
+                    type="button"
+                    onClick={handleGenerate}
+                    disabled={isGenerating}
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#1368CE] to-indigo-600 hover:from-[#105AB3] hover:to-indigo-700 text-white font-heading font-black text-xs shadow-md flex items-center gap-2 transition-all cursor-pointer disabled:opacity-70 active:scale-95"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>{isGenerating ? 'Generating Slides...' : 'Generate with AI'}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleConfirmImport}
+                    className="px-6 py-2.5 rounded-xl bg-[#26890C] hover:bg-[#20740A] text-white font-heading font-black text-xs shadow-md flex items-center gap-2 transition-all cursor-pointer active:scale-95"
+                  >
+                    <Layers className="w-4 h-4" />
+                    <span>Import into Presentation Studio ({generatedQuiz.questions?.length} Slides)</span>
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

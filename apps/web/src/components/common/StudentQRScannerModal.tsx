@@ -115,7 +115,15 @@ export const StudentQRScannerModal: React.FC<StudentQRScannerModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fade-in select-none">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          stopStream();
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fade-in select-none"
+    >
       <div className="relative w-full max-w-sm bg-slate-900 border-2 border-slate-700 rounded-3xl p-6 text-white text-center shadow-2xl flex flex-col items-center">
         {/* Close Button */}
         <button

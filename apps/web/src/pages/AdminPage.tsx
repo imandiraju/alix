@@ -43,6 +43,11 @@ export const AdminPage: React.FC = () => {
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [testResult, setTestResult] = useState<any>(null);
 
+  // Educator AI Licenses state
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [teacherSearch, setTeacherSearch] = useState('');
+  const [togglingTeacherId, setTogglingTeacherId] = useState<string | null>(null);
+
   const isAdmin = user?.role === 'admin';
 
   // Load config & metrics (Admin Only)
@@ -51,11 +56,14 @@ export const AdminPage: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('alix_auth_token') || '';
-      const [configRes, metricsRes] = await Promise.all([
+      const [configRes, metricsRes, teachersRes] = await Promise.all([
         fetch(`${REALTIME_URL}/api/admin/config`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(`${REALTIME_URL}/api/admin/overview`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${REALTIME_URL}/api/admin/teachers`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -73,10 +81,62 @@ export const AdminPage: React.FC = () => {
         const mData = await metricsRes.json();
         if (mData.metrics) setMetrics(mData.metrics);
       }
+
+      if (teachersRes.ok) {
+        const tData = await teachersRes.json();
+        if (tData.teachers) setTeachers(tData.teachers);
+      }
     } catch (err) {
       console.warn('Admin fetch error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleTeacherAi = async (teacherId: string, currentEnabled: boolean) => {
+    setTogglingTeacherId(teacherId);
+    try {
+      const token = localStorage.getItem('alix_auth_token') || '';
+      const res = await fetch(`${REALTIME_URL}/api/admin/teachers/${teacherId}/toggle-ai`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ enabled: !currentEnabled }),
+      });
+      const data = await res.json();
+      if (res.ok && data.teacher) {
+        setTeachers((prev) =>
+          prev.map((t) => (t.id === teacherId ? { ...t, aiEnabled: data.teacher.aiEnabled } : t))
+        );
+      } else {
+        alert(data.error || 'Failed to update teacher AI status.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Network error.');
+    } finally {
+      setTogglingTeacherId(null);
+    }
+  };
+
+  const handleBulkAi = async (enable: boolean) => {
+    if (!confirm(`Are you sure you want to ${enable ? 'ENABLE' : 'DISABLE'} AI Quiz Studio for all teachers?`)) return;
+    try {
+      const token = localStorage.getItem('alix_auth_token') || '';
+      const res = await fetch(`${REALTIME_URL}/api/admin/teachers/bulk-ai`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ enabled: enable }),
+      });
+      if (res.ok) {
+        setTeachers((prev) => prev.map((t) => ({ ...t, aiEnabled: enable })));
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error updating permissions.');
     }
   };
 
@@ -588,6 +648,155 @@ export const AdminPage: React.FC = () => {
                 <span>Open AI Quiz Studio</span>
               </Link>
             </div>
+          </div>
+        </div>
+
+        {/* ─── Educator AI Studio Licensing & Access Controls ──────────────────── */}
+        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div>
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-indigo-600" />
+                <h2 className="text-lg font-heading font-black text-slate-900">
+                  Educator Accounts & AI Studio Licensing
+                </h2>
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black uppercase">
+                  Monetization & Quota Control
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                AI Studio is a Premium feature. Only educators with active licenses enabled below can generate questions using the platform OpenRouter gateway.
+              </p>
+            </div>
+
+            {/* Bulk Controls */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleBulkAi(true)}
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-200 transition-all cursor-pointer"
+              >
+                Enable All
+              </button>
+              <button
+                type="button"
+                onClick={() => handleBulkAi(false)}
+                className="px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs border border-rose-200 transition-all cursor-pointer"
+              >
+                Disable All
+              </button>
+            </div>
+          </div>
+
+          {/* Search Box */}
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <input
+              type="text"
+              value={teacherSearch}
+              onChange={(e) => setTeacherSearch(e.target.value)}
+              placeholder="Search educators by name, email, or department..."
+              className="px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs outline-none focus:border-indigo-600 w-full sm:w-80"
+            />
+            <div className="text-xs text-slate-400">
+              Showing{' '}
+              <strong>
+                {
+                  teachers.filter(
+                    (t) =>
+                      t.name.toLowerCase().includes(teacherSearch.toLowerCase()) ||
+                      t.email.toLowerCase().includes(teacherSearch.toLowerCase()) ||
+                      (t.department || '').toLowerCase().includes(teacherSearch.toLowerCase())
+                  ).length
+                }
+              </strong>{' '}
+              of {teachers.length} registered educators
+            </div>
+          </div>
+
+          {/* Teachers List Table */}
+          <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-black uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th className="py-3 px-4">Educator Profile</th>
+                  <th className="py-3 px-4">Institution / Department</th>
+                  <th className="py-3 px-4">Account Role</th>
+                  <th className="py-3 px-4">AI Studio Access</th>
+                  <th className="py-3 px-4 text-right">License Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {teachers
+                  .filter(
+                    (t) =>
+                      t.name.toLowerCase().includes(teacherSearch.toLowerCase()) ||
+                      t.email.toLowerCase().includes(teacherSearch.toLowerCase()) ||
+                      (t.department || '').toLowerCase().includes(teacherSearch.toLowerCase())
+                  )
+                  .map((t) => {
+                    const isSuperAdmin = t.role === 'admin';
+                    const isToggling = togglingTeacherId === t.id;
+
+                    return (
+                      <tr key={t.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-slate-900">{t.name}</div>
+                          <div className="text-[11px] text-slate-400 font-mono">{t.email}</div>
+                        </td>
+                        <td className="py-3 px-4 text-slate-600">
+                          <div>{t.institution || 'Academic Institution'}</div>
+                          <div className="text-[11px] text-slate-400">{t.department || 'Faculty'}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          {isSuperAdmin ? (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-black text-[10px] uppercase">
+                              Platform Admin
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold text-[10px]">
+                              Educator
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {isSuperAdmin || t.aiEnabled ? (
+                            <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-black text-[10px] uppercase tracking-wider flex items-center gap-1 w-fit">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                              <span>👑 Premium Active</span>
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 font-bold text-[10px] uppercase tracking-wider w-fit block">
+                              🔒 Inactive / Free Tier
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {isSuperAdmin ? (
+                            <span className="text-[11px] text-slate-400 italic">Always Active</span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleTeacherAi(t.id, t.aiEnabled)}
+                              disabled={isToggling}
+                              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer disabled:opacity-50 active:scale-95 ${
+                                t.aiEnabled
+                                  ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                              }`}
+                            >
+                              {isToggling
+                                ? 'Updating...'
+                                : t.aiEnabled
+                                ? 'Revoke AI License'
+                                : 'Grant AI License'}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
           </div>
         </div>
       </main>

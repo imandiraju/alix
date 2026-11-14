@@ -1230,7 +1230,12 @@ export const PlayPage: React.FC = () => {
 
       {/* AI Pedagogical Concept Flashcard Broadcast Modal */}
       {receivedConcept && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setReceivedConcept(null);
+          }}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+        >
           <div className="w-full max-w-md bg-gradient-to-br from-[#1E0938] via-[#2D1050] to-[#120422] rounded-3xl border-2 border-cyan-400/40 p-6 text-white shadow-2xl space-y-4 animate-scale-in text-left">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div className="flex items-center gap-2">
