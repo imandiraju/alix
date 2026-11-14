@@ -420,8 +420,8 @@ export const DashboardPage: React.FC = () => {
                     <Sparkles className="w-5 h-5 text-alix-cyan-300" />
                   </div>
                   <div>
-                    <div className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-alix-cyan-300 mb-0.5">
-                      <span>⚡ AI Assisted</span>
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black uppercase tracking-wider mb-1 shadow-sm">
+                      <span>👑 Premium • AI Studio</span>
                     </div>
                     <h3 className="font-heading font-black text-base leading-snug">
                       Save time! Create with AI Studio

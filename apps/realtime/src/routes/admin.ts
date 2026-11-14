@@ -7,8 +7,6 @@ import { GameSessionModel } from '../models/GameSession.js';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'alix-edtech-secret-jwt-key-2026';
-const PLATFORM_MASTER_ADMIN_KEY =
-  process.env.ALIX_ADMIN_MASTER_KEY || 'alix-admin-2026';
 
 function maskSecretKey(key: string): string {
   if (!key || typeof key !== 'string') return '';
@@ -19,26 +17,40 @@ function maskSecretKey(key: string): string {
   return `${prefix}••••••••••••${suffix}`;
 }
 
-// ─── Middleware / Auth Helper ──────────────────────────────────────────────────
+// ─── Middleware: Strict Platform Admin Guard ──────────────────────────────────
+// Only users with role === 'admin' (such as alixadmin@gmail.com) can access
 
-async function getAdminUserFromHeader(req: Request) {
+async function requireAdminUser(req: Request, res: Response) {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) return null;
+  if (!authHeader?.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Authentication required. Please sign in as Platform Admin.' });
+    return null;
+  }
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role?: string };
     const teacher = await Teacher.findById(decoded.id);
+    if (!teacher || teacher.role !== 'admin') {
+      res.status(403).json({
+        error: 'Forbidden: Access restricted to Platform Administrators (alixadmin@gmail.com). Teachers do not have administrative privileges.',
+      });
+      return null;
+    }
     return teacher;
   } catch {
+    res.status(401).json({ error: 'Invalid or expired administrator session.' });
     return null;
   }
 }
 
 // ─── GET /api/admin/config ────────────────────────────────────────────────────
-// Return current AI model settings & masked API key
+// Return current AI model settings & masked API key (Admin only)
 
 router.get('/config', async (req: Request, res: Response) => {
   try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
+
     const keyConfig = await SystemConfig.findOne({ key: 'openrouter_api_key' });
     const primaryModelConfig = await SystemConfig.findOne({ key: 'ai_primary_model' });
     const fallbackModelConfig = await SystemConfig.findOne({ key: 'ai_fallback_model' });
@@ -68,19 +80,19 @@ router.get('/config', async (req: Request, res: Response) => {
 });
 
 // ─── POST /api/admin/config ───────────────────────────────────────────────────
-// Save or update OpenRouter API key and preferred AI models
+// Save or update OpenRouter API key and preferred AI models (Admin only)
 
 router.post('/config', async (req: Request, res: Response) => {
   try {
-    const user = await getAdminUserFromHeader(req);
-    const { openrouterKey, primaryModel, fallbackModel } = req.body;
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
 
-    const editorName = user ? `${user.name} (${user.email})` : 'Platform Admin';
+    const { openrouterKey, primaryModel, fallbackModel } = req.body;
+    const editorName = `${admin.name} (${admin.email})`;
 
     // 1. Update OpenRouter API Key if provided
     if (typeof openrouterKey === 'string') {
       const trimmed = openrouterKey.trim();
-      // If user passed a non-masked new key
       if (trimmed.length > 0 && !trimmed.includes('••••')) {
         await SystemConfig.findOneAndUpdate(
           { key: 'openrouter_api_key' },
@@ -139,15 +151,16 @@ router.post('/config', async (req: Request, res: Response) => {
 });
 
 // ─── POST /api/admin/test-openrouter ──────────────────────────────────────────
-// Live verification against OpenRouter Auth endpoint
+// Live verification against OpenRouter Auth endpoint (Admin only)
 
 router.post('/test-openrouter', async (req: Request, res: Response) => {
   try {
-    const { keyToTest } = req.body;
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
 
+    const { keyToTest } = req.body;
     let testKey = (keyToTest || '').trim();
 
-    // If keyToTest is empty or masked, fetch the stored database key
     if (!testKey || testKey.includes('••••')) {
       const dbConfig = await SystemConfig.findOne({ key: 'openrouter_api_key' });
       if (dbConfig && dbConfig.value) {
@@ -165,7 +178,6 @@ router.post('/test-openrouter', async (req: Request, res: Response) => {
       });
     }
 
-    // Query OpenRouter Key Auth API
     const authRes = await fetch('https://openrouter.ai/api/v1/auth/key', {
       method: 'GET',
       headers: {
@@ -176,7 +188,6 @@ router.post('/test-openrouter', async (req: Request, res: Response) => {
     const authData = (await authRes.json().catch(() => ({}))) as any;
 
     if (!authRes.ok) {
-      // Update status in DB
       await SystemConfig.findOneAndUpdate(
         { key: 'openrouter_api_key' },
         {
@@ -195,7 +206,6 @@ router.post('/test-openrouter', async (req: Request, res: Response) => {
 
     const keyDetails = authData?.data || {};
 
-    // Mark as active in DB
     await SystemConfig.findOneAndUpdate(
       { key: 'openrouter_api_key' },
       {
@@ -227,72 +237,17 @@ router.post('/test-openrouter', async (req: Request, res: Response) => {
   }
 });
 
-// ─── POST /api/admin/claim-admin ──────────────────────────────────────────────
-// Elevate an authenticated teacher to Platform Admin using the Master Passcode
-
-router.post('/claim-admin', async (req: Request, res: Response) => {
-  try {
-    const { passcode, userId, email } = req.body;
-
-    if (!passcode || passcode.trim() !== PLATFORM_MASTER_ADMIN_KEY) {
-      return res.status(403).json({
-        error: 'Invalid Platform Master Admin Passcode. Please check with the system administrator.',
-      });
-    }
-
-    const query = userId ? { _id: userId } : email ? { email: email.toLowerCase().trim() } : null;
-    if (!query) {
-      return res.status(400).json({ error: 'User identifier (userId or email) is required.' });
-    }
-
-    const teacher = await Teacher.findOne(query);
-    if (!teacher) {
-      return res.status(404).json({ error: 'Educator profile not found.' });
-    }
-
-    teacher.role = 'admin';
-    await teacher.save();
-
-    const token = jwt.sign(
-      { id: teacher._id, email: teacher.email, role: teacher.role },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    return res.json({
-      success: true,
-      message: `Congratulations! ${teacher.name} has been promoted to Platform Admin.`,
-      token,
-      user: {
-        id: teacher._id,
-        name: teacher.name,
-        email: teacher.email,
-        institution: teacher.institution,
-        department: teacher.department,
-        subjects: teacher.subjects,
-        role: teacher.role,
-        avatarInitials: teacher.name
-          .split(' ')
-          .map((n: string) => n[0])
-          .join('')
-          .toUpperCase()
-          .slice(0, 2),
-      },
-    });
-  } catch (err: any) {
-    console.error('[Claim Admin Error]:', err);
-    return res.status(500).json({ error: err.message || 'Failed to claim admin status.' });
-  }
-});
-
 // ─── GET /api/admin/overview ──────────────────────────────────────────────────
-// Platform diagnostics and database health
+// Platform diagnostics and database health (Admin only)
 
-router.get('/overview', async (_req: Request, res: Response) => {
+router.get('/overview', async (req: Request, res: Response) => {
   try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
+
     const [quizCount, teacherCount, adminCount, sessionCount] = await Promise.all([
       Quiz.countDocuments().catch(() => 0),
-      Teacher.countDocuments().catch(() => 0),
+      Teacher.countDocuments({ role: 'teacher' }).catch(() => 0),
       Teacher.countDocuments({ role: 'admin' }).catch(() => 0),
       GameSessionModel.countDocuments().catch(() => 0),
     ]);

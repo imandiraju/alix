@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
   Home,
   Compass,
@@ -26,6 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenRosters,
   onDiscoverClick,
 }) => {
+  const { user } = useAuth();
   const navItems = [
     {
       name: 'Home',
@@ -134,13 +136,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Footer Navigation */}
       <div className="p-3 border-t border-slate-100 space-y-1">
-        <NavLink
-          to="/admin"
-          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold text-amber-800 bg-amber-50/60 hover:bg-amber-100/80 transition-colors"
-        >
-          <ShieldCheck className="w-4 h-4 text-amber-600" />
-          <span>Platform Admin & Keys</span>
-        </NavLink>
+        {user?.role === 'admin' && (
+          <NavLink
+            to="/admin"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold text-amber-800 bg-amber-50/60 hover:bg-amber-100/80 transition-colors"
+          >
+            <ShieldCheck className="w-4 h-4 text-amber-600" />
+            <span>Platform Admin & Keys</span>
+          </NavLink>
+        )}
         <NavLink
           to="/dashboard"
           className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-colors"

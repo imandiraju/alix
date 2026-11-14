@@ -399,10 +399,13 @@ export const CreatePage: React.FC = () => {
                 type="button"
                 onClick={() => setIsAiModalOpen(true)}
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-indigo-500 hover:to-pink-400 text-white font-bold text-sm shadow-md flex items-center gap-2 transition-all cursor-pointer active:scale-95"
-                title="Generate quiz with Grok ➡️ Gemini AI via OpenRouter"
+                title="Generate quiz with Grok ➡️ Gemini AI (Premium Feature)"
               >
                 <Sparkles className="w-4 h-4 text-cyan-300" />
                 <span>AI Quiz Studio</span>
+                <span className="px-1.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black text-[9px] uppercase tracking-wider">
+                  PRO
+                </span>
               </button>
 
               <button

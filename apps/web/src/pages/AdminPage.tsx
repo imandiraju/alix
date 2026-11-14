@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
-import AlixLogo from '../components/common/AlixLogo';
 import { REALTIME_URL } from '../services/socket';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -19,15 +18,13 @@ import {
   Zap,
   Lock,
   Layers,
-  ArrowRight,
-  Database,
   Users,
   Activity,
   Award,
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
 
   // Configuration state from backend
   const [loading, setLoading] = useState(true);
@@ -46,21 +43,21 @@ export const AdminPage: React.FC = () => {
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [testResult, setTestResult] = useState<any>(null);
 
-  // Admin Claim Modal / Passcode
-  const [adminPasscode, setAdminPasscode] = useState('');
-  const [isClaiming, setIsClaiming] = useState(false);
-  const [claimError, setClaimError] = useState<string | null>(null);
-  const [claimSuccess, setClaimSuccess] = useState(false);
-
   const isAdmin = user?.role === 'admin';
 
-  // Load config & metrics
+  // Load config & metrics (Admin Only)
   const fetchAdminData = async () => {
+    if (!isAdmin) return;
     try {
       setLoading(true);
+      const token = localStorage.getItem('alix_auth_token') || '';
       const [configRes, metricsRes] = await Promise.all([
-        fetch(`${REALTIME_URL}/api/admin/config`),
-        fetch(`${REALTIME_URL}/api/admin/overview`),
+        fetch(`${REALTIME_URL}/api/admin/config`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${REALTIME_URL}/api/admin/overview`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
 
       if (configRes.ok) {
@@ -85,7 +82,7 @@ export const AdminPage: React.FC = () => {
 
   useEffect(() => {
     fetchAdminData();
-  }, []);
+  }, [isAdmin]);
 
   // ─── Test OpenRouter Key Live ────────────────────────────────────────────────
   const handleTestKey = async () => {
@@ -113,7 +110,6 @@ export const AdminPage: React.FC = () => {
           type: 'success',
           text: '✅ OpenRouter API key is verified, active, and responsive!',
         });
-        // Refresh status
         fetchAdminData();
       } else {
         setSaveMessage({
@@ -165,7 +161,7 @@ export const AdminPage: React.FC = () => {
       if (res.ok) {
         setSaveMessage({
           type: 'success',
-          text: '🎉 Configuration saved to MongoDB database! All teachers can now generate quizzes uninterrupted.',
+          text: '🎉 Configuration saved to MongoDB database! AI Premium Quiz Studio is live and operational.',
         });
         setApiKeyInput('');
         fetchAdminData();
@@ -185,39 +181,56 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  // ─── Claim Platform Admin Role ───────────────────────────────────────────────
-  const handleClaimAdmin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!adminPasscode.trim()) return;
+  // ─── If User is NOT an Admin: Strict Denial Screen ────────────────────────────
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#F3F4F6]">
+        <Navbar />
+        <main className="flex-1 max-w-[800px] w-full mx-auto p-4 sm:p-8 flex items-center justify-center">
+          <div className="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-xl text-center space-y-6 w-full">
+            <div className="w-16 h-16 rounded-3xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
+              <Lock className="w-8 h-8" />
+            </div>
 
-    setIsClaiming(true);
-    setClaimError(null);
+            <div className="space-y-2">
+              <span className="px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-black uppercase tracking-wider">
+                Platform Admin Restricted Area
+              </span>
+              <h1 className="text-2xl sm:text-3xl font-heading font-black text-slate-900">
+                Access Denied: Administrator Privileges Required
+              </h1>
+              <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+                Educator accounts do not have access to system API key management and platform governance. Premium AI keys and infrastructure settings are managed exclusively by the Platform Administrator.
+              </p>
+            </div>
 
-    try {
-      const res = await fetch(`${REALTIME_URL}/api/admin/claim-admin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          passcode: adminPasscode.trim(),
-          userId: user?.id,
-          email: user?.email,
-        }),
-      });
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-700 max-w-sm mx-auto text-left space-y-1">
+              <div><strong>Authorized Account:</strong> alixadmin@gmail.com</div>
+              <div><strong>Access Level:</strong> Platform Administrator (RKGlobal EdTech)</div>
+            </div>
 
-      const data = await res.json();
-      if (res.ok && data.user) {
-        setClaimSuccess(true);
-        updateUser(data.user, data.token);
-      } else {
-        setClaimError(data.error || 'Invalid Platform Admin Passcode.');
-      }
-    } catch (err: any) {
-      setClaimError(err.message || 'Error communicating with authentication server.');
-    } finally {
-      setIsClaiming(false);
-    }
-  };
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <Link
+                to="/dashboard"
+                className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50 transition-all"
+              >
+                Return to Dashboard
+              </Link>
+              <Link
+                to="/login"
+                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-heading font-black text-xs shadow-md transition-all active:scale-95"
+              >
+                Sign In as Platform Admin
+              </Link>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
+  // ─── Verified Admin Screen ──────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col bg-[#F3F4F6]">
       <Navbar />
@@ -241,72 +254,13 @@ export const AdminPage: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              {isAdmin ? (
-                <div className="px-4 py-2 rounded-2xl bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg ring-2 ring-amber-300/50">
-                  <Award className="w-4 h-4 text-slate-950 fill-current" />
-                  <span>Verified Platform Admin</span>
-                </div>
-              ) : (
-                <div className="px-4 py-2 rounded-2xl bg-white/10 text-white font-bold text-xs flex items-center gap-2 border border-white/20">
-                  <Lock className="w-4 h-4 text-amber-300" />
-                  <span>Educator Role</span>
-                </div>
-              )}
+              <div className="px-4 py-2 rounded-2xl bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg ring-2 ring-amber-300/50">
+                <Award className="w-4 h-4 text-slate-950 fill-current" />
+                <span>Verified Platform Admin (alixadmin@gmail.com)</span>
+              </div>
             </div>
           </div>
         </div>
-
-        {/* If user is not yet an admin, show Admin Claim elevation card */}
-        {!isAdmin && (
-          <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-6 shadow-sm">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-200 text-amber-800 flex items-center justify-center shrink-0">
-                  <Lock className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-heading font-black text-amber-950 text-base">
-                    Elevate Account to Platform Admin
-                  </h3>
-                  <p className="text-xs text-amber-800 mt-0.5">
-                    Enter the system master admin passcode (provided during initial server deployment) to unlock full cloud configuration and key management privileges.
-                  </p>
-                </div>
-              </div>
-
-              <form onSubmit={handleClaimAdmin} className="flex items-center gap-2 w-full sm:w-auto">
-                <input
-                  type="password"
-                  value={adminPasscode}
-                  onChange={(e) => setAdminPasscode(e.target.value)}
-                  placeholder="Enter Master Passcode..."
-                  className="px-4 py-2 rounded-xl bg-white border border-amber-300 text-slate-900 text-xs font-mono outline-none focus:border-amber-500 w-full sm:w-56"
-                />
-                <button
-                  type="submit"
-                  disabled={isClaiming || !adminPasscode.trim()}
-                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-black text-xs transition-all cursor-pointer whitespace-nowrap active:scale-95"
-                >
-                  {isClaiming ? 'Verifying...' : 'Unlock Admin'}
-                </button>
-              </form>
-            </div>
-
-            {claimError && (
-              <p className="text-xs font-bold text-rose-600 mt-3 flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4" />
-                <span>{claimError}</span>
-              </p>
-            )}
-
-            {claimSuccess && (
-              <p className="text-xs font-bold text-emerald-700 mt-3 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Admin privileges unlocked! You now have full platform governance access.</span>
-              </p>
-            )}
-          </div>
-        )}
 
         {/* Live System Metrics Quick Strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -480,7 +434,7 @@ export const AdminPage: React.FC = () => {
                   </button>
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1.5">
-                  If the key runs out of credits or gets revoked, simply paste your new key here and click <strong>"Save Configuration"</strong>. All live games and teachers update instantaneously!
+                  If the key runs out of credits or gets revoked, paste your new key here and click <strong>"Save Configuration"</strong>. All live games and teachers update instantaneously with zero server redeployment!
                 </p>
               </div>
 

@@ -169,12 +169,15 @@ export const AiQuizStudioModal: React.FC<AiQuizStudioModalProps> = ({
                 <h2 className="font-heading font-black text-base sm:text-lg text-white">
                   ALIX AI Quiz Studio
                 </h2>
-                <span className="px-2 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 border border-cyan-400/30 text-[10px] font-black uppercase tracking-wider">
+                <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-[10px] uppercase tracking-wider shadow-sm">
+                  👑 Premium Feature
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 border border-cyan-400/30 text-[10px] font-black uppercase tracking-wider hidden sm:inline">
                   OpenRouter
                 </span>
               </div>
               <p className="text-xs text-white/70">
-                Grok-2 & Gemini Flash Dual-Model Failover Architecture
+                Grok-2 & Gemini Flash Dual-Model Failover Architecture • Managed by RKGlobal EdTech
               </p>
             </div>
           </div>
@@ -233,11 +236,7 @@ export const AiQuizStudioModal: React.FC<AiQuizStudioModalProps> = ({
               </button>
             </div>
             <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
-              Default server configuration automatically fails over: <strong>Grok 2 ➡️ Gemini 2.0 Flash ➡️ Free Model Candidates</strong>.
-              Keys can also be managed platform-wide in the cloud by the Platform Admin in{' '}
-              <a href="/admin" target="_blank" rel="noreferrer" className="text-cyan-300 font-bold underline">
-                Platform Admin Settings ↗
-              </a> without needing individual teacher keys.
+              ⭐ <strong>Enterprise Premium AI Engine:</strong> Assessment questions are powered by the Platform Admin OpenRouter cloud gateway (Grok 2 ➡️ Gemini 2.0 Flash) under your Academic Institution License. You can also provide a personal key override if using your own quota.
             </p>
           </div>
         )}
