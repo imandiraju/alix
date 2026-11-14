@@ -16,7 +16,7 @@ export const ALIX_BRAND = {
   liveSession: 'ALIX Live',
   quizLibrary: 'My ALIX Activities',
   reports: 'ALIX Insights',
-  url: 'https://alix.edu',
+  url: 'https://alix-alp.vercel.app',
 } as const;
 
 export const ALIX_MODULES = {

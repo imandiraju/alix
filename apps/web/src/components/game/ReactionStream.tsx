@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Smile, X } from 'lucide-react';
 import {
   SVG_REACTION_LIST,
   FlameReactionSvg,
@@ -34,6 +35,7 @@ export const ReactionStream: React.FC<ReactionStreamProps> = ({
   showBar = true,
 }) => {
   const [floatingList, setFloatingList] = useState<FloatingReaction[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleSendReaction = (reactionId: string) => {
     const id = `${Date.now()}-${Math.random()}`;
@@ -72,23 +74,48 @@ export const ReactionStream: React.FC<ReactionStreamProps> = ({
         })}
       </div>
 
-      {/* Floating Reaction Pill Bar with SVGs */}
+      {/* Non-intrusive Collapsible Reaction Trigger */}
       {showBar && (
-        <div className="fixed bottom-6 right-6 z-40 bg-white/95 backdrop-blur-md border-2 border-alix-slate-200 shadow-alix-lg rounded-full p-2 flex items-center gap-1.5 sm:gap-2">
-          {SVG_REACTION_LIST.map((item) => {
-            const Icon = item.Component;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => handleSendReaction(item.id)}
-                className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center hover:scale-125 active:scale-90 transition-all hover:bg-alix-violet-50 cursor-pointer p-1.5 group"
-                title={item.label}
-              >
-                <Icon size={28} className="transition-transform group-hover:rotate-6" />
-              </button>
-            );
-          })}
+        <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end">
+          {/* Reaction Palette (Hidden by default, opens on click) */}
+          {isOpen && (
+            <div className="mb-2 bg-[#1B0A3C]/95 backdrop-blur-md border border-white/20 shadow-2xl rounded-2xl p-1.5 flex items-center gap-1 animate-scale-in">
+              {SVG_REACTION_LIST.map((item) => {
+                const Icon = item.Component;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleSendReaction(item.id)}
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center hover:scale-125 active:scale-90 transition-all hover:bg-white/15 cursor-pointer p-1"
+                    title={item.label}
+                  >
+                    <Icon size={24} />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Compact Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setIsOpen(!isOpen)}
+            className="h-9 px-3 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 backdrop-blur-md border border-white/20 shadow-md flex items-center gap-1.5 transition-all cursor-pointer text-xs font-bold"
+            title={isOpen ? 'Close reaction palette' : 'React with emoji'}
+          >
+            {isOpen ? (
+              <>
+                <X className="w-3.5 h-3.5" />
+                <span>Close</span>
+              </>
+            ) : (
+              <>
+                <Smile className="w-4 h-4 text-amber-300" />
+                <span className="hidden sm:inline">React</span>
+              </>
+            )}
+          </button>
         </div>
       )}
     </>

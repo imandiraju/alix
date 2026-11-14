@@ -284,7 +284,7 @@ export const DashboardPage: React.FC = () => {
 
   const handleStartLiveClick = () => {
     if (quizzes.length === 0) {
-      navigate('/create');
+      navigate('/discover');
     } else if (quizzes.length === 1) {
       navigate(`/host/${quizzes[0]._id}`);
     } else {
@@ -353,7 +353,7 @@ export const DashboardPage: React.FC = () => {
           className="hidden lg:flex shrink-0"
           onStartLive={handleStartLiveClick}
           onOpenRosters={() => setIsRosterModalOpen(true)}
-          onDiscoverClick={() => setActiveFilter('All')}
+          onDiscoverClick={() => navigate('/discover')}
         />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 max-w-6xl">

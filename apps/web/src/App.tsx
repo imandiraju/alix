@@ -12,6 +12,7 @@ const PlayPage = lazy(() => import('./pages/PlayPage'));
 const HostPage = lazy(() => import('./pages/HostPage'));
 const CreatePage = lazy(() => import('./pages/CreatePage'));
 const InsightsPage = lazy(() => import('./pages/InsightsPage'));
+const DiscoverPage = lazy(() => import('./pages/DiscoverPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 
@@ -53,6 +54,14 @@ export const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <InsightsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/discover"
+              element={
+                <ProtectedRoute>
+                  <DiscoverPage />
                 </ProtectedRoute>
               }
             />

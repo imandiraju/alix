@@ -256,4 +256,67 @@ router.post('/create', async (req: Request, res: Response) => {
   }
 });
 
+// ─── Delete Individual Session ────────────────────────────────────────────────
+
+router.delete('/:pin', async (req: Request, res: Response) => {
+  try {
+    const pin = req.params.pin?.toUpperCase();
+    if (!pin) {
+      return res.status(400).json({ error: 'PIN is required' });
+    }
+
+    // Delete from MongoDB
+    await GameSessionModel.findOneAndDelete({ pin });
+
+    // Clean up in-memory session if active
+    const mem = sessionManager.findByCode(pin);
+    if (mem) {
+      sessionManager.destroySession(mem.id);
+    }
+
+    return res.json({ success: true, message: `Session ${pin} deleted successfully` });
+  } catch (err: any) {
+    console.error('[Delete Session Error]:', err);
+    return res.status(500).json({ error: err.message || 'Failed to delete session' });
+  }
+});
+
+// ─── Batch Delete Sessions (Delete All or Filtered PIN List) ──────────────────
+
+router.post('/delete-batch', async (req: Request, res: Response) => {
+  try {
+    const { teacherId, pinList, all } = req.body;
+
+    const filter: Record<string, any> = {};
+    if (teacherId && mongoose.isValidObjectId(teacherId)) {
+      filter.teacherId = teacherId;
+    }
+
+    if (Array.isArray(pinList) && pinList.length > 0) {
+      const upperPins = pinList.map((p: string) => String(p).toUpperCase());
+      filter.pin = { $in: upperPins };
+    } else if (!all && !teacherId) {
+      return res.status(400).json({ error: 'Specify pins to delete or set all: true' });
+    }
+
+    // Clean up matching in-memory active sessions
+    const matchingSessions = await GameSessionModel.find(filter);
+    matchingSessions.forEach((s) => {
+      const mem = sessionManager.findByCode(s.pin);
+      if (mem) sessionManager.destroySession(mem.id);
+    });
+
+    const deleteResult = await GameSessionModel.deleteMany(filter);
+
+    return res.json({
+      success: true,
+      deletedCount: deleteResult.deletedCount,
+      message: `${deleteResult.deletedCount} sessions deleted successfully`,
+    });
+  } catch (err: any) {
+    console.error('[Batch Delete Sessions Error]:', err);
+    return res.status(500).json({ error: err.message || 'Failed to delete sessions' });
+  }
+});
+
 export default router;

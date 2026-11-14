@@ -23,6 +23,7 @@ import {
 
 interface QuestionDraft {
   id: string;
+  type?: 'multiple_choice' | 'true_false';
   text: string;
   timeLimit: number;
   points: number;
@@ -72,18 +73,48 @@ export const CreatePage: React.FC = () => {
   const activeQuestion =
     questions.find((q) => q.id === activeQuestionId) || questions[0];
 
-  const handleAddQuestion = () => {
+  const handleAddQuestion = (type: 'multiple_choice' | 'true_false' = 'multiple_choice') => {
     const newId = `q-${Date.now()}`;
     const newQuestion: QuestionDraft = {
       id: newId,
+      type,
       text: '',
       timeLimit: 30,
       points: 1000,
-      options: ['', '', '', ''],
+      options: type === 'true_false' ? ['True', 'False'] : ['', '', '', ''],
       correctIndex: 0,
     };
     setQuestions([...questions, newQuestion]);
     setActiveQuestionId(newId);
+  };
+
+  const handleSetQuestionType = (newType: 'multiple_choice' | 'true_false') => {
+    if (activeQuestion.type === newType) return;
+    if (newType === 'true_false') {
+      const updated = questions.map((q) =>
+        q.id === activeQuestion.id
+          ? {
+              ...q,
+              type: 'true_false' as const,
+              options: ['True', 'False'],
+              correctIndex: q.correctIndex > 1 ? 0 : q.correctIndex,
+            }
+          : q
+      );
+      setQuestions(updated);
+    } else {
+      const updated = questions.map((q) =>
+        q.id === activeQuestion.id
+          ? {
+              ...q,
+              type: 'multiple_choice' as const,
+              options: ['', '', '', ''],
+              correctIndex: 0,
+            }
+          : q
+      );
+      setQuestions(updated);
+    }
   };
 
   const handleDeleteQuestion = (qId: string) => {
@@ -315,7 +346,7 @@ export const CreatePage: React.FC = () => {
                 </span>
                 <button
                   type="button"
-                  onClick={handleAddQuestion}
+                  onClick={() => handleAddQuestion('multiple_choice')}
                   className="text-xs font-bold text-alix-violet-700 hover:text-alix-violet-900 inline-flex items-center gap-1 cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
@@ -339,9 +370,20 @@ export const CreatePage: React.FC = () => {
                       className="flex-1 text-left min-w-0 cursor-pointer"
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold text-alix-indigo">
-                          Q{idx + 1}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-alix-indigo">
+                            Q{idx + 1}
+                          </span>
+                          <span
+                            className={`px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider ${
+                              q.type === 'true_false'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-violet-100 text-violet-700'
+                            }`}
+                          >
+                            {q.type === 'true_false' ? 'T/F' : 'MCQ'}
+                          </span>
+                        </div>
                         <span className="text-[10px] text-alix-slate-400 font-mono">
                           {q.timeLimit}s • {q.points}pts
                         </span>
@@ -368,6 +410,40 @@ export const CreatePage: React.FC = () => {
 
             {/* Right Column: Question Detail Editor */}
             <div className="lg:col-span-8 bg-white p-6 rounded-2xl border border-alix-slate-200 shadow-sm space-y-6">
+              {/* Question Format Selector */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  Question Format
+                </label>
+                <div className="grid grid-cols-2 gap-3 max-w-sm">
+                  <button
+                    type="button"
+                    onClick={() => handleSetQuestionType('multiple_choice')}
+                    className={`py-2 px-3.5 rounded-xl border-2 text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                      (activeQuestion.type || 'multiple_choice') === 'multiple_choice'
+                        ? 'border-alix-violet-600 bg-alix-violet-50 text-alix-violet-900 shadow-xs'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-alix-violet-600" />
+                    <span>Multiple Choice (4)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSetQuestionType('true_false')}
+                    className={`py-2 px-3.5 rounded-xl border-2 text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                      activeQuestion.type === 'true_false'
+                        ? 'border-[#1368CE] bg-blue-50 text-[#1368CE] shadow-xs'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#1368CE]" />
+                    <span>True / False (2)</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Question Text */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-2">
@@ -380,7 +456,11 @@ export const CreatePage: React.FC = () => {
                     handleUpdateActiveQuestion('text', e.target.value)
                   }
                   className="w-full p-3.5 rounded-xl border-2 border-alix-slate-200 focus:border-alix-violet-600 focus:ring-2 focus:ring-alix-violet-100 outline-none text-base text-alix-indigo font-medium"
-                  placeholder="Enter the concept question prompt here..."
+                  placeholder={
+                    activeQuestion.type === 'true_false'
+                      ? 'Enter the statement to evaluate as True or False...'
+                      : 'Enter the concept question prompt here...'
+                  }
                 />
               </div>
 
@@ -431,55 +511,118 @@ export const CreatePage: React.FC = () => {
               {/* Answer Choices */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">
-                  Answer Choices (Click checkmark to set correct answer)
+                  {activeQuestion.type === 'true_false'
+                    ? 'Select the Correct Truth Value'
+                    : 'Answer Choices (Click checkmark to set correct answer)'}
                 </label>
-                <div className="space-y-3">
-                  {activeQuestion.options.map((opt, idx) => {
-                    const themes = [
-                      { shape: '▲', bg: 'bg-[#E21B3C]', border: 'border-[#9E1329]' },
-                      { shape: '◆', bg: 'bg-[#1368CE]', border: 'border-[#0D4589]' },
-                      { shape: '●', bg: 'bg-[#D89E00]', border: 'border-[#8C6700]' },
-                      { shape: '■', bg: 'bg-[#26890C]', border: 'border-[#175407]' },
-                    ];
-                    const t = themes[idx % themes.length];
-                    const isCorrect = activeQuestion.correctIndex === idx;
-                    return (
-                      <div
-                        key={idx}
-                        className={`flex items-center gap-3 p-2.5 rounded-xl border-2 transition-all ${
-                          isCorrect
-                            ? 'border-emerald-500 bg-emerald-50/50 shadow-sm ring-2 ring-emerald-200'
-                            : 'border-slate-200 bg-white hover:border-slate-300'
-                        }`}
-                      >
-                        <div
-                          className={`w-9 h-9 rounded-lg ${t.bg} text-white font-black text-base flex items-center justify-center shrink-0 shadow-sm`}
-                        >
-                          {t.shape}
-                        </div>
-                        <input
-                          type="text"
-                          value={opt}
-                          onChange={(e) => handleUpdateOption(idx, e.target.value)}
-                          className="flex-1 px-3 py-1.5 text-sm font-bold text-slate-900 outline-none bg-transparent"
-                          placeholder={`Add answer ${idx + 1}...`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateActiveQuestion('correctIndex', idx)}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all cursor-pointer ${
-                            isCorrect
-                              ? 'bg-emerald-500 border-emerald-500 text-white shadow-md'
-                              : 'border-slate-300 text-slate-300 hover:border-emerald-500 hover:text-emerald-500'
-                          }`}
-                          title={isCorrect ? 'Correct answer' : 'Mark as correct answer'}
-                        >
-                          <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
-                        </button>
+
+                {activeQuestion.type === 'true_false' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* True Card */}
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateActiveQuestion('correctIndex', 0)}
+                      className={`p-5 rounded-2xl border-4 text-center transition-all flex flex-col items-center justify-center gap-2 cursor-pointer ${
+                        activeQuestion.correctIndex === 0
+                          ? 'border-emerald-500 bg-emerald-50/80 shadow-lg ring-4 ring-emerald-200'
+                          : 'border-slate-200 bg-white hover:border-slate-300 opacity-80 hover:opacity-100'
+                      }`}
+                    >
+                      <div className="w-12 h-12 rounded-xl bg-[#E21B3C] text-white flex items-center justify-center text-2xl font-black shadow-sm">
+                        ▲
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="font-heading font-black text-xl text-slate-900">
+                        True
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs font-bold mt-1">
+                        {activeQuestion.correctIndex === 0 ? (
+                          <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                            <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />
+                            Correct Answer
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">Click to set as correct</span>
+                        )}
+                      </div>
+                    </button>
+
+                    {/* False Card */}
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateActiveQuestion('correctIndex', 1)}
+                      className={`p-5 rounded-2xl border-4 text-center transition-all flex flex-col items-center justify-center gap-2 cursor-pointer ${
+                        activeQuestion.correctIndex === 1
+                          ? 'border-emerald-500 bg-emerald-50/80 shadow-lg ring-4 ring-emerald-200'
+                          : 'border-slate-200 bg-white hover:border-slate-300 opacity-80 hover:opacity-100'
+                      }`}
+                    >
+                      <div className="w-12 h-12 rounded-xl bg-[#1368CE] text-white flex items-center justify-center text-2xl font-black shadow-sm">
+                        ◆
+                      </div>
+                      <div className="font-heading font-black text-xl text-slate-900">
+                        False
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs font-bold mt-1">
+                        {activeQuestion.correctIndex === 1 ? (
+                          <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                            <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />
+                            Correct Answer
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">Click to set as correct</span>
+                        )}
+                      </div>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {activeQuestion.options.map((opt, idx) => {
+                      const themes = [
+                        { shape: '▲', bg: 'bg-[#E21B3C]', border: 'border-[#9E1329]' },
+                        { shape: '◆', bg: 'bg-[#1368CE]', border: 'border-[#0D4589]' },
+                        { shape: '●', bg: 'bg-[#D89E00]', border: 'border-[#8C6700]' },
+                        { shape: '■', bg: 'bg-[#26890C]', border: 'border-[#175407]' },
+                      ];
+                      const t = themes[idx % themes.length];
+                      const isCorrect = activeQuestion.correctIndex === idx;
+                      return (
+                        <div
+                          key={idx}
+                          className={`flex items-center gap-3 p-2.5 rounded-xl border-2 transition-all ${
+                            isCorrect
+                              ? 'border-emerald-500 bg-emerald-50/50 shadow-sm ring-2 ring-emerald-200'
+                              : 'border-slate-200 bg-white hover:border-slate-300'
+                          }`}
+                        >
+                          <div
+                            className={`w-9 h-9 rounded-lg ${t.bg} text-white font-black text-base flex items-center justify-center shrink-0 shadow-sm`}
+                          >
+                            {t.shape}
+                          </div>
+                          <input
+                            type="text"
+                            value={opt}
+                            onChange={(e) => handleUpdateOption(idx, e.target.value)}
+                            className="flex-1 px-3 py-1.5 text-sm font-bold text-slate-900 outline-none bg-transparent"
+                            placeholder={`Add answer ${idx + 1}...`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateActiveQuestion('correctIndex', idx)}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all cursor-pointer ${
+                              isCorrect
+                                ? 'bg-emerald-500 border-emerald-500 text-white shadow-md'
+                                : 'border-slate-300 text-slate-300 hover:border-emerald-500 hover:text-emerald-500'
+                            }`}
+                            title={isCorrect ? 'Correct answer' : 'Mark as correct answer'}
+                          >
+                            <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>

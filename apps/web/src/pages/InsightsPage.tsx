@@ -17,6 +17,8 @@ import {
   Gamepad2,
   Clock,
   ArrowRight,
+  Trash2,
+  Filter,
 } from 'lucide-react';
 
 interface SessionDoc {
@@ -95,6 +97,77 @@ export const InsightsPage: React.FC = () => {
     }
   };
 
+  const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'waiting'>('all');
+  const [deletingPin, setDeletingPin] = useState<string | null>(null);
+
+  const handleDeleteSession = async (pin: string) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete session PIN ${pin}? All associated attendance logs will be permanently removed.`
+      )
+    ) {
+      return;
+    }
+    setDeletingPin(pin);
+    try {
+      const res = await fetch(`${REALTIME_URL}/api/sessions/${pin}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setSessions((prev) => prev.filter((s) => s.pin !== pin));
+        setStats((prev) => ({
+          ...prev,
+          totalSessions: Math.max(0, prev.totalSessions - 1),
+        }));
+      } else {
+        alert('Could not delete session from server.');
+      }
+    } catch (err) {
+      console.error('Delete session error:', err);
+      alert('Network error while deleting session.');
+    } finally {
+      setDeletingPin(null);
+    }
+  };
+
+  const handleDeleteAllSessions = async () => {
+    if (sessions.length === 0) return;
+    if (
+      !window.confirm(
+        `Are you sure you want to delete all ${sessions.length} recorded session reports? This action cannot be reversed.`
+      )
+    ) {
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${REALTIME_URL}/api/sessions/delete-batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teacherId: user?.id,
+          all: true,
+        }),
+      });
+      if (res.ok) {
+        setSessions([]);
+        setStats({ totalSessions: 0, totalLearners: 0, avgParticipation: 0 });
+      } else {
+        alert('Failed to delete sessions.');
+      }
+    } catch (err) {
+      console.error('Batch delete error:', err);
+      alert('Error during batch deletion.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredSessions = sessions.filter((s) => {
+    if (statusFilter === 'all') return true;
+    return s.status === statusFilter;
+  });
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F2F2F2]">
       <Navbar />
@@ -170,13 +243,67 @@ export const InsightsPage: React.FC = () => {
 
           {/* Past Sessions List */}
           <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-base sm:text-lg font-heading font-black text-slate-900">
-                Recent Session Reports
-              </h2>
-              <span className="text-xs text-slate-400 font-bold">
-                {sessions.length} recorded
-              </span>
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <h2 className="text-base sm:text-lg font-heading font-black text-slate-900">
+                  Recorded Sessions
+                </h2>
+                <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold">
+                  {filteredSessions.length} {filteredSessions.length === 1 ? 'session' : 'sessions'}
+                </span>
+              </div>
+
+              {/* Filters and Batch Actions */}
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold">
+                  <Filter className="w-3.5 h-3.5 text-slate-400 ml-1.5" />
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('all')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      statusFilter === 'all'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('completed')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      statusFilter === 'completed'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    Completed
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('waiting')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      statusFilter === 'waiting'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    In Progress
+                  </button>
+                </div>
+
+                {sessions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteAllSessions}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs"
+                    title="Delete all sessions"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Delete All</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {isLoading ? (
@@ -184,16 +311,16 @@ export const InsightsPage: React.FC = () => {
                 <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                 <span className="text-xs font-bold">Loading reports...</span>
               </div>
-            ) : sessions.length === 0 ? (
+            ) : filteredSessions.length === 0 ? (
               <div className="p-10 text-center">
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
                   <FileSpreadsheet className="w-6 h-6" />
                 </div>
                 <h3 className="font-heading font-bold text-slate-800 text-base">
-                  No session reports yet
+                  No sessions match this filter
                 </h3>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
-                  Host your first live quiz or poll to generate real-time student reports and attendance spreadsheets.
+                  Host live games to populate attendance data and performance metrics.
                 </p>
                 <Link
                   to="/dashboard"
@@ -216,7 +343,7 @@ export const InsightsPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {sessions.map((s) => (
+                    {filteredSessions.map((s) => (
                       <tr key={s._id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="py-3.5 px-5 font-mono font-black text-slate-900">
                           {s.pin}
@@ -240,15 +367,27 @@ export const InsightsPage: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-3.5 px-5 text-right">
-                          <button
-                            type="button"
-                            onClick={() => handleExportAttendance(s.pin)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer"
-                            title="Download CSV"
-                          >
-                            <Download className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Export CSV</span>
-                          </button>
+                          <div className="inline-flex items-center gap-2 justify-end">
+                            <button
+                              type="button"
+                              onClick={() => handleExportAttendance(s.pin)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                              title="Download Attendance CSV"
+                            >
+                              <Download className="w-3.5 h-3.5 text-indigo-600" />
+                              <span>CSV</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSession(s.pin)}
+                              disabled={deletingPin === s.pin}
+                              className="p-1.5 rounded-lg border border-slate-200 hover:border-rose-300 hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                              title="Delete Session"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

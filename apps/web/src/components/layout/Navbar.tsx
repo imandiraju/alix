@@ -55,9 +55,9 @@ export const Navbar: React.FC = () => {
           <nav className="hidden lg:flex items-center gap-2">
             {/* 1. Activities (Discover - Green) */}
             <Link
-              to="/dashboard?view=activities"
+              to="/discover"
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black transition-all shadow-sm active:scale-95 ${
-                location.pathname === '/dashboard' && !location.search.includes('rosters') && !location.search.includes('present')
+                location.pathname === '/discover'
                   ? 'bg-[#26890C] text-white ring-2 ring-white/30'
                   : 'bg-[#26890C]/85 hover:bg-[#26890C] text-white'
               }`}

@@ -34,7 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       name: 'Discover',
-      path: '/dashboard',
+      path: '/discover',
       icon: Compass,
       badge: 'Live',
       badgeColor: 'bg-emerald-100 text-emerald-800',
@@ -74,10 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             const Icon = item.icon;
 
             const handleClick = (e: React.MouseEvent) => {
-              if (item.name === 'Discover' && onDiscoverClick) {
-                e.preventDefault();
-                onDiscoverClick();
-              } else if (item.name === 'Class Rosters' && onOpenRosters) {
+              if (item.name === 'Class Rosters' && onOpenRosters) {
                 e.preventDefault();
                 onOpenRosters();
               }
@@ -90,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onClick={handleClick}
                 className={({ isActive }) =>
                   `flex items-center justify-between px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                    isActive && item.name === 'Home'
+                    isActive
                       ? 'bg-alix-violet-50 text-alix-violet-800 font-extrabold'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`

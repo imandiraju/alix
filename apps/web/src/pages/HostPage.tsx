@@ -60,9 +60,13 @@ export const HostPage: React.FC = () => {
   const [timer, setTimer] = useState(30);
   const [answersSubmitted, setAnswersSubmitted] = useState(0);
   const [totalLearners, setTotalLearners] = useState(0);
+  const [questionDistribution, setQuestionDistribution] = useState<Record<string, number>>({});
   const [isQRExpanded, setIsQRExpanded] = useState(false);
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
   const [players, setPlayers] = useState<any[]>([]);
+
+  // Computed authoritative active learner count (always non-zero if players are connected)
+  const displayLearnerCount = Math.max(totalLearners, players.length);
 
   // Anti-Proxy Classroom Protection States
   const [isLocked, setIsLocked] = useState(false);
@@ -169,6 +173,8 @@ export const HostPage: React.FC = () => {
         }
         if (data.playerCount !== undefined) {
           setTotalLearners(data.playerCount);
+        } else {
+          setTotalLearners((prev) => Math.max(prev, 1));
         }
       });
 
@@ -193,6 +199,9 @@ export const HostPage: React.FC = () => {
       socket.on('leaderboard-update', (data: any) => {
         if (data.questionResults?.totalCount !== undefined) {
           setAnswersSubmitted(data.questionResults.totalCount);
+        }
+        if (data.questionResults?.distribution) {
+          setQuestionDistribution(data.questionResults.distribution);
         }
         if (Array.isArray(data.leaderboard)) {
           setPlayers((prev) => {
@@ -308,13 +317,14 @@ export const HostPage: React.FC = () => {
   ];
 
   const handleStartSession = () => {
-    if (totalLearners === 0) {
+    if (displayLearnerCount === 0) {
       alert('At least 1 learner must join the session before starting the live test.');
       return;
     }
     setStage('question');
     setTimer(currentQ.timeLimit || 30);
     setAnswersSubmitted(0);
+    setQuestionDistribution({});
     try {
       const socket = getSocket();
       socket.emit('start-game', {
@@ -337,6 +347,7 @@ export const HostPage: React.FC = () => {
       const nextTimeLimit = nextQ?.timeLimit || 30;
       setTimer(nextTimeLimit);
       setAnswersSubmitted(0);
+      setQuestionDistribution({});
       setStage('question');
       try {
         const socket = getSocket();
@@ -498,21 +509,21 @@ export const HostPage: React.FC = () => {
 
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10">
             <Users className="w-4 h-4 text-cyan-400" />
-            <span className="font-mono text-sm font-bold text-white">{totalLearners}</span>
+            <span className="font-mono text-sm font-bold text-white">{displayLearnerCount}</span>
           </div>
 
           {stage === 'lobby' ? (
             <button
               type="button"
               onClick={handleStartSession}
-              disabled={totalLearners === 0}
+              disabled={displayLearnerCount === 0}
               className={`px-5 py-2 rounded-lg font-bold text-sm text-white transition-all duration-100 flex items-center gap-1.5 ${
-                totalLearners === 0
+                displayLearnerCount === 0
                   ? 'bg-slate-700/80 border-b-4 border-slate-900 opacity-60 cursor-not-allowed'
                   : 'bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#1a5e08] active:border-b-0 active:translate-y-1 cursor-pointer'
               }`}
             >
-              <span>{totalLearners === 0 ? 'Waiting...' : 'Start'}</span>
+              <span>{displayLearnerCount === 0 ? 'Waiting...' : 'Start'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
@@ -673,15 +684,15 @@ export const HostPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleStartSession}
-                disabled={totalLearners === 0}
+                disabled={displayLearnerCount === 0}
                 className={`px-10 py-4 sm:py-5 rounded-2xl text-white font-heading font-black text-lg sm:text-2xl shadow-2xl transition-all duration-100 inline-flex items-center gap-3 ${
-                  totalLearners === 0
+                  displayLearnerCount === 0
                     ? 'bg-slate-700/80 border-b-6 border-slate-900 opacity-60 cursor-not-allowed'
                     : 'bg-[#26890C] hover:bg-[#20740A] border-b-6 border-[#175407] active:border-b-0 active:translate-y-1.5 cursor-pointer group'
                 }`}
               >
                 <span>
-                  {totalLearners === 0
+                  {displayLearnerCount === 0
                     ? 'Waiting for Learners to Join...'
                     : `Start Game (${questions.length} questions)`}
                 </span>
@@ -709,7 +720,7 @@ export const HostPage: React.FC = () => {
                   <div className="text-right">
                     <div className="text-xs text-slate-400 uppercase font-semibold">Submissions</div>
                     <div className="text-base sm:text-lg font-mono font-bold text-alix-cyan-400">
-                      {answersSubmitted} / {Math.max(1, totalLearners)}
+                      {answersSubmitted} / {Math.max(1, displayLearnerCount)}
                     </div>
                   </div>
                   <Countdown secondsRemaining={timer} totalSeconds={currentQ.timeLimit || 30} size="md" />
@@ -785,6 +796,9 @@ export const HostPage: React.FC = () => {
               {displayOptions.map((item, displayIdx) => {
                 const t = themes[displayIdx % themes.length];
                 const isCorrect = item.originalIdx === currentQ.correctIndex;
+                const voteCount = questionDistribution[item.originalIdx.toString()] || 0;
+                const percent = answersSubmitted > 0 ? Math.round((voteCount / answersSubmitted) * 100) : 0;
+
                 return (
                   <div key={item.originalIdx} className="flex flex-col items-center gap-2 h-full justify-end">
                     {/* Checkmark badge */}
@@ -796,17 +810,32 @@ export const HostPage: React.FC = () => {
                       <div className="w-8 h-8 opacity-0 mb-1" />
                     )}
 
-                    {/* Arcade Option Bar */}
+                    {/* Arcade Option Bar with Response Count & Percentages */}
                     <div
                       className={`w-full rounded-2xl ${t.bg} border-b-6 ${t.border} p-5 sm:p-6 text-center text-white font-black shadow-lg transition-all flex flex-col justify-between items-center ${
-                        isCorrect ? 'ring-4 ring-white shadow-2xl scale-[1.02]' : 'opacity-60'
+                        isCorrect ? 'ring-4 ring-white shadow-2xl scale-[1.02]' : 'opacity-70'
                       }`}
-                      style={{ minHeight: isCorrect ? '160px' : '110px' }}
+                      style={{ minHeight: isCorrect ? '170px' : '130px' }}
                     >
-                      <span className="text-3xl sm:text-4xl drop-shadow">{t.shape}</span>
-                      <span className="text-sm sm:text-base font-black line-clamp-2 mt-2 leading-tight drop-shadow">
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-2xl sm:text-3xl drop-shadow">{t.shape}</span>
+                        <span className="px-2.5 py-0.5 rounded-full bg-black/35 font-mono text-xs sm:text-sm font-black border border-white/20">
+                          {answersSubmitted > 0 ? `${percent}%` : '0%'}
+                        </span>
+                      </div>
+
+                      <span className="text-sm sm:text-base font-black line-clamp-2 my-2 leading-tight drop-shadow">
                         {item.text}
                       </span>
+
+                      <div className="w-full pt-2 flex items-center justify-between text-xs font-bold text-white/90 border-t border-white/20">
+                        <span>{voteCount} {voteCount === 1 ? 'vote' : 'votes'}</span>
+                        {isCorrect && (
+                          <span className="text-emerald-300 font-extrabold flex items-center gap-1">
+                            ✓ Correct
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -960,7 +989,7 @@ export const HostPage: React.FC = () => {
         onClose={() => setIsQRExpanded(false)}
         pin={pin}
         joinUrl={joinUrl}
-        participantCount={totalLearners}
+        participantCount={displayLearnerCount}
       />
     </div>
   );

@@ -440,7 +440,7 @@ export const JoinPage: React.FC = () => {
           <p>
             Get started for FREE at{' '}
             <Link to="/login" className="text-white font-bold underline underline-offset-4 hover:text-alix-cyan-300">
-              alix.edu
+              {typeof window !== 'undefined' ? window.location.host : 'alix-alp.vercel.app'}
             </Link>
           </p>
           <div className="flex items-center justify-center gap-2 text-[11px] text-white/60">

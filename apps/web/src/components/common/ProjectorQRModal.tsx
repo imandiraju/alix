@@ -117,7 +117,10 @@ export const ProjectorQRModal: React.FC<ProjectorQRModalProps> = ({
                 Or join manually in browser:
               </div>
               <div className="text-sm font-semibold text-slate-200">
-                Go to <span className="text-alix-cyan-400 font-mono">alix.edu/join</span>
+                Go to{' '}
+                <span className="text-alix-cyan-400 font-mono">
+                  {typeof window !== 'undefined' ? window.location.host : 'alix-alp.vercel.app'}/join
+                </span>
               </div>
               <div className="flex items-center justify-between pt-1">
                 <span className="text-xs text-slate-400">Classroom PIN:</span>
