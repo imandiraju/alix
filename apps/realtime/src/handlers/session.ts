@@ -638,10 +638,25 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       }
     }
 
+    const cIdx = typeof (activeQ as any)?.correctIndex === 'number'
+      ? (activeQ as any).correctIndex
+      : typeof payload?.correctIndex === 'number'
+      ? payload.correctIndex
+      : !isNaN(Number(activeQ?.correctAnswer))
+      ? Number(activeQ?.correctAnswer)
+      : 0;
+
+    const cIndices = Array.isArray((activeQ as any)?.correctIndices) && (activeQ as any).correctIndices.length > 0
+      ? (activeQ as any).correctIndices
+      : Array.isArray(payload?.correctIndices) && payload.correctIndices.length > 0
+      ? payload.correctIndices
+      : [cIdx];
+
     const revealPayload = {
       questionIndex: session.currentQuestionIndex,
-      correctAnswer: activeQ?.correctAnswer,
-      correctIndices: (activeQ as any)?.correctIndices,
+      correctIndex: cIdx,
+      correctAnswer: cIdx.toString(),
+      correctIndices: cIndices,
       questionResults: {
         questionId: activeQ?.id,
         correctCount: answers.filter((a: any) => a.correct).length,
@@ -678,6 +693,54 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
 
     const incomingQ = payload.question;
     const timeLimit = Number(payload.timeLimit) || Number(incomingQ?.timeLimit) || 30;
+    (session as any).questionRemaining = timeLimit;
+
+    // Authoritatively sync session.quiz.questions[qIdx] from incomingQ
+    if (incomingQ) {
+      if (!session.quiz) {
+        session.quiz = {
+          id: session.quizId || 'live-quiz',
+          title: session.quiz?.title || 'Interactive Quiz',
+          questions: [],
+        } as any;
+      }
+      if (!Array.isArray(session.quiz.questions)) {
+        session.quiz.questions = [];
+      }
+
+      const rawOpts = Array.isArray(incomingQ.options) ? incomingQ.options : [];
+      const nonBlank = rawOpts.filter((o: any) => {
+        const txt = typeof o === 'string' ? o : o?.text;
+        return txt !== undefined && String(txt).trim().length > 0;
+      });
+      const finalOpts = nonBlank.length >= 2 ? nonBlank : rawOpts;
+
+      const cIdx = typeof incomingQ.correctIndex === 'number'
+        ? incomingQ.correctIndex
+        : Array.isArray(incomingQ.correctIndices) && incomingQ.correctIndices.length > 0
+        ? incomingQ.correctIndices[0]
+        : 0;
+
+      const cIndices = Array.isArray(incomingQ.correctIndices) && incomingQ.correctIndices.length > 0
+        ? incomingQ.correctIndices
+        : [cIdx];
+
+      session.quiz.questions[qIdx] = {
+        id: incomingQ.id || `q-${qIdx + 1}`,
+        text: incomingQ.text,
+        type: incomingQ.type,
+        questionType: incomingQ.questionType || incomingQ.type,
+        options: finalOpts.map((opt: any, oIdx: number) => {
+          const label = typeof opt === 'string' ? opt : (opt?.text || `Option ${oIdx + 1}`);
+          return { id: oIdx.toString(), text: label, isCorrect: cIndices.includes(oIdx) };
+        }),
+        correctIndex: cIdx,
+        correctIndices: cIndices,
+        correctAnswer: cIdx.toString(),
+        timeLimit,
+        points: Number(incomingQ.points) || 1000,
+      } as any;
+    }
     (session as any).questionRemaining = timeLimit;
 
     const rawOpts = Array.isArray(incomingQ?.options) ? incomingQ.options : [];
@@ -873,12 +936,20 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       // quiet
     }
 
+    const cIdx = typeof (currentQuestion as any).correctIndex === 'number'
+      ? (currentQuestion as any).correctIndex
+      : !isNaN(Number(currentQuestion.correctAnswer))
+      ? Number(currentQuestion.correctAnswer)
+      : 0;
+
     socket.emit('answer-result', {
       correct,
       points,
       streak,
       totalScore: player?.score ?? 0,
-      correctAnswer: currentQuestion.correctAnswer ?? (currentQuestion as any).correctIndex?.toString(),
+      correctIndex: cIdx,
+      correctIndices: (currentQuestion as any).correctIndices || [cIdx],
+      correctAnswer: cIdx.toString(),
     });
 
     // Broadcast live question submitted tally and updated distribution to room/host

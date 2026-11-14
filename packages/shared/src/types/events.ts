@@ -63,6 +63,8 @@ export interface AnswerResultPayload {
   streak: number;
   totalScore: number;
   correctAnswer: string;
+  correctIndex?: number;
+  correctIndices?: number[];
 }
 
 export interface LeaderboardEntry {

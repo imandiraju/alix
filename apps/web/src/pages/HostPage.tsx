@@ -357,7 +357,16 @@ export const HostPage: React.FC = () => {
           remaining: 0,
           total: currentQ.timeLimit || 30,
         });
-        (socket as any).emit('reveal-answers', { code: pin });
+        const targetCorrectIndex = typeof currentQ?.correctIndex === 'number'
+          ? currentQ.correctIndex
+          : (Array.isArray((currentQ as any)?.correctIndices) && (currentQ as any).correctIndices.length > 0 ? (currentQ as any).correctIndices[0] : 0);
+
+        (socket as any).emit('reveal-answers', {
+          code: pin,
+          correctIndex: targetCorrectIndex,
+          correctIndices: (currentQ as any)?.correctIndices || [targetCorrectIndex],
+          correctAnswer: targetCorrectIndex.toString(),
+        });
       } catch {}
       return;
     }
@@ -415,11 +424,21 @@ export const HostPage: React.FC = () => {
         quizTitle,
         colorOnly: colorOnlyMode,
       } as any);
+
+      const targetCorrectIndex = typeof currentQ?.correctIndex === 'number'
+        ? currentQ.correctIndex
+        : (Array.isArray((currentQ as any)?.correctIndices) && (currentQ as any).correctIndices.length > 0 ? (currentQ as any).correctIndices[0] : 0);
+
       (socket as any).emit('host-question-advance', {
         code: pin,
         questionIndex: 0,
         timeLimit: currentQ.timeLimit || 30,
-        question: currentQ,
+        question: {
+          ...currentQ,
+          correctIndex: targetCorrectIndex,
+          correctIndices: (currentQ as any)?.correctIndices || [targetCorrectIndex],
+          correctAnswer: targetCorrectIndex.toString(),
+        },
         totalQuestions: questions.length,
         colorOnly: colorOnlyMode,
       });
@@ -446,11 +465,21 @@ export const HostPage: React.FC = () => {
           quizId: sessionId,
           questionIndex: nextIdx,
         } as any);
+
+        const nextCorrectIndex = typeof nextQ?.correctIndex === 'number'
+          ? nextQ.correctIndex
+          : (Array.isArray((nextQ as any)?.correctIndices) && (nextQ as any).correctIndices.length > 0 ? (nextQ as any).correctIndices[0] : 0);
+
         (socket as any).emit('host-question-advance', {
           code: pin,
           questionIndex: nextIdx,
           timeLimit: nextTimeLimit,
-          question: nextQ,
+          question: {
+            ...nextQ,
+            correctIndex: nextCorrectIndex,
+            correctIndices: (nextQ as any)?.correctIndices || [nextCorrectIndex],
+            correctAnswer: nextCorrectIndex.toString(),
+          },
           totalQuestions: questions.length,
           colorOnly: colorOnlyMode,
         });
@@ -786,7 +815,16 @@ export const HostPage: React.FC = () => {
                       remaining: 0,
                       total: currentQ.timeLimit || 30,
                     });
-                    (socket as any).emit('reveal-answers', { code: pin });
+                    const targetCorrectIndex = typeof currentQ?.correctIndex === 'number'
+                      ? currentQ.correctIndex
+                      : (Array.isArray((currentQ as any)?.correctIndices) && (currentQ as any).correctIndices.length > 0 ? (currentQ as any).correctIndices[0] : 0);
+
+                    (socket as any).emit('reveal-answers', {
+                      code: pin,
+                      correctIndex: targetCorrectIndex,
+                      correctIndices: (currentQ as any)?.correctIndices || [targetCorrectIndex],
+                      correctAnswer: targetCorrectIndex.toString(),
+                    });
                   } catch {}
                 }
                 else if (stage === 'chart') handleShowLeaderboard();

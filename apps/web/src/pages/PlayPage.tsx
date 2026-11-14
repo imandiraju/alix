@@ -105,6 +105,8 @@ export const PlayPage: React.FC = () => {
   const [lastPointsAwarded, setLastPointsAwarded] = useState(0);
   const [isLastAnswerCorrect, setIsLastAnswerCorrect] = useState(false);
   const [serverCorrectAnswer, setServerCorrectAnswer] = useState<string | null>(null);
+  const [serverCorrectIndex, setServerCorrectIndex] = useState<number | null>(null);
+  const [serverCorrectIndices, setServerCorrectIndices] = useState<number[]>([]);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [colorOnlyMode, setColorOnlyMode] = useState(false);
   const [questionDistribution, setQuestionDistribution] = useState<Record<string, number>>({});
@@ -280,6 +282,8 @@ export const PlayPage: React.FC = () => {
           setIsLastAnswerCorrect(false);
           setLastPointsAwarded(0);
           setServerCorrectAnswer(null);
+          setServerCorrectIndex(null);
+          setServerCorrectIndices([]);
           setQuestionDistribution({});
           setTotalRoomAnswers(0);
           if (typeof data.colorOnly === 'boolean') {
@@ -321,8 +325,14 @@ export const PlayPage: React.FC = () => {
       // Listen for teacher/host revealing answers or timer reaching 0
       (socket as any).on('answers-revealed', (data: any) => {
         setPhase((prev) => (prev === 'answering' || prev === 'submitted' ? 'score' : prev));
+        if (data?.correctIndex !== undefined && data?.correctIndex !== null) {
+          setServerCorrectIndex(Number(data.correctIndex));
+        }
         if (data?.correctAnswer !== undefined && data?.correctAnswer !== null) {
           setServerCorrectAnswer(String(data.correctAnswer));
+        }
+        if (Array.isArray(data?.correctIndices)) {
+          setServerCorrectIndices(data.correctIndices);
         }
         if (data?.questionResults?.distribution) {
           setQuestionDistribution(data.questionResults.distribution);
@@ -352,8 +362,14 @@ export const PlayPage: React.FC = () => {
         const correct = !!data.correct;
         setIsLastAnswerCorrect(correct);
         setLastPointsAwarded(data.points || 0);
-        if (data.correctAnswer !== undefined && data.correctAnswer !== null) {
+        if (data?.correctIndex !== undefined && data?.correctIndex !== null) {
+          setServerCorrectIndex(Number(data.correctIndex));
+        }
+        if (data?.correctAnswer !== undefined && data?.correctAnswer !== null) {
           setServerCorrectAnswer(String(data.correctAnswer));
+        }
+        if (Array.isArray(data?.correctIndices)) {
+          setServerCorrectIndices(data.correctIndices);
         }
 
         if (typeof data.totalScore === 'number') {
@@ -548,9 +564,6 @@ export const PlayPage: React.FC = () => {
         timeMs: timeSpentMs,
       });
     } catch {}
-
-    setIsLastAnswerCorrect(false);
-    setLastPointsAwarded(0);
   };
 
   // Student selects a single option
@@ -580,10 +593,6 @@ export const PlayPage: React.FC = () => {
     } catch {
       // quiet
     }
-
-    // Server answer-result event will provide authoritative correctness and score
-    setIsLastAnswerCorrect(false);
-    setLastPointsAwarded(0);
   };
 
   // Exit session and clear cached session storage
@@ -936,20 +945,38 @@ export const PlayPage: React.FC = () => {
         {/* Phase: Score Result Screen */}
         {phase === 'score' && (() => {
           const hasAnswered = selectedIndex !== null || selectedIndices.length > 0;
-          const correctIdxNum = serverCorrectAnswer !== null && !isNaN(Number(serverCorrectAnswer))
+          const correctIdxNum = serverCorrectIndex !== null
+            ? serverCorrectIndex
+            : serverCorrectAnswer !== null && !isNaN(Number(serverCorrectAnswer))
             ? Number(serverCorrectAnswer)
             : -1;
           const correctText = correctIdxNum >= 0 && currentQuestion.options[correctIdxNum]
             ? currentQuestion.options[correctIdxNum]
             : serverCorrectAnswer;
 
-          const isReallyCorrect = isLastAnswerCorrect || (
-            hasAnswered && selectedIndex !== null && serverCorrectAnswer !== null && (
-              selectedIndex.toString() === serverCorrectAnswer.toString() ||
-              (correctIdxNum >= 0 && selectedIndex === correctIdxNum) ||
-              (currentQuestion.options[selectedIndex] && currentQuestion.options[selectedIndex].trim().toLowerCase() === String(serverCorrectAnswer).trim().toLowerCase())
+          const isMultiCorrect = isMultiSelect && (
+            isLastAnswerCorrect || (
+              serverCorrectIndices.length > 0 &&
+              selectedIndices.length === serverCorrectIndices.length &&
+              selectedIndices.every((idx) => serverCorrectIndices.includes(idx))
             )
           );
+
+          const isSingleCorrect = !isMultiSelect && (
+            isLastAnswerCorrect ||
+            lastPointsAwarded > 0 || (
+              hasAnswered && selectedIndex !== null && (
+                (serverCorrectIndex !== null && selectedIndex === serverCorrectIndex) ||
+                (serverCorrectAnswer !== null && (
+                  selectedIndex.toString() === serverCorrectAnswer.toString() ||
+                  (correctIdxNum >= 0 && selectedIndex === correctIdxNum) ||
+                  (currentQuestion.options[selectedIndex] && currentQuestion.options[selectedIndex].trim().toLowerCase() === String(serverCorrectAnswer).trim().toLowerCase())
+                ))
+              )
+            )
+          );
+
+          const isReallyCorrect = isMultiSelect ? isMultiCorrect : isSingleCorrect;
 
           const effectivePoints = lastPointsAwarded > 0 ? lastPointsAwarded : isReallyCorrect ? 1000 : 0;
 
@@ -1045,8 +1072,8 @@ export const PlayPage: React.FC = () => {
                       const count = questionDistribution[oIdx.toString()] || 0;
                       const totalVotes = totalRoomAnswers || Object.values(questionDistribution).reduce((a, b) => a + b, 0) || 1;
                       const pct = Math.round((count / totalVotes) * 100);
-                      const isOptionCorrect = oIdx === correctIdxNum || (correctText && optText.trim().toLowerCase() === correctText.trim().toLowerCase());
-                      const isMyPick = selectedIndex === oIdx;
+                      const isOptionCorrect = oIdx === correctIdxNum || serverCorrectIndices.includes(oIdx) || (correctText && optText.trim().toLowerCase() === correctText.trim().toLowerCase());
+                      const isMyPick = selectedIndex === oIdx || selectedIndices.includes(oIdx);
 
                       const themeShapes = ['▲', '◆', '●', '■'];
                       const themeColors = ['bg-[#E21B3C]', 'bg-[#1368CE]', 'bg-[#D89E00]', 'bg-[#26890C]'];
