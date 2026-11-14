@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import AlixLogo from '../components/common/AlixLogo';
 import Countdown from '../components/game/Countdown';
 import Leaderboard from '../components/game/Leaderboard';
@@ -36,6 +36,7 @@ interface QuizQuestion {
 
 export const HostPage: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   const [pin, setPin] = useState<string>('842915');
@@ -370,6 +371,19 @@ export const HostPage: React.FC = () => {
     }
   };
 
+  const handleShowLeaderboard = () => {
+    setStage('leaderboard');
+    try {
+      const socket = getSocket();
+      (socket as any).emit('host-show-leaderboard', {
+        code: pin,
+        sessionId: activeSessionId || pin,
+      });
+    } catch (err) {
+      console.warn('Could not emit host-show-leaderboard:', err);
+    }
+  };
+
   // Anti-Proxy Shield: Close Room Doors to Outsiders
   const handleToggleLock = async () => {
     try {
@@ -506,8 +520,9 @@ export const HostPage: React.FC = () => {
               type="button"
               onClick={() => {
                 if (stage === 'question') setStage('chart');
-                else if (stage === 'chart') setStage('leaderboard');
+                else if (stage === 'chart') handleShowLeaderboard();
                 else if (stage === 'leaderboard') handleNextQuestion();
+                else if (stage === 'victory') navigate('/dashboard');
                 else setStage('question');
               }}
               className="px-4 py-2 rounded-lg bg-[#1368CE] hover:bg-[#105AB3] border-b-4 border-[#0d4a99] active:border-b-0 active:translate-y-1 font-bold text-sm text-white transition-all duration-100 flex items-center gap-1.5 cursor-pointer"
@@ -813,7 +828,7 @@ export const HostPage: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => setStage('leaderboard')}
+                    onClick={handleShowLeaderboard}
                     className="px-6 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-heading font-black text-sm sm:text-base flex items-center gap-2 cursor-pointer shadow-lg transition-all"
                   >
                     <Trophy className="w-4 h-4 text-amber-400" />

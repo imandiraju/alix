@@ -115,6 +115,7 @@ export interface ClientToServerEvents {
   'next-question': (payload: NextQuestionPayload) => void;
   'submit-answer': (payload: SubmitAnswerPayload) => void;
   'end-game': (payload: EndGamePayload) => void;
+  'host-show-leaderboard': (payload: any) => void;
 }
 
 export interface ServerToClientEvents {
@@ -125,6 +126,7 @@ export interface ServerToClientEvents {
   'timer-tick': (payload: TimerTickPayload) => void;
   'answer-result': (payload: AnswerResultPayload) => void;
   'leaderboard-update': (payload: LeaderboardUpdatePayload) => void;
+  'show-leaderboard': (payload: { leaderboard: LeaderboardEntry[]; sessionId?: string; code?: string }) => void;
   'game-ended': (payload: GameEndedPayload) => void;
   'session-status': (payload: SessionStatusPayload) => void;
   error: (payload: { message: string; code: string }) => void;

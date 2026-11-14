@@ -229,9 +229,47 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     const sessionPin = payload.code.toUpperCase();
     const rollNo = (payload as any).rollNo ? String((payload as any).rollNo).trim().toUpperCase() : '';
 
+    // If session has already finished, immediately send game-ended to student
+    if (session.status === SessionStatus.FINISHED) {
+      const leaderboard = sessionManager.getLeaderboard(session.id);
+      const players = session.players;
+      socket.emit('game-ended', {
+        finalLeaderboard: leaderboard,
+        sessionSummary: {
+          totalQuestions: session.quiz?.questions.length ?? 0,
+          totalPlayers: players.length,
+          averageScore:
+            players.length > 0
+              ? Math.round(players.reduce((sum: number, p: any) => sum + p.score, 0) / players.length)
+              : 0,
+          highestScore: players.length > 0 ? Math.max(...players.map((p: any) => p.score)) : 0,
+          completionRate: 1,
+        },
+      });
+      return;
+    }
+
     // Anti-Proxy validation against MongoDB session document
     try {
       const sessionDoc = await GameSessionModel.findOne({ pin: sessionPin });
+      if (sessionDoc?.status === 'completed') {
+        const leaderboard = sessionManager.getLeaderboard(session.id);
+        const players = session.players;
+        socket.emit('game-ended', {
+          finalLeaderboard: leaderboard,
+          sessionSummary: {
+            totalQuestions: session.quiz?.questions.length ?? 0,
+            totalPlayers: players.length,
+            averageScore:
+              players.length > 0
+                ? Math.round(players.reduce((sum: number, p: any) => sum + p.score, 0) / players.length)
+                : 0,
+            highestScore: players.length > 0 ? Math.max(...players.map((p: any) => p.score)) : 0,
+            completionRate: 1,
+          },
+        });
+        return;
+      }
       if (sessionDoc?.isLocked) {
         socket.emit('error', {
           message: 'The instructor has locked this session. No new joiners are permitted.',
@@ -501,6 +539,26 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
 
     io.to(session.id).emit('question-started', questionPayload);
     io.to(session.code).emit('question-started', questionPayload);
+  });
+
+  // ─── Host Live Leaderboard Reveal ─────────────────────────────────────
+
+  (socket as any).on('host-show-leaderboard', (payload: any) => {
+    const session = resolveSession(socket, payload);
+    if (!session) return;
+    session.hostSocketId = socket.id;
+    socket.data.sessionId = session.id;
+    socket.data.role = 'host';
+
+    const leaderboard = sessionManager.getLeaderboard(session.id);
+    const leaderboardPayload = {
+      leaderboard,
+      sessionId: session.id,
+      code: session.code,
+    };
+
+    (io.to(session.id) as any).emit('show-leaderboard', leaderboardPayload);
+    (io.to(session.code) as any).emit('show-leaderboard', leaderboardPayload);
   });
 
   // ─── Submit Answer ────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import AlixLogo from '../components/common/AlixLogo';
 import QuestionCard from '../components/game/QuestionCard';
 import OptionButton from '../components/game/OptionButton';
@@ -13,6 +13,7 @@ import { getSocket, REALTIME_URL } from '../services/socket';
 import {
   triggerCorrectAnswerConfetti,
   triggerStreakBurst,
+  triggerVictoryPodiumCelebration,
 } from '../components/game/CelebrationEffects';
 import {
   Trophy,
@@ -38,6 +39,7 @@ interface ActiveQuestion {
 
 export const PlayPage: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const studentName = searchParams.get('name') || 'Learner';
   const rollNo = searchParams.get('rollNo') || '';
@@ -45,8 +47,8 @@ export const PlayPage: React.FC = () => {
   const urlQuizId = searchParams.get('quizId') || '';
   const avatar = getAvatarById(avatarId);
 
-  // Game Phases: 'waiting' | 'answering' | 'submitted' | 'score' | 'leaderboard'
-  const [phase, setPhase] = useState<'waiting' | 'answering' | 'submitted' | 'score' | 'leaderboard'>('waiting');
+  // Game Phases: 'waiting' | 'answering' | 'submitted' | 'score' | 'leaderboard' | 'ended'
+  const [phase, setPhase] = useState<'waiting' | 'answering' | 'submitted' | 'score' | 'leaderboard' | 'ended'>('waiting');
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [secondsRemaining, setSecondsRemaining] = useState(30);
   const [score, setScore] = useState(() => {
@@ -172,6 +174,9 @@ export const PlayPage: React.FC = () => {
         if (statusStr === 'playing' && phaseRef.current === 'waiting') {
           // Instructor launched session - transition immediately to Question 1!
           activateQuestion(0);
+        } else if (statusStr === 'finished' || statusStr === 'completed') {
+          setPhase('ended');
+          triggerVictoryPodiumCelebration();
         }
       });
 
@@ -226,9 +231,12 @@ export const PlayPage: React.FC = () => {
         }
       });
 
-      // Listen for errors
+      // Listen for errors (such as room already closed / finished)
       socket.on('error', (err: any) => {
         console.warn('[ALIX Student Play Error]:', err);
+        if (err?.code === 'SESSION_NOT_FOUND' || err?.code === 'SESSION_FINISHED') {
+          setPhase('ended');
+        }
       });
 
       // Listen for answer verification from server
@@ -256,19 +264,28 @@ export const PlayPage: React.FC = () => {
         }
       });
 
-      // Listen for leaderboard update
+      // Listen for host presenting the live leaderboard
+      socket.on('show-leaderboard', (data: any) => {
+        if (Array.isArray(data?.leaderboard)) {
+          setLeaderboardList(data.leaderboard);
+        }
+        setPhase('leaderboard');
+      });
+
+      // Listen for leaderboard update (periodic score tabulation)
       socket.on('leaderboard-update', (data: any) => {
-        if (data.leaderboard) {
+        if (Array.isArray(data?.leaderboard)) {
           setLeaderboardList(data.leaderboard);
         }
       });
 
       // Listen for game end
       socket.on('game-ended', (data: any) => {
-        if (data.finalLeaderboard) {
+        if (Array.isArray(data?.finalLeaderboard)) {
           setLeaderboardList(data.finalLeaderboard);
         }
-        setPhase('leaderboard');
+        setPhase('ended');
+        triggerVictoryPodiumCelebration();
       });
 
       return () => {
@@ -278,8 +295,10 @@ export const PlayPage: React.FC = () => {
         socket.off('question-started');
         socket.off('timer-tick');
         socket.off('answer-result');
+        socket.off('show-leaderboard');
         socket.off('leaderboard-update');
         socket.off('game-ended');
+        socket.off('error');
       };
     } catch {
       // fallback
@@ -332,6 +351,26 @@ export const PlayPage: React.FC = () => {
     setIsLastAnswerCorrect(false);
     setLastPointsAwarded(0);
   };
+
+  // Exit session and clear cached session storage
+  const handleExitSession = () => {
+    try {
+      sessionStorage.removeItem(`alix_score_${sessionId}`);
+      sessionStorage.removeItem(`alix_streak_${sessionId}`);
+      for (let i = 0; i < 50; i++) {
+        sessionStorage.removeItem(`alix_sub_${sessionId}_q${i}`);
+      }
+    } catch {}
+    navigate('/join');
+  };
+
+  const myEntry = leaderboardList.find(
+    (p: any) =>
+      (rollNo && p.rollNo && p.rollNo.toUpperCase() === rollNo.toUpperCase()) ||
+      p.playerName?.trim().toLowerCase() === studentName.trim().toLowerCase()
+  );
+  const myRank = myEntry?.rank ?? 1;
+  const myDisplayScore = typeof myEntry?.score === 'number' ? myEntry.score : score;
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-gradient-to-br from-[#46178F] via-[#350F6E] to-[#1E0938] text-white select-none relative overflow-hidden">
@@ -552,37 +591,229 @@ export const PlayPage: React.FC = () => {
           </div>
         )}
 
-        {/* Phase: Final Leaderboard */}
+        {/* Phase: Live Round Leaderboard */}
         {phase === 'leaderboard' && (
-          <div className="text-center max-w-md mx-auto space-y-6 animate-fade-in py-8">
-            <div className="w-20 h-20 rounded-3xl bg-amber-500/20 border-2 border-amber-400/40 text-amber-300 flex items-center justify-center mx-auto shadow-2xl">
-              <Trophy className="w-10 h-10" />
-            </div>
-            <div>
-              <h2 className="text-3xl sm:text-4xl font-heading font-black text-white">
-                Session Complete!
+          <div className="text-center max-w-md mx-auto space-y-4 animate-scale-in py-4 px-2">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 text-xs font-bold uppercase tracking-wider">
+                <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                <span>Live Standings</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-heading font-black text-white">
+                Classroom Leaderboard
               </h2>
-              <p className="text-xs sm:text-sm text-white/70 mt-1">
-                Great job participating in this interactive active learning round!
+              <p className="text-xs text-white/70">
+                Question {currentQuestion.index || 1} of {currentQuestion.total || 1} Standings
               </p>
             </div>
 
-            <div className="p-5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md shadow-xl">
-              <span className="text-[11px] font-black uppercase tracking-wider text-alix-cyan-300">
-                Final Score
-              </span>
-              <div className="text-4xl font-mono font-black text-white mt-1">
-                {score.toLocaleString()} <span className="text-xs text-white/60">PTS</span>
+            {/* My Rank Highlight Card */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-violet-600/40 to-cyan-600/40 border border-cyan-400/30 backdrop-blur-md shadow-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 p-0.5 flex items-center justify-center shadow-md">
+                  <RenderAvatarSvg avatarId={avatar.id} size={36} />
+                </div>
+                <div className="text-left">
+                  <div className="text-xs font-bold text-cyan-200">Your Standing</div>
+                  <div className="text-base font-heading font-black text-white">
+                    Rank #{myRank} <span className="text-xs text-white/60 font-normal">of {leaderboardList.length || 1}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-lg font-mono font-black text-amber-300">
+                  {myDisplayScore.toLocaleString()}
+                </div>
+                <div className="text-[10px] font-bold text-white/60 uppercase">PTS</div>
               </div>
             </div>
 
-            <Link
-              to="/join"
-              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-alix-cyan-400 hover:bg-alix-cyan-300 text-slate-950 font-heading font-black text-sm shadow-xl transition-all active:scale-95 cursor-pointer"
-            >
-              <span>Join Another Session</span>
-              <ArrowRight className="w-4 h-4 stroke-[3]" />
-            </Link>
+            {/* Top Standings List */}
+            <div className="bg-black/30 backdrop-blur-md rounded-2xl border border-white/10 p-3 divide-y divide-white/10 text-left space-y-1 max-h-60 overflow-y-auto">
+              {leaderboardList.length === 0 ? (
+                <div className="py-6 text-center text-xs text-white/60">
+                  Tabulating latest scores from classroom...
+                </div>
+              ) : (
+                leaderboardList.slice(0, 5).map((p: any, idx: number) => {
+                  const isMe =
+                    (rollNo && p.rollNo && p.rollNo.toUpperCase() === rollNo.toUpperCase()) ||
+                    p.playerName?.trim().toLowerCase() === studentName.trim().toLowerCase();
+                  const rankNum = p.rank || idx + 1;
+                  return (
+                    <div
+                      key={p.playerId || idx}
+                      className={`py-2 px-2.5 rounded-xl flex items-center justify-between transition-all ${
+                        isMe
+                          ? 'bg-alix-cyan-500/20 border border-alix-cyan-400/50 shadow-sm'
+                          : 'hover:bg-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
+                            rankNum === 1
+                              ? 'bg-amber-400 text-slate-950 font-black'
+                              : rankNum === 2
+                              ? 'bg-slate-300 text-slate-950 font-black'
+                              : rankNum === 3
+                              ? 'bg-amber-600 text-white font-black'
+                              : 'bg-white/10 text-white/80'
+                          }`}
+                        >
+                          {rankNum === 1 ? '1' : rankNum === 2 ? '2' : rankNum === 3 ? '3' : rankNum}
+                        </span>
+                        <div>
+                          <div className="text-sm font-bold text-white flex items-center gap-1.5">
+                            <span className="truncate max-w-[130px]">{p.playerName}</span>
+                            {isMe && (
+                              <span className="px-1.5 py-0.5 rounded bg-alix-cyan-400 text-slate-950 text-[10px] font-black uppercase">
+                                You
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="font-mono text-xs font-bold text-alix-cyan-300">
+                        {(p.score ?? 0).toLocaleString()} pts
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Waiting for Next Question Banner */}
+            <div className="p-3.5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-center gap-2.5 text-xs font-bold text-white/90 shadow-inner">
+              <span className="w-2 h-2 rounded-full bg-alix-cyan-400 animate-ping shrink-0" />
+              <span>Waiting for instructor to present next question...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Phase: Final Session Concluded */}
+        {phase === 'ended' && (
+          <div className="text-center max-w-md mx-auto space-y-5 animate-scale-in py-6 px-3">
+            <div className="relative inline-block">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-tr from-amber-500 via-yellow-400 to-amber-600 p-0.5 flex items-center justify-center mx-auto shadow-2xl ring-4 ring-amber-400/50 animate-bounce">
+                <Trophy className="w-10 h-10 sm:w-12 sm:h-12 text-slate-950 fill-current" />
+              </div>
+            </div>
+
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-black uppercase tracking-wider mb-2">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Session Concluded</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-heading font-black text-white">
+                Game Over, {studentName}!
+              </h2>
+              <p className="text-xs text-white/75 mt-1 font-medium">
+                The live classroom round has ended. Here is your final summary!
+              </p>
+            </div>
+
+            {/* Final Achievement & Rank Card */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-md shadow-2xl space-y-3">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-violet-500 to-cyan-400 p-0.5 flex items-center justify-center shadow-md">
+                    <RenderAvatarSvg avatarId={avatar.id} size={42} />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs font-bold text-cyan-200">Final Placement</div>
+                    <div className="text-lg font-heading font-black text-white flex items-center gap-1.5">
+                      {myRank === 1 ? (
+                        <span className="text-amber-300">🥇 1st Place Champion!</span>
+                      ) : myRank === 2 ? (
+                        <span className="text-slate-200">🥈 2nd Place Runner-Up</span>
+                      ) : myRank === 3 ? (
+                        <span className="text-amber-500">🥉 3rd Place Bronze</span>
+                      ) : (
+                        <span>Rank #{myRank} of {leaderboardList.length || 1}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="p-3 rounded-xl bg-black/20 text-center">
+                  <div className="text-[10px] font-black uppercase tracking-wider text-cyan-300">Final Score</div>
+                  <div className="text-2xl font-mono font-black text-white mt-0.5">
+                    {myDisplayScore.toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-white/50">PTS</div>
+                </div>
+                <div className="p-3 rounded-xl bg-black/20 text-center">
+                  <div className="text-[10px] font-black uppercase tracking-wider text-amber-300">Max Streak</div>
+                  <div className="text-2xl font-mono font-black text-white mt-0.5">
+                    {streak}x
+                  </div>
+                  <div className="text-[10px] text-white/50">STREAK 🔥</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Podium / Final Standings List */}
+            {leaderboardList.length > 0 && (
+              <div className="bg-black/30 backdrop-blur-md rounded-2xl border border-white/10 p-3 divide-y divide-white/10 text-left space-y-1 max-h-52 overflow-y-auto">
+                <div className="text-[11px] font-black uppercase tracking-wider text-white/60 px-2 py-1">
+                  Classroom Standings
+                </div>
+                {leaderboardList.slice(0, 5).map((p: any, idx: number) => {
+                  const isMe =
+                    (rollNo && p.rollNo && p.rollNo.toUpperCase() === rollNo.toUpperCase()) ||
+                    p.playerName?.trim().toLowerCase() === studentName.trim().toLowerCase();
+                  const rankNum = p.rank || idx + 1;
+                  return (
+                    <div
+                      key={p.playerId || idx}
+                      className={`py-2 px-2.5 rounded-xl flex items-center justify-between ${
+                        isMe
+                          ? 'bg-alix-cyan-500/20 border border-alix-cyan-400/50'
+                          : 'hover:bg-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
+                            rankNum === 1
+                              ? 'bg-amber-400 text-slate-950 font-black'
+                              : rankNum === 2
+                              ? 'bg-slate-300 text-slate-950 font-black'
+                              : rankNum === 3
+                              ? 'bg-amber-600 text-white font-black'
+                              : 'bg-white/10 text-white/80'
+                          }`}
+                        >
+                          {rankNum}
+                        </span>
+                        <span className="text-sm font-bold text-white truncate max-w-[140px]">
+                          {p.playerName}
+                          {isMe && <span className="ml-1 text-[10px] text-cyan-300 font-normal">(You)</span>}
+                        </span>
+                      </div>
+                      <span className="font-mono text-xs font-bold text-cyan-300">
+                        {(p.score ?? 0).toLocaleString()} pts
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Exit Session Button */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleExitSession}
+                className="w-full py-4 rounded-2xl bg-alix-cyan-400 hover:bg-alix-cyan-300 text-slate-950 font-heading font-black text-base shadow-2xl flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
+              >
+                <span>Leave Session & Join Another</span>
+                <ArrowRight className="w-5 h-5 stroke-[3]" />
+              </button>
+            </div>
           </div>
         )}
       </main>
