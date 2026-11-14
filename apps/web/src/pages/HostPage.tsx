@@ -1879,8 +1879,8 @@ export const HostPage: React.FC = () => {
                 })()}
               </div>
             ) : (
-              /* 3D Animated Victory Podium with Confetti (Classic Mode) */
-              <div className="w-full flex flex-col items-center space-y-6">
+              /* 3D Animated Victory Podium with Confetti (Classic Mode on Grand Royal Purple Theater Stage) */
+              <div className="w-full bg-gradient-to-b from-[#2B0957] via-[#3D147D] to-[#1E053A] text-white p-6 sm:p-10 rounded-3xl shadow-2xl border border-purple-900/40 flex flex-col items-center space-y-6 relative overflow-hidden">
                 <VictoryPodium
                   winners={
                     [...players]

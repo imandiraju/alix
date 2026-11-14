@@ -107,6 +107,8 @@ export const PlayPage: React.FC = () => {
   const [serverCorrectAnswer, setServerCorrectAnswer] = useState<string | null>(null);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [colorOnlyMode, setColorOnlyMode] = useState(false);
+  const [questionDistribution, setQuestionDistribution] = useState<Record<string, number>>({});
+  const [totalRoomAnswers, setTotalRoomAnswers] = useState<number>(0);
 
   const [currentQuestion, setCurrentQuestion] = useState<ActiveQuestion>({
     index: 1,
@@ -278,6 +280,8 @@ export const PlayPage: React.FC = () => {
           setIsLastAnswerCorrect(false);
           setLastPointsAwarded(0);
           setServerCorrectAnswer(null);
+          setQuestionDistribution({});
+          setTotalRoomAnswers(0);
           if (typeof data.colorOnly === 'boolean') {
             setColorOnlyMode(data.colorOnly);
           }
@@ -315,8 +319,17 @@ export const PlayPage: React.FC = () => {
       });
 
       // Listen for teacher/host revealing answers or timer reaching 0
-      (socket as any).on('answers-revealed', () => {
+      (socket as any).on('answers-revealed', (data: any) => {
         setPhase((prev) => (prev === 'answering' || prev === 'submitted' ? 'score' : prev));
+        if (data?.correctAnswer !== undefined && data?.correctAnswer !== null) {
+          setServerCorrectAnswer(String(data.correctAnswer));
+        }
+        if (data?.questionResults?.distribution) {
+          setQuestionDistribution(data.questionResults.distribution);
+        }
+        if (typeof data?.questionResults?.totalCount === 'number') {
+          setTotalRoomAnswers(data.questionResults.totalCount);
+        }
       });
 
       // Listen for teacher toggling Auditorium Projector Mode (Colors Only on student devices)
@@ -378,6 +391,12 @@ export const PlayPage: React.FC = () => {
         }
         if (Array.isArray(data?.leaderboard)) {
           setLeaderboardList(data.leaderboard);
+        }
+        if (data?.questionResults?.distribution) {
+          setQuestionDistribution(data.questionResults.distribution);
+        }
+        if (typeof data?.questionResults?.totalCount === 'number') {
+          setTotalRoomAnswers(data.questionResults.totalCount);
         }
       });
 
@@ -924,6 +943,16 @@ export const PlayPage: React.FC = () => {
             ? currentQuestion.options[correctIdxNum]
             : serverCorrectAnswer;
 
+          const isReallyCorrect = isLastAnswerCorrect || (
+            hasAnswered && selectedIndex !== null && serverCorrectAnswer !== null && (
+              selectedIndex.toString() === serverCorrectAnswer.toString() ||
+              (correctIdxNum >= 0 && selectedIndex === correctIdxNum) ||
+              (currentQuestion.options[selectedIndex] && currentQuestion.options[selectedIndex].trim().toLowerCase() === String(serverCorrectAnswer).trim().toLowerCase())
+            )
+          );
+
+          const effectivePoints = lastPointsAwarded > 0 ? lastPointsAwarded : isReallyCorrect ? 1000 : 0;
+
           return (
             <div className="text-center max-w-md mx-auto space-y-5 animate-scale-in py-8">
               {/* Status Icon */}
@@ -931,18 +960,18 @@ export const PlayPage: React.FC = () => {
                 className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-2xl border-2 ${
                   isPoll
                     ? 'bg-amber-500/20 text-amber-300 border-amber-400/40'
-                    : hasAnswered && isLastAnswerCorrect
+                    : isReallyCorrect
                     ? 'bg-emerald-500/25 text-emerald-400 border-emerald-400/60 animate-bounce'
-                    : hasAnswered && !isLastAnswerCorrect
+                    : hasAnswered && !isReallyCorrect
                     ? 'bg-rose-500/25 text-rose-400 border-rose-400/60'
                     : 'bg-amber-500/25 text-amber-300 border-amber-400/60'
                 }`}
               >
                 {isPoll ? (
                   <BarChart3 className="w-10 h-10 stroke-[2.5]" />
-                ) : hasAnswered && isLastAnswerCorrect ? (
+                ) : isReallyCorrect ? (
                   <CheckCircle2 className="w-10 h-10 stroke-[2.5]" />
-                ) : hasAnswered && !isLastAnswerCorrect ? (
+                ) : hasAnswered && !isReallyCorrect ? (
                   <X className="w-10 h-10 stroke-[3]" />
                 ) : (
                   <Clock className="w-10 h-10 stroke-[2.5]" />
@@ -954,18 +983,18 @@ export const PlayPage: React.FC = () => {
                 <h2 className="text-3xl sm:text-4xl font-heading font-black text-white">
                   {isPoll
                     ? 'Opinion Registered!'
-                    : hasAnswered && isLastAnswerCorrect
+                    : isReallyCorrect
                     ? 'Correct!'
-                    : hasAnswered && !isLastAnswerCorrect
+                    : hasAnswered && !isReallyCorrect
                     ? 'Incorrect'
                     : "Time's Up!"}
                 </h2>
                 <p className="text-xs sm:text-sm text-white/80 mt-1 font-medium">
                   {isPoll
                     ? '+100 participation points earned for contributing!'
-                    : hasAnswered && isLastAnswerCorrect
-                    ? `+${lastPointsAwarded.toLocaleString()} points earned! ${streak > 1 ? `Streak: ${streak}x 🔥` : 'Spot on!'}`
-                    : hasAnswered && !isLastAnswerCorrect
+                    : isReallyCorrect
+                    ? `+${effectivePoints.toLocaleString()} points earned! ${streak > 1 ? `Streak: ${streak}x 🔥` : 'Spot on!'}`
+                    : hasAnswered && !isReallyCorrect
                     ? "0 points awarded. Keep your focus on the next question!"
                     : "You didn't lock in an answer before the countdown ended."}
                 </p>
@@ -976,8 +1005,8 @@ export const PlayPage: React.FC = () => {
                 <div className="p-3.5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md shadow-md text-xs sm:text-sm text-left space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-white/60 font-medium">Your submission:</span>
-                    <span className={`font-bold flex items-center gap-1.5 ${isLastAnswerCorrect ? 'text-emerald-300' : 'text-rose-300'}`}>
-                      {isLastAnswerCorrect ? (
+                    <span className={`font-bold flex items-center gap-1.5 ${isReallyCorrect ? 'text-emerald-300' : 'text-rose-300'}`}>
+                      {isReallyCorrect ? (
                         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                       ) : (
                         <X className="w-4 h-4 text-rose-400 shrink-0" />
@@ -990,7 +1019,7 @@ export const PlayPage: React.FC = () => {
                     </span>
                   </div>
 
-                  {!isLastAnswerCorrect && correctText && (
+                  {!isReallyCorrect && correctText && (
                     <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/10">
                       <span className="text-white/60 font-medium">Correct answer:</span>
                       <span className="font-bold text-emerald-300 flex items-center gap-1.5">
@@ -999,6 +1028,64 @@ export const PlayPage: React.FC = () => {
                       </span>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* How the Room Answered (Live Distribution of Each Option) */}
+              {Object.keys(questionDistribution).length > 0 && (
+                <div className="p-4 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md shadow-md text-left space-y-2.5">
+                  <div className="text-[11px] font-black uppercase tracking-wider text-purple-200 flex items-center justify-between">
+                    <span>How the Room Answered</span>
+                    <span className="text-white/70">
+                      {totalRoomAnswers || Object.values(questionDistribution).reduce((a, b) => a + b, 0)} votes
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {currentQuestion.options.map((optText, oIdx) => {
+                      const count = questionDistribution[oIdx.toString()] || 0;
+                      const totalVotes = totalRoomAnswers || Object.values(questionDistribution).reduce((a, b) => a + b, 0) || 1;
+                      const pct = Math.round((count / totalVotes) * 100);
+                      const isOptionCorrect = oIdx === correctIdxNum || (correctText && optText.trim().toLowerCase() === correctText.trim().toLowerCase());
+                      const isMyPick = selectedIndex === oIdx;
+
+                      const themeShapes = ['▲', '◆', '●', '■'];
+                      const themeColors = ['bg-[#E21B3C]', 'bg-[#1368CE]', 'bg-[#D89E00]', 'bg-[#26890C]'];
+
+                      return (
+                        <div key={oIdx} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs text-white">
+                            <span className="flex items-center gap-1.5 font-bold truncate max-w-[220px]">
+                              <span className={`w-4 h-4 rounded flex items-center justify-center text-[10px] text-white shrink-0 ${themeColors[oIdx % 4]}`}>
+                                {themeShapes[oIdx % 4]}
+                              </span>
+                              <span className="truncate">{optText}</span>
+                              {isOptionCorrect && (
+                                <span className="px-1.5 py-0.5 rounded bg-emerald-500/80 text-[10px] font-black shrink-0">
+                                  ✓ Correct
+                                </span>
+                              )}
+                              {isMyPick && (
+                                <span className="px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-black shrink-0">
+                                  You
+                                </span>
+                              )}
+                            </span>
+                            <span className="font-mono text-xs text-white/90 font-bold shrink-0">
+                              {count} ({pct}%)
+                            </span>
+                          </div>
+                          <div className="h-2 rounded-full bg-black/30 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-700 ${
+                                isOptionCorrect ? 'bg-emerald-400' : 'bg-white/40'
+                              }`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 

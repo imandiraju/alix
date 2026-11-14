@@ -618,8 +618,49 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     (session as any).questionRemaining = 0;
     io.to(session.id).emit('timer-tick', { remaining: 0, total: 30 });
     io.to(session.code).emit('timer-tick', { remaining: 0, total: 30 });
-    (io.to(session.id) as any).emit('answers-revealed', { questionIndex: session.currentQuestionIndex });
-    (io.to(session.code) as any).emit('answers-revealed', { questionIndex: session.currentQuestionIndex });
+
+    const activeQ = session.quiz?.questions[session.currentQuestionIndex];
+    const answers = activeQ ? session.players.flatMap((p: any) =>
+      p.answers.filter((a: any) => a.questionId === activeQ.id),
+    ) : [];
+
+    const distribution: Record<string, number> = {};
+    if (activeQ?.options) {
+      for (let optIdx = 0; optIdx < activeQ.options.length; optIdx++) {
+        const optId = optIdx.toString();
+        distribution[optId] = answers.filter((a: any) => {
+          if (Array.isArray(a.answer)) return a.answer.map(String).includes(optId);
+          if (typeof a.answer === 'string' && a.answer.includes(',')) {
+            return a.answer.split(',').map((s: string) => s.trim()).includes(optId);
+          }
+          return String(a.answer).trim() === optId;
+        }).length;
+      }
+    }
+
+    const revealPayload = {
+      questionIndex: session.currentQuestionIndex,
+      correctAnswer: activeQ?.correctAnswer,
+      correctIndices: (activeQ as any)?.correctIndices,
+      questionResults: {
+        questionId: activeQ?.id,
+        correctCount: answers.filter((a: any) => a.correct).length,
+        totalCount: answers.length,
+        distribution,
+      },
+    };
+
+    (io.to(session.id) as any).emit('answers-revealed', revealPayload);
+    (io.to(session.code) as any).emit('answers-revealed', revealPayload);
+
+    const updatePayload = {
+      leaderboard: sessionManager.getLeaderboard(session.id),
+      teamLeaderboard: sessionManager.getTeamLeaderboard(session.id),
+      gameMode: session.gameMode,
+      questionResults: revealPayload.questionResults,
+    };
+    io.to(session.id).emit('leaderboard-update', updatePayload);
+    io.to(session.code).emit('leaderboard-update', updatePayload);
   });
 
   // ─── Host Instant Question Advance ────────────────────────────────────
@@ -716,7 +757,8 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       return;
     }
 
-    const currentQuestion = session.quiz?.questions[session.currentQuestionIndex];
+    const qById = session.quiz?.questions?.find((q: any) => q.id === payload.questionId);
+    const currentQuestion = qById || session.quiz?.questions[session.currentQuestionIndex];
     if (!currentQuestion) return;
 
     const isPoll = (currentQuestion as any).questionType === 'poll' || currentQuestion.type === QuestionType.POLL;
@@ -740,7 +782,48 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       const sortedExp = [...new Set(expectedAnswers)].sort();
       correct = sortedSub.length === sortedExp.length && sortedSub.every((val, i) => val === sortedExp[i]);
     } else {
-      correct = String(payload.answer).trim() === String(currentQuestion.correctAnswer).trim();
+      const rawAns = String(payload.answer).trim();
+      const numAns = Number(rawAns);
+      const targetIdx = typeof (currentQuestion as any).correctIndex === 'number'
+        ? (currentQuestion as any).correctIndex
+        : !isNaN(Number(currentQuestion.correctAnswer))
+        ? Number(currentQuestion.correctAnswer)
+        : -1;
+
+      // 1. Direct string comparison with correctAnswer
+      if (rawAns.toLowerCase() === String(currentQuestion.correctAnswer).trim().toLowerCase()) {
+        correct = true;
+      }
+      // 2. Numeric index match
+      else if (!isNaN(numAns) && targetIdx >= 0 && numAns === targetIdx) {
+        correct = true;
+      }
+      // 3. Option text match: does the answer match the text of the correct option?
+      else if (targetIdx >= 0 && currentQuestion.options && currentQuestion.options[targetIdx]) {
+        const correctOptText = typeof currentQuestion.options[targetIdx] === 'string'
+          ? currentQuestion.options[targetIdx]
+          : (currentQuestion.options[targetIdx] as any)?.text;
+        if (correctOptText && rawAns.toLowerCase() === String(correctOptText).trim().toLowerCase()) {
+          correct = true;
+        }
+      }
+      // 4. Check if the submitted index has isCorrect: true in options array
+      else if (!isNaN(numAns) && currentQuestion.options && currentQuestion.options[numAns]) {
+        const chosenOpt = currentQuestion.options[numAns];
+        if (typeof chosenOpt === 'object' && (chosenOpt as any)?.isCorrect === true) {
+          correct = true;
+        }
+      }
+      // 5. Check if the submitted text matches an option whose isCorrect is true
+      else if (currentQuestion.options && Array.isArray(currentQuestion.options)) {
+        const matchedOpt = currentQuestion.options.find((o: any) => {
+          const txt = typeof o === 'string' ? o : o?.text;
+          return txt && String(txt).trim().toLowerCase() === rawAns.toLowerCase();
+        });
+        if (matchedOpt && (typeof matchedOpt === 'object' ? (matchedOpt as any).isCorrect : false)) {
+          correct = true;
+        }
+      }
     }
 
     const streak = correct
@@ -795,8 +878,42 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       points,
       streak,
       totalScore: player?.score ?? 0,
-      correctAnswer: currentQuestion.correctAnswer,
+      correctAnswer: currentQuestion.correctAnswer ?? (currentQuestion as any).correctIndex?.toString(),
     });
+
+    // Broadcast live question submitted tally and updated distribution to room/host
+    try {
+      const answers = session.players.flatMap((p: any) =>
+        p.answers.filter((a: any) => a.questionId === currentQuestion.id),
+      );
+      const distribution: Record<string, number> = {};
+      const optsCount = currentQuestion.options?.length || 4;
+      for (let optIdx = 0; optIdx < optsCount; optIdx++) {
+        const optId = optIdx.toString();
+        distribution[optId] = answers.filter((a: any) => {
+          if (Array.isArray(a.answer)) return a.answer.map(String).includes(optId);
+          if (typeof a.answer === 'string' && a.answer.includes(',')) {
+            return a.answer.split(',').map((s: string) => s.trim()).includes(optId);
+          }
+          return String(a.answer).trim() === optId;
+        }).length;
+      }
+
+      const liveUpdatePayload = {
+        leaderboard: sessionManager.getLeaderboard(session.id),
+        teamLeaderboard: sessionManager.getTeamLeaderboard(session.id),
+        gameMode: session.gameMode,
+        questionResults: {
+          questionId: currentQuestion.id,
+          correctCount: answers.filter((a: any) => a.correct).length,
+          totalCount: answers.length,
+          distribution,
+        },
+      };
+
+      io.to(session.id).emit('leaderboard-update', liveUpdatePayload);
+      io.to(session.code).emit('leaderboard-update', liveUpdatePayload);
+    } catch {}
   });
 
   // ─── End Game ─────────────────────────────────────────────────────────

@@ -37,10 +37,10 @@ export const VictoryPodium: React.FC<VictoryPodiumProps> = ({
           <Trophy className="w-4 h-4 text-amber-400" />
           <span>Academic Learning Champions • RKGlobal EdTech</span>
         </div>
-        <h2 className="text-3xl sm:text-5xl font-heading font-black tracking-tight text-white">
+        <h2 className="text-3xl sm:text-5xl font-heading font-black tracking-tight text-white drop-shadow-md">
           Classroom Victory Podium
         </h2>
-        <p className="text-sm text-slate-300">
+        <p className="text-sm sm:text-base text-purple-100 font-medium drop-shadow-xs">
           Where every learner participated and mastery was achieved!
         </p>
       </div>
