@@ -168,12 +168,12 @@ router.post('/login', async (req: Request, res: Response) => {
 
     const teacher = await Teacher.findOne({ email: email.toLowerCase().trim() });
     if (!teacher) {
-      return res.status(401).json({ error: 'No account found with this email. Please register.' });
+      return res.status(401).json({ error: 'No account found with this email. Please sign up.' });
     }
 
     const isMatch = await bcrypt.compare(password, teacher.passwordHash);
     if (!isMatch) {
-      return res.status(401).json({ error: 'Incorrect academic credentials.' });
+      return res.status(401).json({ error: 'Incorrect password. Please try again.' });
     }
 
     const token = jwt.sign(

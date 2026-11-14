@@ -58,8 +58,8 @@ export const LoginPage: React.FC = () => {
           return prev - 1;
         });
       }, 1000);
-    } catch {
-      setError('Failed to send code. Please retry.');
+    } catch (err: any) {
+      setError(err.message || 'Failed to send code. Please retry.');
     } finally {
       setIsLoading(false);
     }
@@ -96,14 +96,14 @@ export const LoginPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const ok = await verifyOtp(email, code);
-      if (ok) {
+      const result = await verifyOtp(email, code);
+      if (result.verified && result.user) {
         navigate(redirectPath);
       } else {
-        setError('Invalid or expired code.');
+        setError('No account found for this email. Please sign up first.');
       }
-    } catch {
-      setError('Verification failed.');
+    } catch (err: any) {
+      setError(err.message || 'Invalid or expired code.');
     } finally {
       setIsLoading(false);
     }
@@ -116,14 +116,18 @@ export const LoginPage: React.FC = () => {
       setError('Enter your email address.');
       return;
     }
+    if (!password) {
+      setError('Enter your password.');
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
     try {
       await login(email, password);
       navigate(redirectPath);
-    } catch {
-      setError('Invalid credentials.');
+    } catch (err: any) {
+      setError(err.message || 'Invalid credentials.');
     } finally {
       setIsLoading(false);
     }

@@ -81,12 +81,6 @@ export const LandingPage: React.FC = () => {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-gradient-to-tr from-alix-violet-200/40 to-alix-cyan-200/30 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          {/* Brand Tagline Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm mb-6 text-xs font-bold text-slate-800">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-            <span>Interactive Learning Games for Classroom Engagement</span>
-          </div>
-
           {/* Master Headline */}
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-heading font-black text-slate-900 tracking-tight max-w-5xl mx-auto leading-[1.08]">
             Make Learning <span className="text-[#864CBF]">Awesome.</span>
@@ -120,26 +114,6 @@ export const LandingPage: React.FC = () => {
               <PlusSquare className="w-4 h-4 stroke-[3]" />
               <span>Create a Game</span>
             </Link>
-          </div>
-
-          {/* Social Proof / Features strip */}
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs font-medium text-alix-slate-500">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>Zero App Installs Needed</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>Instant 6-Digit PIN Join</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>Projector-Optimized UI</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>Real-Time Pedagogy Insights</span>
-            </div>
           </div>
         </div>
       </section>

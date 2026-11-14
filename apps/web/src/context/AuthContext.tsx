@@ -12,12 +12,17 @@ export interface UserProfile {
   avatarInitials: string;
 }
 
+export interface VerifyOtpResult {
+  verified: boolean;
+  user?: UserProfile;
+}
+
 export interface AuthContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
   login: (email: string, password?: string) => Promise<boolean>;
   sendOtp: (email: string) => Promise<{ success: boolean; code: string }>;
-  verifyOtp: (email: string, code: string) => Promise<boolean>;
+  verifyOtp: (email: string, code: string) => Promise<VerifyOtpResult>;
   pendingOtpCode: string | null;
   register: (data: Omit<UserProfile, 'id' | 'role' | 'avatarInitials'> & { password?: string }) => Promise<boolean>;
   logout: () => void;
@@ -42,148 +47,95 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [pendingOtpCode, setPendingOtpCode] = useState<string | null>(null);
 
   const login = async (email: string, password?: string): Promise<boolean> => {
-    try {
-      const res = await fetch(`${REALTIME_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: password || 'alix-default-pass' }),
-      });
-      const data = await res.json();
-      if (res.ok && data.user) {
-        setUser(data.user);
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
-        if (data.token) localStorage.setItem(AUTH_TOKEN_KEY, data.token);
-        return true;
-      }
-    } catch {
-      // offline fallback
+    const cleanEmail = email.toLowerCase().trim();
+    const res = await fetch(`${REALTIME_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail, password }),
+    });
+
+    const data = await res.json();
+    if (res.ok && data.user) {
+      setUser(data.user);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
+      if (data.token) localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+      return true;
     }
 
-    const name = email
-      .split('@')[0]
-      .replace(/[._]/g, ' ')
-      .replace(/\b\w/g, (l) => l.toUpperCase());
-
-    const profile: UserProfile = {
-      id: `teacher-${Date.now()}`,
-      email,
-      name: name || 'Faculty Member',
-      institution: 'Academic Institution',
-      department: 'Faculty Department',
-      role: 'teacher',
-      avatarInitials: (name || email).slice(0, 2).toUpperCase(),
-    };
-    setUser(profile);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(profile));
-    return true;
+    // Fail strictly with server error message
+    throw new Error(data.error || 'Invalid email or password.');
   };
 
   /**
    * Dispatches a 6-digit confirmation code via Google Apps Script Webhook.
    */
   const sendOtp = async (email: string, name?: string): Promise<{ success: boolean; code: string }> => {
-    try {
-      const res = await fetch(`${REALTIME_URL}/api/auth/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name }),
-      });
-      if (res.ok) {
-        return { success: true, code: '' };
-      }
-    } catch {
-      // offline fallback
+    const cleanEmail = email.toLowerCase().trim();
+    const res = await fetch(`${REALTIME_URL}/api/auth/send-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail, name }),
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true, code: '' };
     }
 
-    const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
-    setPendingOtpCode(randomCode);
-    sessionStorage.setItem(OTP_STORAGE_KEY, JSON.stringify({ email, code: randomCode, timestamp: Date.now() }));
-    return { success: true, code: randomCode };
+    throw new Error(data.error || 'Failed to dispatch verification code.');
   };
 
   /**
    * Validates the 6-digit OTP code against the server database.
    */
-  const verifyOtp = async (email: string, code: string): Promise<boolean> => {
-    try {
-      const res = await fetch(`${REALTIME_URL}/api/auth/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code }),
-      });
-      const data = await res.json();
-      if (res.ok && data.verified) {
-        if (data.user) {
-          setUser(data.user);
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
-          if (data.token) localStorage.setItem(AUTH_TOKEN_KEY, data.token);
-        }
-        return true;
+  const verifyOtp = async (email: string, code: string): Promise<VerifyOtpResult> => {
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanCode = code.trim();
+
+    const res = await fetch(`${REALTIME_URL}/api/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail, code: cleanCode }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Invalid or expired confirmation code.');
+    }
+
+    if (data.verified) {
+      if (data.user) {
+        setUser(data.user);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
+        if (data.token) localStorage.setItem(AUTH_TOKEN_KEY, data.token);
       }
-    } catch {
-      // offline fallback
+      return { verified: true, user: data.user };
     }
 
-    const storedStr = sessionStorage.getItem(OTP_STORAGE_KEY);
-    let expected = pendingOtpCode;
-
-    if (storedStr) {
-      try {
-        const stored = JSON.parse(storedStr);
-        if (stored.code) expected = stored.code;
-      } catch {
-        // fallback
-      }
-    }
-
-    if (expected && code.trim() === expected.trim()) {
-      await login(email);
-      setPendingOtpCode(null);
-      sessionStorage.removeItem(OTP_STORAGE_KEY);
-      return true;
-    }
-
-    return false;
+    throw new Error(data.error || 'Invalid code.');
   };
 
   const register = async (
     data: Omit<UserProfile, 'id' | 'role' | 'avatarInitials'> & { password?: string }
   ): Promise<boolean> => {
-    try {
-      const res = await fetch(`${REALTIME_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      const resData = await res.json();
-      if (res.ok && resData.user) {
-        setUser(resData.user);
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(resData.user));
-        if (resData.token) localStorage.setItem(AUTH_TOKEN_KEY, resData.token);
-        return true;
-      }
-    } catch {
-      // offline fallback
+    const res = await fetch(`${REALTIME_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...data,
+        email: data.email.toLowerCase().trim(),
+      }),
+    });
+
+    const resData = await res.json();
+    if (res.ok && resData.user) {
+      setUser(resData.user);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(resData.user));
+      if (resData.token) localStorage.setItem(AUTH_TOKEN_KEY, resData.token);
+      return true;
     }
 
-    const profile: UserProfile = {
-      id: `teacher-${Date.now()}`,
-      name: data.name,
-      email: data.email,
-      institution: data.institution || 'University Faculty',
-      department: data.department || 'Academic Department',
-      subjects: data.subjects || [],
-      role: 'teacher',
-      avatarInitials: data.name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2),
-    };
-    setUser(profile);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(profile));
-    return true;
+    throw new Error(resData.error || 'Registration failed.');
   };
 
   const logout = () => {

@@ -85,15 +85,15 @@ export const RegisterPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const ok = await verifyOtp(formData.email, code);
-      if (ok) {
+      const result = await verifyOtp(formData.email, code);
+      if (result.verified) {
         await register(formData);
         navigate('/dashboard');
       } else {
         setError('Invalid or expired code.');
       }
-    } catch {
-      setError('Verification failed.');
+    } catch (err: any) {
+      setError(err.message || 'Verification failed.');
     } finally {
       setIsLoading(false);
     }
