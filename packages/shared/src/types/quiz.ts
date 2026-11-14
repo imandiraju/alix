@@ -3,6 +3,7 @@
 export enum QuestionType {
   MULTIPLE_CHOICE = 'MULTIPLE_CHOICE',
   TRUE_FALSE = 'TRUE_FALSE',
+  MULTI_SELECT = 'MULTI_SELECT',
   SHORT_ANSWER = 'SHORT_ANSWER',
   POLL = 'POLL',
 }
@@ -19,6 +20,7 @@ export interface Question {
   type: QuestionType;
   options: QuizOption[];
   correctAnswer: string;
+  correctIndices?: number[];
   timeLimit: number; // seconds
   points: number;
   explanation?: string;

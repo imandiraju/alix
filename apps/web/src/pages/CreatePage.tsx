@@ -8,12 +8,16 @@ import { useAuth } from '../context/AuthContext';
 import {
   PlusCircle,
   Trash2,
+  Copy,
   Save,
   Sparkles,
   Clock,
   Zap,
   ArrowLeft,
   CheckCircle2,
+  CheckSquare,
+  Square,
+  BarChart3,
   Play,
   LayoutDashboard,
   AlertCircle,
@@ -23,12 +27,13 @@ import {
 
 interface QuestionDraft {
   id: string;
-  type?: 'multiple_choice' | 'true_false';
+  type?: 'multiple_choice' | 'true_false' | 'multi_select' | 'poll';
   text: string;
   timeLimit: number;
   points: number;
   options: string[];
   correctIndex: number;
+  correctIndices?: number[];
 }
 
 export const CreatePage: React.FC = () => {
@@ -73,48 +78,104 @@ export const CreatePage: React.FC = () => {
   const activeQuestion =
     questions.find((q) => q.id === activeQuestionId) || questions[0];
 
-  const handleAddQuestion = (type: 'multiple_choice' | 'true_false' = 'multiple_choice') => {
+  const handleAddQuestion = (type: 'multiple_choice' | 'true_false' | 'multi_select' | 'poll' = 'multiple_choice') => {
     const newId = `q-${Date.now()}`;
     const newQuestion: QuestionDraft = {
       id: newId,
       type,
       text: '',
       timeLimit: 30,
-      points: 1000,
+      points: type === 'poll' ? 0 : 1000,
       options: type === 'true_false' ? ['True', 'False'] : ['', '', '', ''],
       correctIndex: 0,
+      correctIndices: type === 'multi_select' ? [0] : undefined,
     };
     setQuestions([...questions, newQuestion]);
     setActiveQuestionId(newId);
   };
 
-  const handleSetQuestionType = (newType: 'multiple_choice' | 'true_false') => {
-    if (activeQuestion.type === newType) return;
-    if (newType === 'true_false') {
-      const updated = questions.map((q) =>
-        q.id === activeQuestion.id
-          ? {
-              ...q,
-              type: 'true_false' as const,
-              options: ['True', 'False'],
-              correctIndex: q.correctIndex > 1 ? 0 : q.correctIndex,
-            }
-          : q
-      );
-      setQuestions(updated);
+  const handleDuplicateQuestion = (qId: string) => {
+    const target = questions.find((q) => q.id === qId);
+    if (!target) return;
+    const newId = `q-${Date.now()}`;
+    const duplicated: QuestionDraft = {
+      ...target,
+      id: newId,
+      text: target.text ? `${target.text} (Copy)` : '',
+      options: [...target.options],
+      correctIndices: target.correctIndices ? [...target.correctIndices] : undefined,
+    };
+    const targetIndex = questions.findIndex((q) => q.id === qId);
+    const updated = [...questions];
+    updated.splice(targetIndex + 1, 0, duplicated);
+    setQuestions(updated);
+    setActiveQuestionId(newId);
+  };
+
+  const handleToggleMultiCorrect = (index: number) => {
+    const currentList = activeQuestion.correctIndices || [activeQuestion.correctIndex ?? 0];
+    let nextList: number[];
+    if (currentList.includes(index)) {
+      if (currentList.length === 1) return; // Keep at least one correct
+      nextList = currentList.filter((i) => i !== index);
     } else {
-      const updated = questions.map((q) =>
-        q.id === activeQuestion.id
-          ? {
-              ...q,
-              type: 'multiple_choice' as const,
-              options: ['', '', '', ''],
-              correctIndex: 0,
-            }
-          : q
-      );
-      setQuestions(updated);
+      nextList = [...currentList, index].sort();
     }
+    const updated = questions.map((q) =>
+      q.id === activeQuestion.id
+        ? {
+            ...q,
+            correctIndices: nextList,
+            correctIndex: nextList[0],
+          }
+        : q
+    );
+    setQuestions(updated);
+  };
+
+  const handleSetQuestionType = (newType: 'multiple_choice' | 'true_false' | 'multi_select' | 'poll') => {
+    if (activeQuestion.type === newType) return;
+    const updated = questions.map((q) => {
+      if (q.id !== activeQuestion.id) return q;
+      if (newType === 'true_false') {
+        return {
+          ...q,
+          type: newType,
+          options: ['True', 'False'],
+          correctIndex: q.correctIndex > 1 ? 0 : q.correctIndex,
+          correctIndices: [q.correctIndex > 1 ? 0 : q.correctIndex],
+        };
+      }
+      if (newType === 'multi_select') {
+        const baseOpts = q.options.length >= 2 ? (q.options.length === 2 ? [...q.options, '', ''] : q.options) : ['', '', '', ''];
+        const existingIndices = q.correctIndices && q.correctIndices.length > 0 ? q.correctIndices : [q.correctIndex ?? 0];
+        return {
+          ...q,
+          type: newType,
+          options: baseOpts,
+          correctIndices: existingIndices,
+        };
+      }
+      if (newType === 'poll') {
+        const baseOpts = q.options.length >= 2 ? (q.options.length === 2 ? [...q.options, '', ''] : q.options) : ['', '', '', ''];
+        return {
+          ...q,
+          type: newType,
+          options: baseOpts,
+          points: 0,
+        };
+      }
+      // multiple_choice
+      const baseOpts = q.options.length >= 2 ? (q.options.length === 2 ? [...q.options, '', ''] : q.options) : ['', '', '', ''];
+      return {
+        ...q,
+        type: newType,
+        options: baseOpts,
+        correctIndex: q.correctIndex ?? 0,
+        correctIndices: [q.correctIndex ?? 0],
+      };
+    });
+    setQuestions(updated);
   };
 
   const handleDeleteQuestion = (qId: string) => {
@@ -375,13 +436,17 @@ export const CreatePage: React.FC = () => {
                             Q{idx + 1}
                           </span>
                           <span
-                            className={`px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider ${
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
                               q.type === 'true_false'
                                 ? 'bg-blue-100 text-blue-700'
+                                : q.type === 'multi_select'
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : q.type === 'poll'
+                                ? 'bg-amber-100 text-amber-700'
                                 : 'bg-violet-100 text-violet-700'
                             }`}
                           >
-                            {q.type === 'true_false' ? 'T/F' : 'MCQ'}
+                            {q.type === 'true_false' ? 'T/F' : q.type === 'multi_select' ? 'MULTI' : q.type === 'poll' ? 'POLL' : 'QUIZ'}
                           </span>
                         </div>
                         <span className="text-[10px] text-alix-slate-400 font-mono">
@@ -393,16 +458,27 @@ export const CreatePage: React.FC = () => {
                       </p>
                     </button>
 
-                    {questions.length > 1 && (
+                    <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => handleDeleteQuestion(q.id)}
-                        className="p-1 rounded text-alix-slate-300 hover:text-rose-600 transition-colors"
-                        title="Delete question"
+                        onClick={() => handleDuplicateQuestion(q.id)}
+                        className="p-1 rounded text-alix-slate-300 hover:text-alix-violet-600 transition-colors cursor-pointer"
+                        title="Duplicate question"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Copy className="w-3.5 h-3.5" />
                       </button>
-                    )}
+
+                      {questions.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteQuestion(q.id)}
+                          className="p-1 rounded text-alix-slate-300 hover:text-rose-600 transition-colors cursor-pointer"
+                          title="Delete question"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -410,36 +486,102 @@ export const CreatePage: React.FC = () => {
 
             {/* Right Column: Question Detail Editor */}
             <div className="lg:col-span-8 bg-white p-6 rounded-2xl border border-alix-slate-200 shadow-sm space-y-6">
-              {/* Question Format Selector */}
+              {/* Question Format Selector (4 Types matching Kahoot) */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                  Question Format
-                </label>
-                <div className="grid grid-cols-2 gap-3 max-w-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Question Type
+                  </label>
+                  <span className="text-[11px] font-bold text-slate-400">
+                    {activeQuestion.type === 'multi_select'
+                      ? 'Learners select all correct options'
+                      : activeQuestion.type === 'poll'
+                      ? 'Opinion poll, no grading'
+                      : activeQuestion.type === 'true_false'
+                      ? 'Binary true/false'
+                      : 'Single choice, 1 correct'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {/* 1. Quiz (Single Choice) */}
                   <button
                     type="button"
                     onClick={() => handleSetQuestionType('multiple_choice')}
-                    className={`py-2 px-3.5 rounded-xl border-2 text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between min-h-[72px] ${
                       (activeQuestion.type || 'multiple_choice') === 'multiple_choice'
-                        ? 'border-alix-violet-600 bg-alix-violet-50 text-alix-violet-900 shadow-xs'
+                        ? 'border-alix-violet-600 bg-alix-violet-50 text-alix-violet-950 shadow-xs ring-2 ring-alix-violet-200'
                         : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                     }`}
                   >
-                    <span className="w-2.5 h-2.5 rounded-full bg-alix-violet-600" />
-                    <span>Multiple Choice (4)</span>
+                    <div className="flex items-center justify-between">
+                      <span className="w-3 h-3 rounded-full bg-[#E21B3C]" />
+                      <span className="text-[10px] font-black uppercase text-slate-400">Single</span>
+                    </div>
+                    <div>
+                      <div className="font-heading font-black text-xs text-slate-900">Quiz</div>
+                      <div className="text-[10px] text-slate-500">1 correct answer</div>
+                    </div>
                   </button>
 
+                  {/* 2. True / False */}
                   <button
                     type="button"
                     onClick={() => handleSetQuestionType('true_false')}
-                    className={`py-2 px-3.5 rounded-xl border-2 text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between min-h-[72px] ${
                       activeQuestion.type === 'true_false'
-                        ? 'border-[#1368CE] bg-blue-50 text-[#1368CE] shadow-xs'
+                        ? 'border-[#1368CE] bg-blue-50 text-blue-950 shadow-xs ring-2 ring-blue-200'
                         : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                     }`}
                   >
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#1368CE]" />
-                    <span>True / False (2)</span>
+                    <div className="flex items-center justify-between">
+                      <span className="w-3 h-3 rounded-full bg-[#1368CE]" />
+                      <span className="text-[10px] font-black uppercase text-slate-400">Binary</span>
+                    </div>
+                    <div>
+                      <div className="font-heading font-black text-xs text-slate-900">True / False</div>
+                      <div className="text-[10px] text-slate-500">2 options only</div>
+                    </div>
+                  </button>
+
+                  {/* 3. Multi-Select Quiz */}
+                  <button
+                    type="button"
+                    onClick={() => handleSetQuestionType('multi_select')}
+                    className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between min-h-[72px] ${
+                      activeQuestion.type === 'multi_select'
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-950 shadow-xs ring-2 ring-emerald-200'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="w-3 h-3 rounded-full bg-[#26890C]" />
+                      <span className="text-[10px] font-black uppercase text-emerald-600">Multi</span>
+                    </div>
+                    <div>
+                      <div className="font-heading font-black text-xs text-slate-900">Multi-Select</div>
+                      <div className="text-[10px] text-slate-500">Choose all that apply</div>
+                    </div>
+                  </button>
+
+                  {/* 4. Poll (Opinion Survey) */}
+                  <button
+                    type="button"
+                    onClick={() => handleSetQuestionType('poll')}
+                    className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between min-h-[72px] ${
+                      activeQuestion.type === 'poll'
+                        ? 'border-amber-500 bg-amber-50 text-amber-950 shadow-xs ring-2 ring-amber-200'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="w-3 h-3 rounded-full bg-[#D89E00]" />
+                      <span className="text-[10px] font-black uppercase text-amber-600">Opinion</span>
+                    </div>
+                    <div>
+                      <div className="font-heading font-black text-xs text-slate-900">Poll</div>
+                      <div className="text-[10px] text-slate-500">Collect sentiment</div>
+                    </div>
                   </button>
                 </div>
               </div>
@@ -459,6 +601,8 @@ export const CreatePage: React.FC = () => {
                   placeholder={
                     activeQuestion.type === 'true_false'
                       ? 'Enter the statement to evaluate as True or False...'
+                      : activeQuestion.type === 'poll'
+                      ? 'Enter your opinion or survey question prompt...'
                       : 'Enter the concept question prompt here...'
                   }
                 />
@@ -481,11 +625,14 @@ export const CreatePage: React.FC = () => {
                     }
                     className="w-full p-2.5 rounded-xl border border-alix-slate-300 text-sm font-semibold text-alix-indigo outline-none cursor-pointer"
                   >
+                    <option value={10}>10 Seconds</option>
                     <option value={15}>15 Seconds</option>
                     <option value={20}>20 Seconds</option>
                     <option value={30}>30 Seconds</option>
                     <option value={45}>45 Seconds</option>
                     <option value={60}>60 Seconds</option>
+                    <option value={90}>90 Seconds</option>
+                    <option value={120}>120 Seconds</option>
                   </select>
                 </div>
 
@@ -501,6 +648,7 @@ export const CreatePage: React.FC = () => {
                     }
                     className="w-full p-2.5 rounded-xl border border-alix-slate-300 text-sm font-semibold text-alix-indigo outline-none cursor-pointer"
                   >
+                    <option value={0}>0 Points (No score)</option>
                     <option value={500}>500 Points</option>
                     <option value={1000}>1,000 Points (Standard)</option>
                     <option value={2000}>2,000 Points (Double)</option>
@@ -513,6 +661,10 @@ export const CreatePage: React.FC = () => {
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">
                   {activeQuestion.type === 'true_false'
                     ? 'Select the Correct Truth Value'
+                    : activeQuestion.type === 'multi_select'
+                    ? 'Answer Choices (Click checkmark on each correct answer)'
+                    : activeQuestion.type === 'poll'
+                    ? 'Poll Choices (All options collect learner sentiment)'
                     : 'Answer Choices (Click checkmark to set correct answer)'}
                 </label>
 
@@ -576,6 +728,18 @@ export const CreatePage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-3">
+                    {activeQuestion.type === 'multi_select' && (
+                      <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800 flex items-center gap-2">
+                        <CheckSquare className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Multi-Select Active: Click the checkbox button on every correct choice.</span>
+                      </div>
+                    )}
+                    {activeQuestion.type === 'poll' && (
+                      <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800 flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>Opinion Poll Active: All choices are valid options for learners to vote on.</span>
+                      </div>
+                    )}
                     {activeQuestion.options.map((opt, idx) => {
                       const themes = [
                         { shape: '▲', bg: 'bg-[#E21B3C]', border: 'border-[#9E1329]' },
@@ -584,12 +748,17 @@ export const CreatePage: React.FC = () => {
                         { shape: '■', bg: 'bg-[#26890C]', border: 'border-[#175407]' },
                       ];
                       const t = themes[idx % themes.length];
-                      const isCorrect = activeQuestion.correctIndex === idx;
+                      const isMulti = activeQuestion.type === 'multi_select';
+                      const isPoll = activeQuestion.type === 'poll';
+                      const isCorrect = isMulti
+                        ? (activeQuestion.correctIndices || [activeQuestion.correctIndex ?? 0]).includes(idx)
+                        : activeQuestion.correctIndex === idx;
+
                       return (
                         <div
                           key={idx}
                           className={`flex items-center gap-3 p-2.5 rounded-xl border-2 transition-all ${
-                            isCorrect
+                            isCorrect && !isPoll
                               ? 'border-emerald-500 bg-emerald-50/50 shadow-sm ring-2 ring-emerald-200'
                               : 'border-slate-200 bg-white hover:border-slate-300'
                           }`}
@@ -606,18 +775,36 @@ export const CreatePage: React.FC = () => {
                             className="flex-1 px-3 py-1.5 text-sm font-bold text-slate-900 outline-none bg-transparent"
                             placeholder={`Add answer ${idx + 1}...`}
                           />
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateActiveQuestion('correctIndex', idx)}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all cursor-pointer ${
-                              isCorrect
-                                ? 'bg-emerald-500 border-emerald-500 text-white shadow-md'
-                                : 'border-slate-300 text-slate-300 hover:border-emerald-500 hover:text-emerald-500'
-                            }`}
-                            title={isCorrect ? 'Correct answer' : 'Mark as correct answer'}
-                          >
-                            <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
-                          </button>
+
+                          {!isPoll && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isMulti) {
+                                  handleToggleMultiCorrect(idx);
+                                } else {
+                                  handleUpdateActiveQuestion('correctIndex', idx);
+                                }
+                              }}
+                              className={`px-3 py-1.5 rounded-lg border-2 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                isCorrect
+                                  ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm'
+                                  : 'border-slate-300 text-slate-400 hover:border-emerald-500 hover:text-emerald-600'
+                              }`}
+                              title={isCorrect ? 'Marked as correct' : 'Mark as correct'}
+                            >
+                              {isMulti ? (
+                                isCorrect ? (
+                                  <CheckSquare className="w-4 h-4 stroke-[2.5]" />
+                                ) : (
+                                  <Square className="w-4 h-4" />
+                                )
+                              ) : (
+                                <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                              )}
+                              <span className="hidden sm:inline">{isCorrect ? 'Correct' : 'Mark'}</span>
+                            </button>
+                          )}
                         </div>
                       );
                     })}

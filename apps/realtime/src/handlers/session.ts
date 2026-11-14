@@ -36,21 +36,38 @@ function adaptQuestionsToSharedQuiz(rawQuestions: any[]): any[] {
     });
     const finalOpts = nonBlankOpts.length >= 2 ? nonBlankOpts : rawOpts;
 
+    const rawQType = (q.type || 'multiple_choice').toLowerCase();
+    const isMulti = rawQType === 'multi_select' || rawQType === 'multiple_select';
+    const isPoll = rawQType === 'poll';
+    const isTrueFalse = rawQType === 'true_false';
+
+    const correctIndices: number[] = Array.isArray(q.correctIndices) && q.correctIndices.length > 0
+      ? q.correctIndices
+      : [typeof q.correctIndex === 'number' ? q.correctIndex : 0];
+
     return {
       id: q.id || `q-${idx + 1}`,
       text: q.text || `Question ${idx + 1}`,
-      type: QuestionType.MULTIPLE_CHOICE,
+      type: isPoll
+        ? QuestionType.POLL
+        : isTrueFalse
+        ? QuestionType.TRUE_FALSE
+        : isMulti
+        ? QuestionType.MULTI_SELECT
+        : QuestionType.MULTIPLE_CHOICE,
+      questionType: rawQType,
       options: finalOpts.map((opt: any, optIdx: number) => {
         const label = typeof opt === 'string' ? opt : (opt?.text || `Option ${optIdx + 1}`);
         return {
           id: optIdx.toString(),
           text: label,
-          isCorrect: optIdx === (q.correctIndex ?? 0),
+          isCorrect: isPoll ? true : correctIndices.includes(optIdx),
         };
       }),
-      correctAnswer: (q.correctIndex ?? 0).toString(),
+      correctAnswer: isMulti ? correctIndices.map(String).sort().join(',') : isPoll ? 'poll' : (q.correctIndex ?? 0).toString(),
+      correctIndices,
       timeLimit: Number(q.timeLimit) || 30,
-      points: Number(q.points) || 1000,
+      points: isPoll ? 0 : (Number(q.points) || 1000),
     };
   });
 }
@@ -574,17 +591,42 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     const currentQuestion = session.quiz?.questions[session.currentQuestionIndex];
     if (!currentQuestion) return;
 
-    const correct = String(payload.answer).trim() === String(currentQuestion.correctAnswer).trim();
+    const isPoll = (currentQuestion as any).questionType === 'poll' || currentQuestion.type === QuestionType.POLL;
+    const isMulti = (currentQuestion as any).questionType === 'multi_select' || currentQuestion.type === QuestionType.MULTI_SELECT;
+
+    let correct = false;
+    if (isPoll) {
+      correct = true; // All poll responses are considered valid participation
+    } else if (isMulti) {
+      const submittedAnswers: string[] = Array.isArray(payload.answer)
+        ? (payload.answer as any[]).map(String)
+        : String(payload.answer).split(',').map((s) => s.trim()).filter(Boolean);
+
+      const expectedAnswers: string[] = Array.isArray((currentQuestion as any).correctIndices)
+        ? (currentQuestion as any).correctIndices.map(String)
+        : Array.isArray(currentQuestion.correctAnswer)
+        ? (currentQuestion.correctAnswer as any[]).map(String)
+        : String(currentQuestion.correctAnswer).split(',').map((s) => s.trim()).filter(Boolean);
+
+      const sortedSub = [...new Set(submittedAnswers)].sort();
+      const sortedExp = [...new Set(expectedAnswers)].sort();
+      correct = sortedSub.length === sortedExp.length && sortedSub.every((val, i) => val === sortedExp[i]);
+    } else {
+      correct = String(payload.answer).trim() === String(currentQuestion.correctAnswer).trim();
+    }
+
     const streak = correct
       ? (sessionManager.getPlayerStreak(session.id, socket.id) + 1)
       : 0;
 
-    const points = calculateScore(
-      correct,
-      payload.timeMs,
-      currentQuestion.timeLimit * 1000,
-      streak,
-    );
+    const points = isPoll
+      ? 100 // Flat participation score for polls
+      : calculateScore(
+          correct,
+          payload.timeMs,
+          currentQuestion.timeLimit * 1000,
+          streak,
+        );
 
     sessionManager.recordAnswer(session.id, socket.id, {
       questionId: payload.questionId,
@@ -805,7 +847,15 @@ function sendNextQuestion(io: IOServer, sessionId: string): void {
 
       const distribution: Record<string, number> = {};
       for (const opt of question.options) {
-        distribution[opt.id] = answers.filter((a) => a.answer === opt.id).length;
+        distribution[opt.id] = answers.filter((a) => {
+          if (Array.isArray(a.answer)) {
+            return a.answer.map(String).includes(opt.id);
+          }
+          if (typeof a.answer === 'string' && a.answer.includes(',')) {
+            return a.answer.split(',').map((s: string) => s.trim()).includes(opt.id);
+          }
+          return String(a.answer).trim() === opt.id;
+        }).length;
       }
 
       const updatePayload = {

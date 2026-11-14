@@ -15,6 +15,7 @@ import {
   Sparkles,
   QrCode,
   CheckCircle2,
+  BarChart3,
   Lock,
   Unlock,
   Download,
@@ -707,13 +708,28 @@ export const HostPage: React.FC = () => {
           <div className="space-y-6 sm:space-y-8 animate-fade-in">
             <div className="bg-slate-800/95 rounded-3xl border border-slate-700 p-6 sm:p-10 shadow-2xl relative overflow-hidden">
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-700/80">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="px-3.5 py-1.5 rounded-lg bg-alix-violet-500/20 text-alix-violet-300 border border-alix-violet-500/30 text-xs sm:text-sm font-bold uppercase tracking-wider">
                     Question {currentQuestionIdx + 1} of {questions.length}
                   </span>
                   <span className="px-2.5 py-1 rounded-lg bg-slate-700/60 text-xs font-semibold text-slate-300">
                     {subject}
                   </span>
+                  {((currentQ as any).type === 'multi_select' || (currentQ as any).questionType === 'multi_select') && (
+                    <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-black uppercase tracking-wider animate-pulse">
+                      ☑ Multi-Select: Choose all that apply
+                    </span>
+                  )}
+                  {((currentQ as any).type === 'poll' || (currentQ as any).questionType === 'poll') && (
+                    <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-black uppercase tracking-wider">
+                      📊 Poll: Live Opinion Check
+                    </span>
+                  )}
+                  {((currentQ as any).type === 'true_false' || (currentQ as any).questionType === 'true_false') && (
+                    <span className="px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-300 border border-blue-500/40 text-xs font-black uppercase tracking-wider">
+                      ⚖️ True / False
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -762,122 +778,160 @@ export const HostPage: React.FC = () => {
         )}
 
         {/* Stage 2: Response Distribution Breakdown */}
-        {stage === 'chart' && (
-          <div className="bg-[#0F0524]/90 rounded-3xl border border-white/10 p-6 sm:p-8 shadow-2xl animate-scale-in">
-            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
-              <div>
-                <span className="text-xs font-black uppercase tracking-wider text-cyan-400">
-                  Results
-                </span>
-                <h2 className="text-xl sm:text-2xl font-heading font-black text-white mt-1">
-                  {currentQ.text}
-                </h2>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-black text-emerald-400 flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                  <span>
-                    Correct: {rawOptions[currentQ.correctIndex] || `Option ${currentQ.correctIndex + 1}`}
+        {stage === 'chart' && (() => {
+          const isMulti = (currentQ as any).type === 'multi_select' || (currentQ as any).questionType === 'multi_select';
+          const isPoll = (currentQ as any).type === 'poll' || (currentQ as any).questionType === 'poll';
+          const correctIndices: number[] = Array.isArray((currentQ as any).correctIndices) && (currentQ as any).correctIndices.length > 0
+            ? (currentQ as any).correctIndices
+            : [currentQ.correctIndex ?? 0];
+
+          return (
+            <div className="bg-[#0F0524]/90 rounded-3xl border border-white/10 p-6 sm:p-8 shadow-2xl animate-scale-in">
+              <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
+                <div>
+                  <span className="text-xs font-black uppercase tracking-wider text-cyan-400">
+                    Results Breakdown
                   </span>
+                  <h2 className="text-xl sm:text-2xl font-heading font-black text-white mt-1">
+                    {currentQ.text}
+                  </h2>
+                </div>
+                <div className="text-right">
+                  {isPoll ? (
+                    <div className="text-sm font-black text-amber-400 flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-amber-400" />
+                      <span>Poll Results ({answersSubmitted} responses)</span>
+                    </div>
+                  ) : (
+                    <div className="text-sm font-black text-emerald-400 flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                      <span>
+                        Correct:{' '}
+                        {correctIndices.map((ci: number) => rawOptions[ci] || `Option ${ci + 1}`).join(' & ')}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
 
-            {/* Filtered Response Distribution Bars */}
-            <div
-              className={`grid gap-4 sm:gap-6 items-end min-h-[220px] pt-4 ${
-                displayOptions.length === 2
-                  ? 'grid-cols-2 max-w-xl mx-auto'
-                  : displayOptions.length === 3
-                  ? 'grid-cols-3 max-w-3xl mx-auto'
-                  : 'grid-cols-2 sm:grid-cols-4'
-              }`}
-            >
-              {displayOptions.map((item, displayIdx) => {
-                const t = themes[displayIdx % themes.length];
-                const isCorrect = item.originalIdx === currentQ.correctIndex;
-                const voteCount = questionDistribution[item.originalIdx.toString()] || 0;
-                const percent = answersSubmitted > 0 ? Math.round((voteCount / answersSubmitted) * 100) : 0;
+              {/* Filtered Response Distribution Bars with Kahoot-style Histogram Columns */}
+              <div
+                className={`grid gap-4 sm:gap-6 items-end min-h-[300px] pt-4 ${
+                  displayOptions.length === 2
+                    ? 'grid-cols-2 max-w-xl mx-auto'
+                    : displayOptions.length === 3
+                    ? 'grid-cols-3 max-w-3xl mx-auto'
+                    : 'grid-cols-2 sm:grid-cols-4'
+                }`}
+              >
+                {displayOptions.map((item, displayIdx) => {
+                  const t = themes[displayIdx % themes.length];
+                  const isCorrect = isPoll ? false : isMulti ? correctIndices.includes(item.originalIdx) : item.originalIdx === currentQ.correctIndex;
+                  const voteCount = questionDistribution[item.originalIdx.toString()] || 0;
+                  const percent = answersSubmitted > 0 ? Math.round((voteCount / answersSubmitted) * 100) : 0;
 
-                return (
-                  <div key={item.originalIdx} className="flex flex-col items-center gap-2 h-full justify-end">
-                    {/* Checkmark badge */}
-                    {isCorrect ? (
-                      <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg animate-bounce mb-1">
-                        <CheckCircle2 className="w-5 h-5 stroke-[3]" />
-                      </div>
-                    ) : (
-                      <div className="w-8 h-8 opacity-0 mb-1" />
-                    )}
+                  return (
+                    <div key={item.originalIdx} className="flex flex-col items-center gap-2 h-full justify-end">
+                      {/* Checkmark or correct badge */}
+                      {isCorrect ? (
+                        <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg animate-bounce mb-1">
+                          <CheckCircle2 className="w-5 h-5 stroke-[3]" />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 opacity-0 mb-1" />
+                      )}
 
-                    {/* Arcade Option Bar with Response Count & Percentages */}
-                    <div
-                      className={`w-full rounded-2xl ${t.bg} border-b-6 ${t.border} p-5 sm:p-6 text-center text-white font-black shadow-lg transition-all flex flex-col justify-between items-center ${
-                        isCorrect ? 'ring-4 ring-white shadow-2xl scale-[1.02]' : 'opacity-70'
-                      }`}
-                      style={{ minHeight: isCorrect ? '170px' : '130px' }}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-2xl sm:text-3xl drop-shadow">{t.shape}</span>
-                        <span className="px-2.5 py-0.5 rounded-full bg-black/35 font-mono text-xs sm:text-sm font-black border border-white/20">
-                          {answersSubmitted > 0 ? `${percent}%` : '0%'}
-                        </span>
-                      </div>
-
-                      <span className="text-sm sm:text-base font-black line-clamp-2 my-2 leading-tight drop-shadow">
-                        {item.text}
-                      </span>
-
-                      <div className="w-full pt-2 flex items-center justify-between text-xs font-bold text-white/90 border-t border-white/20">
-                        <span>{voteCount} {voteCount === 1 ? 'vote' : 'votes'}</span>
-                        {isCorrect && (
-                          <span className="text-emerald-300 font-extrabold flex items-center gap-1">
-                            ✓ Correct
+                      {/* Rising Histogram Bar Column (Image 5 style) */}
+                      <div className="w-full flex flex-col items-center justify-end h-36 mb-1">
+                        <div
+                          className={`w-14 sm:w-20 rounded-t-2xl ${t.bg} border-t-2 border-x-2 border-white/40 flex flex-col items-center justify-between py-2 transition-all duration-700 shadow-xl ${
+                            isCorrect ? 'ring-2 ring-emerald-300' : ''
+                          }`}
+                          style={{
+                            height: `${Math.max(34, (voteCount / Math.max(1, answersSubmitted)) * 135)}px`,
+                          }}
+                        >
+                          <span className="font-heading font-black text-sm sm:text-base text-white drop-shadow flex items-center gap-1">
+                            <span>{t.shape}</span>
+                            <span>{voteCount}</span>
                           </span>
-                        )}
+                          {answersSubmitted > 0 && (
+                            <span className="text-[10px] font-mono text-white/90 font-black">
+                              {percent}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Arcade Option Bar with Response Count & Percentages */}
+                      <div
+                        className={`w-full rounded-2xl ${t.bg} border-b-6 ${t.border} p-4 sm:p-5 text-center text-white font-black shadow-lg transition-all flex flex-col justify-between items-center ${
+                          isCorrect ? 'ring-4 ring-white shadow-2xl scale-[1.02]' : isPoll ? 'opacity-90' : 'opacity-70'
+                        }`}
+                        style={{ minHeight: isCorrect ? '140px' : '110px' }}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-xl sm:text-2xl drop-shadow">{t.shape}</span>
+                          <span className="px-2.5 py-0.5 rounded-full bg-black/35 font-mono text-xs font-black border border-white/20">
+                            {answersSubmitted > 0 ? `${percent}%` : '0%'}
+                          </span>
+                        </div>
+
+                        <span className="text-sm sm:text-base font-black line-clamp-2 my-2 leading-tight drop-shadow">
+                          {item.text}
+                        </span>
+
+                        <div className="w-full pt-1.5 flex items-center justify-between text-xs font-bold text-white/90 border-t border-white/20">
+                          <span>{voteCount} {voteCount === 1 ? 'vote' : 'votes'}</span>
+                          {isCorrect && (
+                            <span className="text-emerald-300 font-extrabold flex items-center gap-1">
+                              ✓ Correct
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
 
-            {/* Prominent Action Bar directly under Chart */}
-            <div className="pt-8 flex flex-wrap items-center justify-center gap-4">
-              {currentQuestionIdx + 1 < questions.length ? (
-                <>
+              {/* Action Buttons */}
+              <div className="pt-8 flex flex-wrap items-center justify-center gap-4">
+                {currentQuestionIdx + 1 < questions.length ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleNextQuestion}
+                      className="px-8 py-3.5 rounded-2xl bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#175407] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-lg sm:text-xl shadow-2xl flex items-center gap-3 cursor-pointer transition-all"
+                    >
+                      <span>Next Question ({currentQuestionIdx + 2} of {questions.length})</span>
+                      <ArrowRight className="w-5 h-5 stroke-[3]" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleShowLeaderboard}
+                      className="px-6 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-heading font-black text-sm sm:text-base flex items-center gap-2 cursor-pointer shadow-lg transition-all"
+                    >
+                      <Trophy className="w-4 h-4 text-amber-400" />
+                      <span>View Leaderboard</span>
+                    </button>
+                  </>
+                ) : (
                   <button
                     type="button"
                     onClick={handleNextQuestion}
-                    className="px-8 py-3.5 rounded-2xl bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#175407] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-lg sm:text-xl shadow-2xl flex items-center gap-3 cursor-pointer transition-all"
+                    className="px-10 py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 border-b-6 border-amber-700 active:border-b-0 active:translate-y-1.5 text-white font-heading font-black text-xl sm:text-2xl shadow-2xl flex items-center gap-3 cursor-pointer transition-all"
                   >
-                    <span>Next Question ({currentQuestionIdx + 2} of {questions.length})</span>
-                    <ArrowRight className="w-5 h-5 stroke-[3]" />
+                    <Trophy className="w-6 h-6 stroke-[2.5]" />
+                    <span>Final Podium & Results</span>
+                    <ArrowRight className="w-6 h-6 stroke-[3]" />
                   </button>
-
-                  <button
-                    type="button"
-                    onClick={handleShowLeaderboard}
-                    className="px-6 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-heading font-black text-sm sm:text-base flex items-center gap-2 cursor-pointer shadow-lg transition-all"
-                  >
-                    <Trophy className="w-4 h-4 text-amber-400" />
-                    <span>View Leaderboard</span>
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleNextQuestion}
-                  className="px-10 py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 border-b-6 border-amber-700 active:border-b-0 active:translate-y-1.5 text-white font-heading font-black text-xl sm:text-2xl shadow-2xl flex items-center gap-3 cursor-pointer transition-all"
-                >
-                  <Trophy className="w-6 h-6 stroke-[2.5]" />
-                  <span>Final Podium & Results</span>
-                  <ArrowRight className="w-6 h-6 stroke-[3]" />
-                </button>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Stage 3: Live Session Leaderboard */}
         {stage === 'leaderboard' && (

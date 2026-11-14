@@ -21,6 +21,9 @@ import {
   User,
   LogOut,
   CheckCircle2,
+  CheckSquare,
+  Square,
+  BarChart3,
   Clock,
   Wifi,
   Sparkles,
@@ -30,11 +33,14 @@ import {
 
 interface ActiveQuestion {
   id?: string;
+  type?: string;
+  questionType?: string;
   index: number;
   total: number;
   text: string;
   options: string[];
   timeLimit: number;
+  points?: number;
 }
 
 export const PlayPage: React.FC = () => {
@@ -50,6 +56,7 @@ export const PlayPage: React.FC = () => {
   // Game Phases: 'waiting' | 'answering' | 'submitted' | 'score' | 'leaderboard' | 'ended'
   const [phase, setPhase] = useState<'waiting' | 'answering' | 'submitted' | 'score' | 'leaderboard' | 'ended'>('waiting');
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
   const [secondsRemaining, setSecondsRemaining] = useState(30);
   const [score, setScore] = useState(() => {
     return Number(sessionStorage.getItem(`alix_score_${sessionId}`)) || 0;
@@ -137,14 +144,18 @@ export const PlayPage: React.FC = () => {
 
       setCurrentQuestion({
         id: q.id || `q-${idx + 1}`,
+        type: q.type,
+        questionType: q.questionType || q.type,
         index: idx + 1,
         total: questionsList.length || 1,
         text: q.text,
         options: finalOpts,
         timeLimit: q.timeLimit || 30,
+        points: q.points || 1000,
       });
       setSecondsRemaining(q.timeLimit || 30);
       setSelectedIndex(null);
+      setSelectedIndices([]);
       setPhase('answering');
     }
   };
@@ -200,11 +211,14 @@ export const PlayPage: React.FC = () => {
 
           setCurrentQuestion({
             id: data.question.id,
+            type: data.question.type,
+            questionType: data.question.questionType || data.question.type,
             index: qIdx + 1,
             total: data.totalQuestions || quizQuestionsRef.current.length || 1,
             text: data.question.text,
             options: finalOpts,
             timeLimit: data.timeLimit || 30,
+            points: data.question.points || 1000,
           });
           setSecondsRemaining(remainingSeconds);
 
@@ -212,10 +226,15 @@ export const PlayPage: React.FC = () => {
           const subKey = `alix_sub_${sessionId}_q${qIdx}`;
           const existingSub = sessionStorage.getItem(subKey);
           if (existingSub !== null) {
-            setSelectedIndex(Number(existingSub));
+            if (existingSub.includes(',')) {
+              setSelectedIndices(existingSub.split(',').map(Number));
+            } else {
+              setSelectedIndex(Number(existingSub));
+            }
             setPhase('submitted');
           } else {
             setSelectedIndex(null);
+            setSelectedIndices([]);
             setPhase('answering');
           }
         }
@@ -319,7 +338,51 @@ export const PlayPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [secondsRemaining, phase, isLastAnswerCorrect, lastPointsAwarded, streak, sessionId]);
 
-  // Student selects an option
+  const isMultiSelect =
+    (currentQuestion as any).type === 'MULTI_SELECT' ||
+    (currentQuestion as any).questionType === 'multi_select';
+
+  const isPoll =
+    (currentQuestion as any).type === 'POLL' ||
+    (currentQuestion as any).questionType === 'poll';
+
+  // Multi-Select Option Toggle
+  const handleToggleMultiOption = (idx: number) => {
+    if (phase !== 'answering') return;
+    setSelectedIndices((prev) =>
+      prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx].sort()
+    );
+  };
+
+  // Multi-Select Final Submission
+  const handleSubmitMultiAnswer = () => {
+    if (phase !== 'answering' || selectedIndices.length === 0) return;
+    setPhase('submitted');
+
+    try {
+      sessionStorage.setItem(`alix_sub_${sessionId}_q${currentIdxRef.current}`, selectedIndices.join(','));
+    } catch {}
+
+    const timeSpentMs = Math.max(
+      100,
+      ((currentQuestion.timeLimit || 30) - secondsRemaining) * 1000
+    );
+
+    try {
+      const socket = getSocket();
+      socket.emit('submit-answer', {
+        sessionId: sessionId || '842915',
+        questionId: currentQuestion.id || 'q-01',
+        answer: selectedIndices.join(','),
+        timeMs: timeSpentMs,
+      });
+    } catch {}
+
+    setIsLastAnswerCorrect(false);
+    setLastPointsAwarded(0);
+  };
+
+  // Student selects a single option
   const handleSelectOption = (idx: number) => {
     if (selectedIndex !== null || phase !== 'answering') return;
     setSelectedIndex(idx);
@@ -500,6 +563,20 @@ export const PlayPage: React.FC = () => {
               </h2>
             </div>
 
+            {/* Question Format Indicators */}
+            {isMultiSelect && (
+              <div className="px-3.5 py-2 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-xs font-bold text-emerald-200 text-center flex items-center justify-center gap-2 animate-pulse">
+                <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Multi-Select: Choose all answers that apply, then press Submit</span>
+              </div>
+            )}
+            {isPoll && (
+              <div className="px-3.5 py-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-xs font-bold text-amber-200 text-center flex items-center justify-center gap-2">
+                <BarChart3 className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Opinion Poll: Cast your vote, no right or wrong answers!</span>
+              </div>
+            )}
+
             {/* Kahoot Tactile Options Grid (strictly filters out blank cards) */}
             <div
               className={`grid gap-3 sm:gap-4 pt-1 ${
@@ -513,12 +590,41 @@ export const PlayPage: React.FC = () => {
                   key={idx}
                   index={idx}
                   text={opt}
-                  selected={selectedIndex === idx}
-                  disabled={selectedIndex !== null}
-                  onClick={() => handleSelectOption(idx)}
+                  selected={isMultiSelect ? selectedIndices.includes(idx) : selectedIndex === idx}
+                  disabled={isMultiSelect ? phase !== 'answering' : selectedIndex !== null}
+                  onClick={() => {
+                    if (isMultiSelect) {
+                      handleToggleMultiOption(idx);
+                    } else {
+                      handleSelectOption(idx);
+                    }
+                  }}
                 />
               ))}
             </div>
+
+            {/* Multi-Select Submit Button */}
+            {isMultiSelect && (
+              <div className="pt-2 flex justify-center">
+                <button
+                  type="button"
+                  onClick={handleSubmitMultiAnswer}
+                  disabled={selectedIndices.length === 0}
+                  className={`w-full max-w-md py-4 px-6 rounded-2xl font-heading font-black text-base sm:text-lg shadow-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                    selectedIndices.length === 0
+                      ? 'bg-slate-700/60 text-slate-400 border border-slate-600 cursor-not-allowed opacity-60'
+                      : 'bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#175407] active:border-b-0 active:translate-y-1 text-white shadow-emerald-950/60'
+                  }`}
+                >
+                  <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+                  <span>
+                    {selectedIndices.length === 0
+                      ? 'Select Option(s) to Submit'
+                      : `Submit Answer (${selectedIndices.length} Selected)`}
+                  </span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -530,17 +636,20 @@ export const PlayPage: React.FC = () => {
             </div>
             <div>
               <h2 className="text-3xl sm:text-4xl font-heading font-black text-white">
-                Answer Locked!
+                {isPoll ? 'Vote Recorded!' : 'Answer Locked!'}
               </h2>
               <p className="text-xs sm:text-sm text-white/70 font-medium mt-1">
-                Hang tight! Results will appear as soon as the timer closes.
+                {isPoll
+                  ? 'Your opinion has been registered. Results will show live when the timer ends.'
+                  : 'Hang tight! Solution breakdown will appear as soon as the timer closes.'}
               </p>
             </div>
             <div className="p-4 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md shadow-md text-sm font-heading font-black text-white flex items-center justify-between">
-              <span>Selected Choice:</span>
-              <span className="px-3 py-1 rounded-lg bg-alix-cyan-400 text-slate-950 font-black">
-                {currentQuestion.options[selectedIndex ?? 0] ||
-                  `Option ${String.fromCharCode(65 + (selectedIndex ?? 0))}`}
+              <span>{isMultiSelect ? 'Selected Choices:' : 'Selected Choice:'}</span>
+              <span className="px-3 py-1 rounded-lg bg-alix-cyan-400 text-slate-950 font-black truncate max-w-[200px]">
+                {isMultiSelect
+                  ? selectedIndices.map((i) => currentQuestion.options[i]).join(', ')
+                  : currentQuestion.options[selectedIndex ?? 0] || `Option ${selectedIndex !== null ? selectedIndex + 1 : ''}`}
               </span>
             </div>
           </div>
@@ -551,12 +660,16 @@ export const PlayPage: React.FC = () => {
           <div className="text-center max-w-md mx-auto space-y-5 animate-scale-in py-8">
             <div
               className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-2xl border-2 ${
-                isLastAnswerCorrect
+                isPoll
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-400/40'
+                  : isLastAnswerCorrect
                   ? 'bg-emerald-500/20 text-emerald-400 border-emerald-400/40 animate-bounce'
                   : 'bg-rose-500/20 text-rose-400 border-rose-400/40'
               }`}
             >
-              {isLastAnswerCorrect ? (
+              {isPoll ? (
+                <BarChart3 className="w-10 h-10 stroke-[2.5]" />
+              ) : isLastAnswerCorrect ? (
                 <CheckCircle2 className="w-10 h-10 stroke-[2.5]" />
               ) : (
                 <Clock className="w-10 h-10 stroke-[2.5]" />
@@ -565,10 +678,16 @@ export const PlayPage: React.FC = () => {
 
             <div>
               <h2 className="text-2xl sm:text-3xl font-heading font-black text-white">
-                {isLastAnswerCorrect ? 'Correct! Outstanding!' : 'Time Up / Incorrect'}
+                {isPoll
+                  ? 'Opinion Registered!'
+                  : isLastAnswerCorrect
+                  ? 'Correct! Outstanding!'
+                  : 'Time Up / Incorrect'}
               </h2>
               <p className="text-xs text-white/70 mt-1">
-                {isLastAnswerCorrect
+                {isPoll
+                  ? '+100 participation points earned for contributing!'
+                  : isLastAnswerCorrect
                   ? `+${lastPointsAwarded.toLocaleString()} points earned! Streak: ${streak}x 🔥`
                   : 'Check the solution breakdown on the main lecture screen.'}
               </p>

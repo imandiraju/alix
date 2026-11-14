@@ -3,10 +3,12 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IQuestion {
   id: string;
   text: string;
+  type?: string;
   timeLimit: number;
   points: number;
   options: string[];
   correctIndex: number;
+  correctIndices?: number[];
 }
 
 export interface IQuiz extends Document {
@@ -26,10 +28,12 @@ const QuestionSchema = new Schema<IQuestion>(
   {
     id: { type: String, required: true },
     text: { type: String, required: true },
+    type: { type: String, default: 'multiple_choice' },
     timeLimit: { type: Number, default: 30 },
     points: { type: Number, default: 1000 },
     options: { type: [String], required: true },
-    correctIndex: { type: Number, required: true },
+    correctIndex: { type: Number, default: 0 },
+    correctIndices: { type: [Number], default: [] },
   },
   { _id: false }
 );
