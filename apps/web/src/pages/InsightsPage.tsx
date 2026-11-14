@@ -1,189 +1,261 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Sidebar from '../components/layout/Sidebar';
 import Footer from '../components/layout/Footer';
+import { useAuth } from '../context/AuthContext';
+import { REALTIME_URL } from '../services/socket';
 import {
   TrendingUp,
-  AlertTriangle,
   Users,
   Download,
   Calendar,
   Sparkles,
-  CheckCircle,
-  HelpCircle,
-  Lightbulb,
+  CheckCircle2,
+  Play,
+  FileSpreadsheet,
+  Gamepad2,
+  Clock,
+  ArrowRight,
 } from 'lucide-react';
 
-export const InsightsPage: React.FC = () => {
-  const misconceptions = [
-    {
-      question: 'Q3: Minimum Raft nodes for 2 crash failures',
-      misconception: '34% of students answered "3 nodes" instead of 5 (2f + 1 formula missed)',
-      recommendation: 'Review quorum formula during the next lecture opening summary.',
-      severity: 'high',
-    },
-    {
-      question: 'Q6: Byzantine Generals vs Crash Faults',
-      misconception: '21% confused crash-stop models with arbitrary message manipulation',
-      recommendation: 'Add comparison slide between Paxos and PBFT.',
-      severity: 'medium',
-    },
-  ];
+interface SessionDoc {
+  _id: string;
+  pin: string;
+  status: string;
+  createdAt: string;
+  participants: any[];
+  responses: any[];
+  quizTitle?: string;
+  quizId?: any;
+}
 
-  const studentPerformance = [
-    { name: 'Zoe Chen', participation: '100%', accuracy: '92%', score: 9480 },
-    { name: 'Marcus Taylor', participation: '100%', accuracy: '85%', score: 8120 },
-    { name: 'Priya Sharma', participation: '100%', accuracy: '83%', score: 7890 },
-    { name: 'David Kim', participation: '90%', accuracy: '78%', score: 7210 },
-    { name: 'Alex Rivera', participation: '100%', accuracy: '75%', score: 7150 },
-  ];
+export const InsightsPage: React.FC = () => {
+  const { user } = useAuth();
+  const [sessions, setSessions] = useState<SessionDoc[]>([]);
+  const [stats, setStats] = useState({
+    totalSessions: 0,
+    totalLearners: 0,
+    avgParticipation: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      setIsLoading(true);
+      try {
+        const teacherParam = user?.id ? `?teacherId=${user.id}` : '';
+        const res = await fetch(`${REALTIME_URL}/api/sessions/stats${teacherParam}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.stats) {
+            setStats({
+              totalSessions: data.stats.totalSessions || 0,
+              totalLearners: data.stats.totalLearners || 0,
+              avgParticipation: data.stats.avgParticipation || 0,
+            });
+            if (Array.isArray(data.stats.recentSessions)) {
+              setSessions(data.stats.recentSessions);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Reports fetch error:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, [user]);
+
+  const handleExportAttendance = async (pin: string) => {
+    try {
+      const res = await fetch(`${REALTIME_URL}/api/sessions/${pin}/attendance`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.attendance) return;
+
+      let csv = 'Roll No,Student Name,Email,Section,Status,Score,Joined At\n';
+      data.attendance.forEach((a: any) => {
+        csv += `${a.rollNo},"${a.name}",${a.email},${a.section},${a.status},${a.score},"${
+          a.joinedAt ? new Date(a.joinedAt).toLocaleTimeString() : 'N/A'
+        }"\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `ALIX_Report_${pin}_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to export report:', err);
+    }
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-alix-slate-50">
+    <div className="min-h-screen flex flex-col bg-[#F2F2F2]">
       <Navbar />
 
-      <div className="flex-1 flex max-w-7xl w-full mx-auto">
-        <Sidebar className="hidden lg:flex" />
+      <div className="flex-1 flex max-w-[1440px] w-full mx-auto">
+        <Sidebar className="hidden lg:flex shrink-0" />
 
-        <main className="flex-1 p-6 sm:p-8 max-w-5xl">
-          {/* Header Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 max-w-6xl">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <div className="flex items-center gap-2 text-xs font-bold text-alix-violet-700 uppercase tracking-wider mb-1">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Pedagogical Analytics</span>
-              </div>
-              <h1 className="text-3xl font-heading font-extrabold text-alix-indigo">
-                ALIX Insights
+              <h1 className="text-2xl sm:text-3xl font-heading font-black text-slate-900 tracking-tight">
+                Reports & Insights
               </h1>
-              <p className="text-alix-slate-600 text-sm mt-1">
-                Real-time active learning analytics, question diagnostic metrics, and misconception detection.
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                View scores, participant attendance, and performance reports from your live games.
               </p>
             </div>
 
-            <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-alix-slate-300 hover:border-alix-indigo text-alix-indigo text-sm font-bold shadow-sm transition-all">
-              <Download className="w-4 h-4 text-alix-violet-600" />
-              <span>Export CSV Report</span>
-            </button>
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1368CE] hover:bg-[#105AB3] text-white text-xs font-black shadow-sm transition-all"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Host Live Game</span>
+            </Link>
           </div>
 
-          {/* Top Analytics Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
-            <div className="p-6 rounded-2xl bg-white border border-alix-slate-200 shadow-sm">
-              <span className="text-xs font-bold uppercase tracking-wider text-alix-slate-400">
-                Participation Rate
-              </span>
-              <div className="text-3xl font-heading font-extrabold text-alix-indigo mt-2">
-                98.4%
-              </div>
-              <p className="text-xs text-emerald-600 mt-1 font-semibold">
-                71 of 72 students answered all questions
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-white border border-alix-slate-200 shadow-sm">
-              <span className="text-xs font-bold uppercase tracking-wider text-alix-slate-400">
-                Average Cohort Score
-              </span>
-              <div className="text-3xl font-heading font-extrabold text-alix-indigo mt-2">
-                79.2%
-              </div>
-              <p className="text-xs text-alix-cyan-600 mt-1 font-semibold">
-                Target mastery threshold (&gt;75%) achieved
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-white border border-alix-slate-200 shadow-sm">
-              <span className="text-xs font-bold uppercase tracking-wider text-alix-slate-400">
-                Identified Misconceptions
-              </span>
-              <div className="text-3xl font-heading font-extrabold text-alix-coral-500 mt-2">
-                2 Critical
-              </div>
-              <p className="text-xs text-alix-slate-500 mt-1">
-                Flags generated for targeted peer instruction
-              </p>
-            </div>
-          </div>
-
-          {/* Misconception Diagnostic Section */}
-          <section className="bg-white rounded-2xl border border-alix-slate-200 shadow-sm p-6 mb-8">
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-alix-slate-100">
-              <AlertTriangle className="w-5 h-5 text-alix-coral-500" />
-              <h2 className="text-lg font-heading font-bold text-alix-indigo">
-                Misconception Detection Alerts
-              </h2>
-            </div>
-
-            <div className="space-y-4">
-              {misconceptions.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="p-4 rounded-xl bg-orange-50/60 border border-orange-200/80 space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-orange-950">
-                      {item.question}
-                    </span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-orange-200 text-orange-800">
-                      {item.severity} severity
-                    </span>
-                  </div>
-                  <p className="text-xs text-orange-900 font-medium">
-                    {item.misconception}
-                  </p>
-                  <div className="text-xs text-alix-indigo font-semibold bg-white p-2.5 rounded-lg border border-orange-200/50 flex items-center gap-1.5">
-                    <Lightbulb className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    <span><strong>Pedagogy Advice:</strong> {item.recommendation}</span>
-                  </div>
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Games Hosted
+                </span>
+                <div className="text-2xl sm:text-3xl font-heading font-black text-slate-900 mt-1">
+                  {stats.totalSessions}
                 </div>
-              ))}
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center font-bold">
+                <Gamepad2 className="w-6 h-6" />
+              </div>
             </div>
-          </section>
 
-          {/* Student Performance Table */}
-          <section className="bg-white rounded-2xl border border-alix-slate-200 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-alix-slate-100 flex items-center justify-between">
-              <h2 className="text-lg font-heading font-bold text-alix-indigo">
-                Cohort Performance Breakdown
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Total Players
+                </span>
+                <div className="text-2xl sm:text-3xl font-heading font-black text-slate-900 mt-1">
+                  {stats.totalLearners}
+                </div>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center font-bold">
+                <Users className="w-6 h-6" />
+              </div>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Avg Participation
+                </span>
+                <div className="text-2xl sm:text-3xl font-heading font-black text-emerald-600 mt-1">
+                  {stats.avgParticipation}%
+                </div>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <TrendingUp className="w-6 h-6" />
+              </div>
+            </div>
+          </div>
+
+          {/* Past Sessions List */}
+          <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-base sm:text-lg font-heading font-black text-slate-900">
+                Recent Session Reports
               </h2>
-              <span className="text-xs text-alix-slate-400 font-medium">
-                Showing top active participants
+              <span className="text-xs text-slate-400 font-bold">
+                {sessions.length} recorded
               </span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-alix-slate-50 text-alix-slate-500 text-xs uppercase font-semibold border-b border-alix-slate-100">
-                  <tr>
-                    <th className="py-3 px-6">Learner Name</th>
-                    <th className="py-3 px-6">Participation</th>
-                    <th className="py-3 px-6">Accuracy</th>
-                    <th className="py-3 px-6 text-right">Total Score</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-alix-slate-100">
-                  {studentPerformance.map((s, idx) => (
-                    <tr key={idx} className="hover:bg-alix-slate-50/80">
-                      <td className="py-4 px-6 font-bold text-alix-indigo">
-                        {s.name}
-                      </td>
-                      <td className="py-4 px-6 text-alix-slate-600">
-                        {s.participation}
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          {s.accuracy}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-right font-mono font-bold text-alix-indigo">
-                        {s.score.toLocaleString()} pts
-                      </td>
+            {isLoading ? (
+              <div className="p-12 text-center text-slate-400">
+                <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                <span className="text-xs font-bold">Loading reports...</span>
+              </div>
+            ) : sessions.length === 0 ? (
+              <div className="p-10 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                  <FileSpreadsheet className="w-6 h-6" />
+                </div>
+                <h3 className="font-heading font-bold text-slate-800 text-base">
+                  No session reports yet
+                </h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
+                  Host your first live quiz or poll to generate real-time student reports and attendance spreadsheets.
+                </p>
+                <Link
+                  to="/dashboard"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#26890C] hover:bg-[#20740A] text-white font-black text-xs shadow-sm transition-all"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <span>Host a Game</span>
+                </Link>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs sm:text-sm">
+                  <thead className="bg-slate-50 text-slate-500 text-[11px] uppercase font-bold border-b border-slate-100">
+                    <tr>
+                      <th className="py-3 px-5">Game PIN</th>
+                      <th className="py-3 px-5">Date</th>
+                      <th className="py-3 px-5">Players</th>
+                      <th className="py-3 px-5">Status</th>
+                      <th className="py-3 px-5 text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {sessions.map((s) => (
+                      <tr key={s._id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3.5 px-5 font-mono font-black text-slate-900">
+                          {s.pin}
+                        </td>
+                        <td className="py-3.5 px-5 text-slate-500 text-xs">
+                          {new Date(s.createdAt).toLocaleDateString()} at{' '}
+                          {new Date(s.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="py-3.5 px-5 font-bold text-slate-700">
+                          {s.participants?.length || 0} learners
+                        </td>
+                        <td className="py-3.5 px-5">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                              s.status === 'completed'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {s.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-5 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleExportAttendance(s.pin)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                            title="Download CSV"
+                          >
+                            <Download className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>Export CSV</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         </main>
       </div>

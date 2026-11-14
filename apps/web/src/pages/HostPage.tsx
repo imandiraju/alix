@@ -636,22 +636,40 @@ export const HostPage: React.FC = () => {
 
         {/* Stage 4: Victory Podium & Export */}
         {stage === 'victory' && (
-          <div className="text-center max-w-2xl mx-auto space-y-6 animate-scale-in">
-            <div className="w-16 h-16 rounded-2xl bg-amber-400/20 text-amber-300 flex items-center justify-center mx-auto mb-2 border border-amber-400/30">
-              <Trophy className="w-8 h-8" />
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-heading font-black text-white">
-              Session Concluded!
-            </h1>
-            <p className="text-slate-300 text-sm sm:text-base">
-              Great engagement! Responses and student participation have been securely logged to your database.
-            </p>
+          <div className="w-full max-w-4xl mx-auto space-y-6 animate-scale-in flex flex-col items-center">
+            {/* 3D Animated Victory Podium with Confetti */}
+            <VictoryPodium
+              winners={
+                players.length > 0
+                  ? [...players]
+                      .sort((a, b) => (b.score || 0) - (a.score || 0))
+                      .slice(0, 3)
+                      .map((p, idx) => ({
+                        rank: idx + 1,
+                        name: p.name,
+                        score: p.score || Math.max(500, 1000 - idx * 150),
+                        avatarId: p.avatar || (idx === 0 ? 'fox' : idx === 1 ? 'bot' : 'owl'),
+                        streak: 3,
+                      }))
+                  : [
+                      { rank: 1, name: 'Champion', score: 1000, avatarId: 'fox', streak: 4 },
+                      { rank: 2, name: 'Runner Up', score: 850, avatarId: 'bot', streak: 2 },
+                      { rank: 3, name: '3rd Place', score: 700, avatarId: 'owl', streak: 1 },
+                    ]
+              }
+              onRestart={() => {
+                setStage('lobby');
+                setCurrentQuestionIdx(0);
+                setAnswersSubmitted(0);
+              }}
+            />
 
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            {/* Bottom Actions */}
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
               <button
                 type="button"
                 onClick={handleExportAttendance}
-                className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-alix-md transition-all flex items-center gap-2 cursor-pointer"
+                className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1 text-white font-bold text-sm shadow-lg transition-all duration-100 flex items-center gap-2 cursor-pointer"
               >
                 <Download className="w-4 h-4" />
                 <span>Export Attendance Sheet (CSV)</span>
@@ -659,7 +677,7 @@ export const HostPage: React.FC = () => {
 
               <Link
                 to="/dashboard"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-alix-violet-600 hover:bg-alix-violet-500 text-white font-bold text-sm shadow-alix-md transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#1368CE] hover:bg-[#105AB3] border-b-4 border-[#0D4A99] active:border-b-0 active:translate-y-1 text-white font-bold text-sm shadow-lg transition-all duration-100 cursor-pointer"
               >
                 <span>Return to Dashboard</span>
                 <ArrowRight className="w-4 h-4" />
