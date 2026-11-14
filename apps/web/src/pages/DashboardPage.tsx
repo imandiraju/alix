@@ -29,6 +29,7 @@ import {
   Code,
   Cpu,
   Compass,
+  ChevronRight,
 } from 'lucide-react';
 
 interface QuizItem {
@@ -360,120 +361,244 @@ export const DashboardPage: React.FC = () => {
         />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 max-w-6xl">
-          {/* Section: Educator Toolbar (Exact Kahoot 4-Card Unified Royal Purple Grid) */}
-          <div className="mb-8">
+          {/* Section: Educator Toolbar (Exact Kahoot 4-Card Unified Purple Gradient Carousel Grid) */}
+          <div className="mb-8 relative">
             <h2 className="text-base sm:text-lg font-heading font-semibold text-[#252525] mb-3 tracking-tight">
               Educator toolbar
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Card 1: Create activity from scratch */}
-              <div className="bg-[#46178F] hover:bg-[#3D147D] text-white p-5 rounded-2xl shadow-xs transition-all flex flex-col justify-between min-h-[160px] group">
-                <div className="space-y-3">
-                  <div className="w-10 h-10 rounded-full bg-white text-[#46178F] flex items-center justify-center shrink-0 shadow-xs">
-                    <Plus className="w-5 h-5 stroke-[2.5]" />
+            <div className="relative">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Card 1: Create activity from scratch */}
+                <div className="bg-gradient-to-br from-[#46178F] via-[#521C9C] to-[#6722B3] hover:shadow-md text-white p-5 rounded-2xl transition-all flex flex-col justify-between min-h-[160px] group">
+                  <div className="space-y-3">
+                    <div className="w-9 h-9 rounded-full bg-white text-[#46178F] flex items-center justify-center shrink-0 shadow-xs font-black text-sm">
+                      <Plus className="w-5 h-5 stroke-[2.5]" />
+                    </div>
+                    <div>
+                      <h3 className="font-heading font-bold text-[15px] leading-tight text-white">
+                        Create activity
+                      </h3>
+                      <p className="text-xs text-white/85 font-normal mt-1 leading-relaxed">
+                        Draft questions, concept checks, and polls.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-heading font-semibold text-base leading-snug text-white">
-                      Create activity
-                    </h3>
-                    <p className="text-xs text-white/90 font-normal mt-1 leading-relaxed">
-                      Draft questions, concept checks, and polls.
-                    </p>
+
+                  <div className="pt-3">
+                    <Link
+                      to="/create"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-white underline hover:no-underline"
+                    >
+                      <span>Create new</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
                   </div>
                 </div>
 
-                <div className="pt-3">
-                  <Link
-                    to="/create"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-white underline hover:no-underline"
-                  >
-                    <span>Create new</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
+                {/* Card 2: AI Assisted Studio */}
+                <div className="bg-gradient-to-br from-[#46178F] via-[#521C9C] to-[#6722B3] hover:shadow-md text-white p-5 rounded-2xl transition-all flex flex-col justify-between min-h-[160px] group">
+                  <div className="space-y-3">
+                    <div className="w-9 h-9 rounded-full bg-white text-[#46178F] flex items-center justify-center shrink-0 shadow-xs font-black text-sm">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-heading font-bold text-[15px] leading-tight text-white">
+                        AI Studio
+                      </h3>
+                      <p className="text-xs text-white/85 font-normal mt-1 leading-relaxed">
+                        Instant curriculum-aligned questions.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-3">
+                    <Link
+                      to="/create?ai=true"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-white underline hover:no-underline"
+                    >
+                      <span>Start creating</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Card 3: Anti-Proxy Rosters */}
+                <div className="bg-gradient-to-br from-[#46178F] via-[#521C9C] to-[#6722B3] hover:shadow-md text-white p-5 rounded-2xl transition-all flex flex-col justify-between min-h-[160px] group">
+                  <div className="space-y-3">
+                    <div className="w-9 h-9 rounded-full bg-white text-[#46178F] flex items-center justify-center shrink-0 shadow-xs font-black text-sm">
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-heading font-bold text-[15px] leading-tight text-white">
+                        Class rosters
+                      </h3>
+                      <p className="text-xs text-white/85 font-normal mt-1 leading-relaxed">
+                        Excel / CSV student roll numbers whitelist.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsRosterModalOpen(true)}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-white underline hover:no-underline cursor-pointer"
+                    >
+                      <span>Upload file</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Card 4: Accuracy & Live Host */}
+                <div className="bg-gradient-to-br from-[#46178F] via-[#521C9C] to-[#6722B3] hover:shadow-md text-white p-5 rounded-2xl transition-all flex flex-col justify-between min-h-[160px] group">
+                  <div className="space-y-3">
+                    <div className="w-9 h-9 rounded-full bg-white text-[#46178F] flex items-center justify-center shrink-0 shadow-xs font-black text-sm">
+                      <Play className="w-5 h-5 fill-current" />
+                    </div>
+                    <div>
+                      <h3 className="font-heading font-bold text-[15px] leading-tight text-white">
+                        Accuracy experience
+                      </h3>
+                      <p className="text-xs text-white/85 font-normal mt-1 leading-relaxed">
+                        Encourage correct answers over speed.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-3">
+                    <button
+                      type="button"
+                      onClick={handleStartLiveClick}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-white underline hover:no-underline cursor-pointer"
+                    >
+                      <span>Try now</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Card 2: AI Assisted Studio */}
-              <div className="bg-[#46178F] hover:bg-[#3D147D] text-white p-5 rounded-2xl shadow-xs transition-all flex flex-col justify-between min-h-[160px] group">
-                <div className="space-y-3">
-                  <div className="w-10 h-10 rounded-full bg-white text-[#46178F] flex items-center justify-center shrink-0 shadow-xs">
-                    <Sparkles className="w-5 h-5" />
+              {/* Floating Carousel Navigation Arrow (Exact Kahoot Visual Detail) */}
+              <button
+                type="button"
+                onClick={() => navigate('/discover')}
+                title="Explore more educator tools"
+                className="absolute -right-3.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white shadow-md border border-slate-200 hidden xl:flex items-center justify-center text-slate-700 hover:bg-slate-50 transition-all cursor-pointer z-10"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Section: To-do list (Kahoot Signature Overview Dashboard Element) */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-heading font-semibold text-[#252525] tracking-tight">
+                  To-do list
+                </h2>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <Link to="/insights" className="hover:underline">4 tasks completed</Link>
+                </div>
+              </div>
+              <Link to="/insights" className="text-xs font-semibold text-[#1368CE] hover:underline">
+                View all tasks
+              </Link>
+            </div>
+
+            <div className="space-y-2.5">
+              {/* Task 1: View report for latest session */}
+              <div
+                onClick={() => navigate('/insights')}
+                className="bg-white rounded-xl border border-[#E5E5E5] p-3.5 sm:p-4 flex items-center justify-between hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#1368CE] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
+                    K!
                   </div>
-                  <div>
-                    <h3 className="font-heading font-semibold text-base leading-snug text-white">
-                      AI Studio
+                  <div className="min-w-0">
+                    <h3 className="font-heading font-semibold text-sm text-[#252525] group-hover:text-[#46178F] transition-colors truncate">
+                      View report for {quizzes[0]?.title || 'latest session'}
                     </h3>
-                    <p className="text-xs text-white/90 font-normal mt-1 leading-relaxed">
-                      Instant curriculum-aligned questions.
+                    <p className="text-xs text-[#626262] font-normal truncate mt-0.5">
+                      Check the student accuracy and comprehension metrics from your lecture hall session.
                     </p>
                   </div>
                 </div>
-
-                <div className="pt-3">
-                  <Link
-                    to="/create?ai=true"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-white underline hover:no-underline"
-                  >
-                    <span>Start creating</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
+                <div className="w-7 h-7 rounded-full bg-slate-100 group-hover:bg-[#46178F] group-hover:text-white flex items-center justify-center text-slate-400 shrink-0 transition-colors ml-3">
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </div>
               </div>
 
-              {/* Card 3: Anti-Proxy Rosters */}
-              <div className="bg-[#46178F] hover:bg-[#3D147D] text-white p-5 rounded-2xl shadow-xs transition-all flex flex-col justify-between min-h-[160px] group">
-                <div className="space-y-3">
-                  <div className="w-10 h-10 rounded-full bg-white text-[#46178F] flex items-center justify-center shrink-0 shadow-xs">
+              {/* Task 2: AI Question Synthesis */}
+              <div
+                onClick={() => navigate('/create?ai=true')}
+                className="bg-white rounded-xl border border-[#E5E5E5] p-3.5 sm:p-4 flex items-center justify-between hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#46178F] to-[#7B2CBF] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+                    <Sparkles className="w-5 h-5 text-amber-300" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-heading font-semibold text-sm text-[#252525] group-hover:text-[#46178F] transition-colors truncate">
+                      Synthesize concept checks with Enterprise AI Studio
+                    </h3>
+                    <p className="text-xs text-[#626262] font-normal truncate mt-0.5">
+                      Turn slide notes or lecture topics into interactive multiple-choice questions in 15 seconds.
+                    </p>
+                  </div>
+                </div>
+                <div className="w-7 h-7 rounded-full bg-slate-100 group-hover:bg-[#46178F] group-hover:text-white flex items-center justify-center text-slate-400 shrink-0 transition-colors ml-3">
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+              </div>
+
+              {/* Task 3: Zero-Proxy Roster Protection */}
+              <div
+                onClick={() => setIsRosterModalOpen(true)}
+                className="bg-white rounded-xl border border-[#E5E5E5] p-3.5 sm:p-4 flex items-center justify-between hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#059669] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
                     <ShieldCheck className="w-5 h-5" />
                   </div>
-                  <div>
-                    <h3 className="font-heading font-semibold text-base leading-snug text-white">
-                      Class rosters
+                  <div className="min-w-0">
+                    <h3 className="font-heading font-semibold text-sm text-[#252525] group-hover:text-[#46178F] transition-colors truncate">
+                      Upload institutional roll number whitelist
                     </h3>
-                    <p className="text-xs text-white/90 font-normal mt-1 leading-relaxed">
-                      Excel / CSV student roll numbers whitelist.
+                    <p className="text-xs text-[#626262] font-normal truncate mt-0.5">
+                      Lock live rooms strictly to enrolled university student IDs to eliminate proxy attendance.
                     </p>
                   </div>
                 </div>
-
-                <div className="pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsRosterModalOpen(true)}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-white underline hover:no-underline cursor-pointer"
-                  >
-                    <span>Upload file</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                <div className="w-7 h-7 rounded-full bg-slate-100 group-hover:bg-[#46178F] group-hover:text-white flex items-center justify-center text-slate-400 shrink-0 transition-colors ml-3">
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </div>
               </div>
 
-              {/* Card 4: Accuracy & Live Host */}
-              <div className="bg-[#46178F] hover:bg-[#3D147D] text-white p-5 rounded-2xl shadow-xs transition-all flex flex-col justify-between min-h-[160px] group">
-                <div className="space-y-3">
-                  <div className="w-10 h-10 rounded-full bg-white text-[#46178F] flex items-center justify-center shrink-0 shadow-xs">
-                    <Play className="w-5 h-5 fill-current" />
+              {/* Task 4: Discover Curated Activities */}
+              <div
+                onClick={() => navigate('/discover')}
+                className="bg-white rounded-xl border border-[#E5E5E5] p-3.5 sm:p-4 flex items-center justify-between hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#00A6A6] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+                    <Compass className="w-5 h-5" />
                   </div>
-                  <div>
-                    <h3 className="font-heading font-semibold text-base leading-snug text-white">
-                      Accuracy experience
+                  <div className="min-w-0">
+                    <h3 className="font-heading font-semibold text-sm text-[#252525] group-hover:text-[#46178F] transition-colors truncate">
+                      Explore curated STEM concept inventories
                     </h3>
-                    <p className="text-xs text-white/90 font-normal mt-1 leading-relaxed">
-                      Encourage correct answers over speed.
+                    <p className="text-xs text-[#626262] font-normal truncate mt-0.5">
+                      Calibrated peer instruction decks for Algorithms, Linear Algebra, and System Engineering.
                     </p>
                   </div>
                 </div>
-
-                <div className="pt-3">
-                  <button
-                    type="button"
-                    onClick={handleStartLiveClick}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-white underline hover:no-underline cursor-pointer"
-                  >
-                    <span>Try now</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                <div className="w-7 h-7 rounded-full bg-slate-100 group-hover:bg-[#46178F] group-hover:text-white flex items-center justify-center text-slate-400 shrink-0 transition-colors ml-3">
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </div>
               </div>
             </div>

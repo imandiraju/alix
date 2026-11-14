@@ -38,25 +38,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       name: 'Discover',
       path: '/discover',
       icon: Compass,
-      badge: 'Live',
-      badgeColor: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
     },
     {
-      name: 'Library & Creator',
+      name: 'Library',
       path: '/create',
       icon: BookOpen,
+    },
+    {
+      name: 'Reports',
+      path: '/insights',
+      icon: LineChart,
     },
     {
       name: 'Class Rosters',
       path: '/dashboard?view=rosters',
       icon: ShieldCheck,
-      badge: 'Protected',
-      badgeColor: 'bg-purple-50 text-[#46178F] border border-purple-200',
-    },
-    {
-      name: 'Reports & Insights',
-      path: '/insights',
-      icon: LineChart,
     },
     {
       name: 'Student Groups',
@@ -84,10 +80,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (item.name === 'Discover') {
       return currentPath.startsWith('/discover');
     }
-    if (item.name === 'Library & Creator') {
+    if (item.name === 'Library') {
       return currentPath.startsWith('/create');
     }
-    if (item.name === 'Reports & Insights') {
+    if (item.name === 'Reports') {
       return currentPath.startsWith('/insights');
     }
     return false;
@@ -95,9 +91,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
-      className={`w-60 bg-white border-r border-[#E5E5E5] flex flex-col justify-between h-[calc(100vh-4rem)] sticky top-16 select-none ${className}`}
+      className={`w-64 bg-white border-r border-[#E5E5E5] flex flex-col justify-between h-[calc(100vh-4rem)] sticky top-16 select-none ${className}`}
     >
-      <div className="p-3.5 space-y-3 overflow-y-auto">
+      <div className="p-3 space-y-2 overflow-y-auto">
         {/* Navigation Menu */}
         <nav className="space-y-1">
           {navItems.map((item) => {
@@ -116,28 +112,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 key={item.name}
                 to={item.path}
                 onClick={handleClick}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                className={`flex items-center gap-3.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                   isActive
                     ? 'bg-[#46178F] text-white font-semibold shadow-xs'
                     : 'text-[#252525] hover:bg-[#F3F3F3] hover:text-[#46178F]'
                 }`}
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <Icon
-                    className={`w-4 h-4 shrink-0 ${
-                      isActive ? 'text-white' : 'text-[#626262] group-hover:text-[#46178F]'
-                    }`}
-                  />
-                  <span className="truncate">{item.name}</span>
-                </div>
-
-                {item.badge && !isActive && (
-                  <span
-                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${item.badgeColor}`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
+                <Icon
+                  className={`w-4 h-4 shrink-0 ${
+                    isActive ? 'text-white' : 'text-[#626262]'
+                  }`}
+                />
+                <span className="font-heading text-sm">{item.name}</span>
               </Link>
             );
           })}
@@ -164,11 +150,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-[#626262] hover:bg-[#F3F3F3] hover:text-[#252525] transition-colors"
         >
           <HelpCircle className="w-4 h-4 text-[#626262]" />
-          <span>Help & Tutorial</span>
+          <span>Help</span>
         </Link>
-        <div className="px-3 pt-1 text-[11px] text-[#626262] font-normal">
-          Academic Learning Platform • RKGlobal EdTech
-        </div>
       </div>
     </aside>
   );

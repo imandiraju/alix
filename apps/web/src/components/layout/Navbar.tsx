@@ -89,19 +89,6 @@ export const Navbar: React.FC = () => {
 
           {isAuthenticated && user ? (
             <>
-              {/* Faculty Dashboard Button */}
-              <Link
-                to="/dashboard"
-                className={`hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs sm:text-sm font-semibold transition-all ${
-                  location.pathname === '/dashboard'
-                    ? 'bg-[#46178F] text-white border-[#46178F] shadow-xs'
-                    : 'border-[#E5E5E5] text-[#252525] hover:bg-[#F3F3F3] hover:border-slate-300'
-                }`}
-              >
-                <LayoutDashboard className={`w-3.5 h-3.5 ${location.pathname === '/dashboard' ? 'text-amber-300' : 'text-[#46178F]'}`} />
-                <span>Dashboard</span>
-              </Link>
-
               {/* Admin Portal Button - Strictly for Platform Admin (alixadmin@gmail.com) */}
               {user.role === 'admin' && (
                 <Link
@@ -117,7 +104,7 @@ export const Navbar: React.FC = () => {
               {/* Signature Kahoot-Blue Create Button */}
               <Link
                 to="/create"
-                className="inline-flex items-center gap-1.5 bg-[#1368CE] hover:bg-[#0F52A4] text-white font-semibold text-xs sm:text-sm px-3.5 py-2 sm:px-4 sm:py-2 rounded-lg shadow-sm active:scale-95 transition-all"
+                className="inline-flex items-center gap-1.5 bg-[#1368CE] hover:bg-[#0F52A4] text-white font-semibold text-xs sm:text-sm px-4 py-2 rounded-lg shadow-xs active:scale-95 transition-all"
               >
                 <Plus className="w-4 h-4 stroke-[2.5]" />
                 <span>Create</span>
@@ -128,17 +115,11 @@ export const Navbar: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-2 p-1 rounded-xl hover:bg-[#F3F3F3] transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 p-1 rounded-xl hover:bg-[#F3F3F3] transition-colors cursor-pointer"
                   aria-label="User menu"
                 >
                   <div className="w-8 h-8 rounded-full bg-[#46178F] text-white flex items-center justify-center font-bold text-xs shadow-xs">
                     {user.avatarInitials}
-                  </div>
-                  <div className="hidden xl:block text-left text-xs">
-                    <div className="font-semibold text-[#252525] leading-tight truncate max-w-[110px]">
-                      {user.name}
-                    </div>
-                    <div className="text-[11px] text-[#626262] leading-tight font-normal">Faculty</div>
                   </div>
                   <ChevronDown className="w-3.5 h-3.5 text-[#626262] hidden sm:block" />
                 </button>
