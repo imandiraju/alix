@@ -132,7 +132,7 @@ export const Navbar: React.FC = () => {
               {user.role === 'admin' && (
                 <Link
                   to="/admin"
-                  className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md transition-all active:scale-95 ring-1 ring-amber-300"
+                  className="hidden md:inline-flex items-center gap-1.5 btn-tactile-amber text-xs px-3 py-1.5"
                   title="Platform Admin & OpenRouter Key Vault"
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-slate-950" />
@@ -143,9 +143,9 @@ export const Navbar: React.FC = () => {
               {/* Blue Primary Create Button */}
               <Link
                 to="/create"
-                className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#1368CE] hover:bg-[#105AB3] text-white font-black text-xs sm:text-sm shadow-md active:scale-95 transition-all"
+                className="hidden sm:inline-flex items-center gap-1.5 btn-tactile-blue text-xs px-3.5 py-1.5"
               >
-                <Plus className="w-4 h-4 stroke-[3]" />
+                <Plus className="w-3.5 h-3.5 stroke-[3]" />
                 <span>Create</span>
               </Link>
 

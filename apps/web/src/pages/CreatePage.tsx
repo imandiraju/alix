@@ -398,10 +398,10 @@ export const CreatePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsAiModalOpen(true)}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-indigo-500 hover:to-pink-400 text-white font-bold text-sm shadow-md flex items-center gap-2 transition-all cursor-pointer active:scale-95"
-                title="Generate quiz with Grok ➡️ Gemini AI (Premium Feature)"
+                className="btn-tactile-primary"
+                title="Generate quiz with Grok ➡️ Gemini AI (Enterprise Feature)"
               >
-                <Sparkles className="w-4 h-4 text-cyan-300" />
+                <Sparkles className="w-4 h-4 text-amber-300" />
                 <span>AI Quiz Studio</span>
                 <span className="px-1.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black text-[9px] uppercase tracking-wider">
                   PRO
@@ -416,7 +416,7 @@ export const CreatePage: React.FC = () => {
                   setRevealSolution(false);
                   setIsFullscreenPresentation(true);
                 }}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-white font-bold text-sm shadow-md flex items-center gap-2 transition-all cursor-pointer"
+                className="btn-tactile-amber"
                 title="Present slides in full screen like a slideshow"
               >
                 <Maximize2 className="w-4 h-4" />
@@ -425,7 +425,7 @@ export const CreatePage: React.FC = () => {
 
               <Link
                 to="/dashboard"
-                className="px-4 py-2 rounded-xl border border-alix-slate-300 text-alix-slate-600 hover:bg-alix-slate-100 text-sm font-semibold transition-colors"
+                className="btn-tactile-white"
               >
                 Dashboard
               </Link>
@@ -434,10 +434,10 @@ export const CreatePage: React.FC = () => {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="px-5 py-2 rounded-xl bg-alix-violet-600 hover:bg-alix-violet-700 text-white font-bold text-sm shadow-sm flex items-center gap-2 transition-all cursor-pointer disabled:opacity-70"
+                className="btn-tactile-green"
               >
                 <Save className="w-4 h-4" />
-                <span>{isSaving ? 'Saving to Database...' : isEditMode ? 'Update Activity' : 'Save Activity'}</span>
+                <span>{isSaving ? 'Saving...' : isEditMode ? 'Update Activity' : 'Save Activity'}</span>
               </button>
             </div>
           </div>
@@ -451,54 +451,54 @@ export const CreatePage: React.FC = () => {
           )}
 
           {/* Activity Metadata Inputs */}
-          <div className="bg-white p-6 rounded-2xl border border-alix-slate-200 shadow-sm mb-6 space-y-4">
+          <div className="card-tactile p-6 mb-6 space-y-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
+              <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
                 Activity Title *
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full text-lg sm:text-xl font-heading font-bold text-alix-indigo border-b-2 border-alix-slate-200 focus:border-alix-violet-600 outline-none pb-1"
+                className="w-full text-lg sm:text-xl font-heading font-black text-slate-900 input-tactile"
                 placeholder="e.g. Distributed Consensus & Fault Tolerance"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
                   Subject / Discipline *
                 </label>
                 <input
                   type="text"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  className="w-full text-sm text-alix-indigo font-semibold border-b border-alix-slate-200 focus:border-alix-violet-600 outline-none pb-1"
+                  className="w-full text-sm font-bold text-slate-900 input-tactile"
                   placeholder="e.g. Computer Science, Mechanical..."
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
                   Course Code (Optional)
                 </label>
                 <input
                   type="text"
                   value={courseCode}
                   onChange={(e) => setCourseCode(e.target.value)}
-                  className="w-full text-sm text-alix-indigo font-semibold border-b border-alix-slate-200 focus:border-alix-violet-600 outline-none pb-1"
+                  className="w-full text-sm font-bold text-slate-900 input-tactile"
                   placeholder="e.g. CS 301, CSE 102"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1">
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
                   Section (Optional)
                 </label>
                 <input
                   type="text"
                   value={section}
                   onChange={(e) => setSection(e.target.value)}
-                  className="w-full text-sm text-alix-indigo font-semibold border-b border-alix-slate-200 focus:border-alix-violet-600 outline-none pb-1"
+                  className="w-full text-sm font-bold text-slate-900 input-tactile"
                   placeholder="e.g. Sec A, Section 1, Batch B"
                 />
               </div>
@@ -506,8 +506,8 @@ export const CreatePage: React.FC = () => {
 
             {/* Anti-Proxy Roster Selector */}
             <div className="pt-1">
-              <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-1 flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
                 <span>Enforce Section Roster (Anti-Proxy Whitelist)</span>
               </label>
               <select
@@ -518,9 +518,10 @@ export const CreatePage: React.FC = () => {
                   if (matched) {
                     if (!courseCode) setCourseCode(matched.courseCode);
                     if (!subject) setSubject(matched.courseName);
+                    if (!section) setSection(matched.section);
                   }
                 }}
-                className="w-full text-xs font-semibold text-alix-indigo border-b border-alix-slate-200 focus:border-emerald-600 outline-none pb-1 bg-transparent cursor-pointer"
+                className="w-full input-tactile cursor-pointer"
               >
                 <option value="">None (Open to all students with PIN)</option>
                 {rosters.map((r) => (
@@ -562,23 +563,23 @@ export const CreatePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleAddQuestion('multiple_choice')}
-                  className="text-xs font-bold text-alix-violet-700 hover:text-alix-violet-900 inline-flex items-center gap-1 cursor-pointer"
+                  className="btn-tactile-white text-xs px-2.5 py-1"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
                   <span>Add Slide</span>
                 </button>
               </div>
 
-              <div className="space-y-2.5 max-h-[640px] overflow-y-auto pr-1">
+              <div className="space-y-3 max-h-[640px] overflow-y-auto pr-1">
                 {questions.map((q, idx) => {
                   const isActive = q.id === activeQuestion.id;
                   return (
                     <div
                       key={q.id}
-                      className={`p-2.5 rounded-2xl border-2 transition-all flex flex-col gap-2 ${
+                      className={`p-3 rounded-2xl border-2 transition-all flex flex-col gap-2 ${
                         isActive
-                          ? 'bg-alix-violet-50/80 border-alix-violet-600 shadow-md ring-2 ring-alix-violet-200'
-                          : 'bg-white border-slate-200 hover:border-slate-300'
+                          ? 'bg-violet-50/90 border-violet-600 shadow-[0_4px_0_#7C3AED] ring-2 ring-violet-200'
+                          : 'bg-white border-slate-300 shadow-[0_2px_0_#CBD5E1] hover:border-slate-400'
                       }`}
                     >
                       <button
@@ -592,14 +593,14 @@ export const CreatePage: React.FC = () => {
                             Slide {idx + 1}
                           </span>
                           <span
-                            className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
+                            className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border ${
                               q.type === 'true_false'
-                                ? 'bg-blue-100 text-blue-700'
+                                ? 'bg-blue-100 text-blue-800 border-blue-300'
                                 : q.type === 'multi_select'
-                                ? 'bg-emerald-100 text-emerald-700'
+                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                                 : q.type === 'poll'
-                                ? 'bg-amber-100 text-amber-700'
-                                : 'bg-violet-100 text-violet-700'
+                                ? 'bg-amber-100 text-amber-800 border-amber-300'
+                                : 'bg-violet-100 text-violet-800 border-violet-300'
                             }`}
                           >
                             {q.type === 'true_false' ? 'T/F' : q.type === 'multi_select' ? 'MULTI' : q.type === 'poll' ? 'POLL' : 'QUIZ'}
@@ -607,33 +608,33 @@ export const CreatePage: React.FC = () => {
                         </div>
 
                         {/* Miniature Slide Preview */}
-                        <div className="w-full h-16 rounded-lg bg-slate-900 p-1.5 flex flex-col justify-between border border-slate-700 relative overflow-hidden shadow-inner">
-                          <div className="w-full h-2 rounded bg-white/20 truncate text-[7px] text-white/70 px-1 overflow-hidden">
+                        <div className="w-full h-16 rounded-xl bg-slate-950 p-2 flex flex-col justify-between border-2 border-slate-700 relative overflow-hidden shadow-inner">
+                          <div className="w-full h-2 rounded bg-white/30 truncate text-[7px] text-white/90 px-1 overflow-hidden font-bold">
                             {q.text || 'Question Prompt...'}
                           </div>
-                          <div className="flex items-center justify-center text-white/30 text-[9px]">
-                            <ImageIcon className="w-3 h-3" />
+                          <div className="flex items-center justify-center text-white/40 text-[9px]">
+                            <ImageIcon className="w-3.5 h-3.5" />
                           </div>
                           <div className="grid grid-cols-2 gap-1">
-                            <div className="h-1.5 rounded bg-[#E21B3C]/80" />
-                            <div className="h-1.5 rounded bg-[#1368CE]/80" />
+                            <div className="h-2 rounded bg-[#E21B3C]" />
+                            <div className="h-2 rounded bg-[#1368CE]" />
                           </div>
                         </div>
 
-                        <p className="text-xs text-slate-700 truncate font-semibold mt-1.5">
+                        <p className="text-xs text-slate-800 truncate font-bold mt-2">
                           {q.text || 'Untitled Question Prompt...'}
                         </p>
-                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        <div className="text-[10px] text-slate-500 font-mono font-bold mt-0.5">
                           {q.timeLimit}s • {q.points}pts
                         </div>
                       </button>
 
                       {/* Slide Action Buttons */}
-                      <div className="flex items-center justify-end gap-1 pt-1 border-t border-slate-100">
+                      <div className="flex items-center justify-end gap-1 pt-1.5 border-t border-slate-200">
                         <button
                           type="button"
                           onClick={() => handleDuplicateQuestion(q.id)}
-                          className="p-1 rounded text-slate-400 hover:text-alix-violet-600 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-violet-700 hover:bg-slate-100 transition-colors cursor-pointer"
                           title="Duplicate slide"
                         >
                           <Copy className="w-3.5 h-3.5" />
@@ -642,7 +643,7 @@ export const CreatePage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleDeleteQuestion(q.id)}
-                            className="p-1 rounded text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                             title="Delete slide"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -657,9 +658,9 @@ export const CreatePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleAddQuestion('multiple_choice')}
-                  className="w-full py-3 rounded-2xl border-2 border-dashed border-slate-300 hover:border-alix-violet-500 hover:bg-alix-violet-50/50 text-slate-600 hover:text-alix-violet-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  className="w-full py-3 rounded-2xl border-2 border-dashed border-slate-400 hover:border-violet-600 hover:bg-violet-50/60 text-slate-700 hover:text-violet-800 font-heading font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
                 >
-                  <PlusCircle className="w-4 h-4" />
+                  <PlusCircle className="w-4 h-4 text-violet-600" />
                   <span>Add Question Slide</span>
                 </button>
 
@@ -667,23 +668,23 @@ export const CreatePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAiModalOpen(true)}
-                  className="w-full py-2.5 rounded-2xl bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 border border-purple-200 text-purple-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                  className="btn-tactile-primary w-full text-xs py-2.5"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                  <Sparkles className="w-4 h-4 text-amber-300" />
                   <span>Generate with AI Studio</span>
                 </button>
               </div>
             </div>
 
             {/* 2. Center Panel: 16:9 Presentation Slide Canvas */}
-            <div className={`${showProperties ? 'lg:col-span-6' : 'lg:col-span-9'} bg-gradient-to-br from-[#1E0B36] via-[#2A104E] to-[#140626] rounded-3xl border-2 border-slate-700 p-4 sm:p-6 shadow-2xl relative flex flex-col justify-between min-h-[580px] text-white transition-all duration-300`}>
+            <div className={`${showProperties ? 'lg:col-span-6' : 'lg:col-span-9'} bg-gradient-to-br from-[#1E0B36] via-[#2A104E] to-[#140626] rounded-3xl border-2 border-slate-700 p-5 sm:p-7 shadow-2xl relative flex flex-col justify-between min-h-[580px] text-white transition-all duration-300`}>
               {/* Slide Format Indicator Badge */}
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center justify-between pb-3 border-b border-white/15">
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-1 rounded-lg bg-white/15 text-white font-mono text-xs font-bold">
+                  <span className="px-3 py-1 rounded-xl bg-white/20 text-white font-mono text-xs font-bold border border-white/20">
                     Slide {questions.findIndex((q) => q.id === activeQuestion.id) + 1} of {questions.length}
                   </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-alix-cyan-500/20 text-alix-cyan-300 border border-alix-cyan-500/40 text-xs font-black uppercase">
+                  <span className="px-3 py-1 rounded-xl bg-cyan-400/20 text-cyan-300 border border-cyan-400/40 text-xs font-black uppercase tracking-wider">
                     {activeQuestion.type === 'true_false' ? 'True / False' : activeQuestion.type === 'multi_select' ? 'Multi-Select' : activeQuestion.type === 'poll' ? 'Opinion Poll' : 'Quiz (Single)'}
                   </span>
                 </div>
@@ -692,7 +693,7 @@ export const CreatePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setShowProperties(true)}
-                      className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                      className="btn-tactile-primary text-xs px-3 py-1.5"
                       title="Open Question Properties"
                     >
                       <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-300" />
@@ -707,7 +708,7 @@ export const CreatePage: React.FC = () => {
                       setRevealSolution(false);
                       setIsFullscreenPresentation(true);
                     }}
-                    className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-all flex items-center gap-1 cursor-pointer"
+                    className="btn-tactile-white text-xs px-3 py-1.5"
                     title="Present this slide fullscreen"
                   >
                     <Maximize2 className="w-3.5 h-3.5" />
@@ -737,33 +738,33 @@ export const CreatePage: React.FC = () => {
 
               {/* Slide Middle: Presentation Visual / Media Box */}
               <div className="my-auto py-2">
-                <div className="w-full max-w-sm mx-auto h-28 sm:h-36 rounded-2xl bg-white/5 border-2 border-dashed border-white/20 flex flex-col items-center justify-center gap-1.5 text-white/60 hover:bg-white/10 hover:border-white/30 transition-all cursor-pointer p-4 text-center">
-                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-alix-cyan-400">
-                    <ImageIcon className="w-5 h-5" />
+                <div className="w-full max-w-sm mx-auto h-28 sm:h-36 rounded-2xl bg-white/10 border-2 border-dashed border-white/30 flex flex-col items-center justify-center gap-1.5 text-white/80 hover:bg-white/15 hover:border-white/50 transition-all cursor-pointer p-4 text-center group">
+                  <div className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center text-cyan-300 group-hover:scale-110 transition-transform">
+                    <ImageIcon className="w-6 h-6" />
                   </div>
-                  <div className="text-xs font-bold text-white">Presentation Visual Prompt</div>
-                  <div className="text-[10px] text-white/50">Add diagram, equation, or image mockup</div>
+                  <div className="text-xs font-black text-white">Presentation Visual Prompt</div>
+                  <div className="text-[10px] text-white/60 font-semibold">Click to upload diagram, formula, or image</div>
                 </div>
               </div>
 
-              {/* Slide Bottom: Answer Choices Blocks */}
+              {/* Slide Bottom: Answer Choices Blocks (Tactile 3D Buttons) */}
               <div className="mt-3">
                 {activeQuestion.type === 'true_false' ? (
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => handleUpdateActiveQuestion('correctIndex', 0)}
-                      className={`p-4 rounded-2xl border-4 text-center transition-all flex items-center justify-between cursor-pointer ${
+                      className={`p-4 rounded-2xl text-center transition-all flex items-center justify-between cursor-pointer border-2 border-[#B5142F] border-b-4 border-b-[#8B0F24] active:border-b-2 active:translate-y-1 ${
                         activeQuestion.correctIndex === 0
-                          ? 'border-emerald-400 bg-[#E21B3C] shadow-lg ring-4 ring-emerald-300/40'
-                          : 'border-transparent bg-[#E21B3C] opacity-80 hover:opacity-100'
+                          ? 'bg-[#E21B3C] shadow-lg ring-4 ring-white/50'
+                          : 'bg-[#E21B3C] opacity-80 hover:opacity-100'
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-xl font-black">▲</span>
                         <span className="font-heading font-black text-lg text-white">True</span>
                       </div>
-                      <span className="text-xs font-bold bg-white/20 px-2.5 py-1 rounded-full">
+                      <span className="text-xs font-extrabold bg-white text-slate-900 px-3 py-1 rounded-xl shadow-sm">
                         {activeQuestion.correctIndex === 0 ? '✓ Correct' : 'Mark'}
                       </span>
                     </button>
@@ -771,29 +772,29 @@ export const CreatePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleUpdateActiveQuestion('correctIndex', 1)}
-                      className={`p-4 rounded-2xl border-4 text-center transition-all flex items-center justify-between cursor-pointer ${
+                      className={`p-4 rounded-2xl text-center transition-all flex items-center justify-between cursor-pointer border-2 border-[#0F52A4] border-b-4 border-b-[#0B3D7A] active:border-b-2 active:translate-y-1 ${
                         activeQuestion.correctIndex === 1
-                          ? 'border-emerald-400 bg-[#1368CE] shadow-lg ring-4 ring-emerald-300/40'
-                          : 'border-transparent bg-[#1368CE] opacity-80 hover:opacity-100'
+                          ? 'bg-[#1368CE] shadow-lg ring-4 ring-white/50'
+                          : 'bg-[#1368CE] opacity-80 hover:opacity-100'
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-xl font-black">◆</span>
                         <span className="font-heading font-black text-lg text-white">False</span>
                       </div>
-                      <span className="text-xs font-bold bg-white/20 px-2.5 py-1 rounded-full">
+                      <span className="text-xs font-extrabold bg-white text-slate-900 px-3 py-1 rounded-xl shadow-sm">
                         {activeQuestion.correctIndex === 1 ? '✓ Correct' : 'Mark'}
                       </span>
                     </button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {activeQuestion.options.map((opt, idx) => {
                       const themes = [
-                        { shape: '▲', bg: 'bg-[#E21B3C]', border: 'border-[#9E1329]' },
-                        { shape: '◆', bg: 'bg-[#1368CE]', border: 'border-[#0D4589]' },
-                        { shape: '●', bg: 'bg-[#D89E00]', border: 'border-[#8C6700]' },
-                        { shape: '■', bg: 'bg-[#26890C]', border: 'border-[#175407]' },
+                        { shape: '▲', bg: 'bg-[#E21B3C]', border: 'border-[#B5142F]', bottom: 'border-b-[#8B0F24]' },
+                        { shape: '◆', bg: 'bg-[#1368CE]', border: 'border-[#0F52A4]', bottom: 'border-b-[#0B3D7A]' },
+                        { shape: '●', bg: 'bg-[#D89E00]', border: 'border-[#A77A00]', bottom: 'border-b-[#7A5A00]' },
+                        { shape: '■', bg: 'bg-[#26890C]', border: 'border-[#1C6409]', bottom: 'border-b-[#144706]' },
                       ];
                       const t = themes[idx % themes.length];
                       const isMulti = activeQuestion.type === 'multi_select';
@@ -805,16 +806,18 @@ export const CreatePage: React.FC = () => {
                       return (
                         <div
                           key={idx}
-                          className={`p-2.5 rounded-2xl ${t.bg} border-2 flex items-center gap-2 shadow-md transition-all ${
-                            isCorrect && !isPoll ? 'border-white ring-4 ring-emerald-400/50' : 'border-black/20'
+                          className={`p-3 rounded-2xl ${t.bg} border-2 ${t.border} border-b-4 ${t.bottom} flex items-center gap-3 shadow-md transition-all ${
+                            isCorrect && !isPoll ? 'ring-4 ring-white/60' : ''
                           }`}
                         >
-                          <span className="text-lg font-black text-white shrink-0 pl-1">{t.shape}</span>
+                          <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-lg font-black text-white shrink-0">
+                            {t.shape}
+                          </div>
                           <input
                             type="text"
                             value={opt}
                             onChange={(e) => handleUpdateOption(idx, e.target.value)}
-                            className="flex-1 px-2 py-1 text-xs sm:text-sm font-bold text-white placeholder-white/60 outline-none bg-transparent"
+                            className="flex-1 px-2 py-1 text-xs sm:text-sm font-extrabold text-white placeholder-white/60 outline-none bg-transparent"
                             placeholder={`Add answer ${idx + 1}...`}
                           />
                           {!isPoll && (
@@ -827,17 +830,17 @@ export const CreatePage: React.FC = () => {
                                   handleUpdateActiveQuestion('correctIndex', idx);
                                 }
                               }}
-                              className={`p-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                              className={`p-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 border-b-2 active:scale-95 ${
                                 isCorrect
-                                  ? 'bg-white text-slate-900 border-white shadow-md'
-                                  : 'bg-black/20 border-white/30 text-white/70 hover:bg-white hover:text-slate-900'
+                                  ? 'bg-white text-emerald-700 border-white shadow-md'
+                                  : 'bg-black/30 border-white/20 text-white hover:bg-white hover:text-slate-900'
                               }`}
                               title={isCorrect ? 'Correct Answer' : 'Mark as correct'}
                             >
                               {isMulti ? (
-                                isCorrect ? <CheckSquare className="w-4 h-4 stroke-[2.5]" /> : <Square className="w-4 h-4" />
+                                isCorrect ? <CheckSquare className="w-4 h-4 stroke-[3]" /> : <Square className="w-4 h-4" />
                               ) : (
-                                <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                                <CheckCircle2 className="w-4 h-4 stroke-[3]" />
                               )}
                             </button>
                           )}
@@ -850,17 +853,17 @@ export const CreatePage: React.FC = () => {
             </div>
 
             {/* 3. Right Panel: Properties Inspector */}
-            <div className={`${showProperties ? 'lg:col-span-3' : 'hidden'} bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-5 animate-fade-in`}>
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <Settings2 className="w-3.5 h-3.5 text-indigo-600" />
+            <div className={`${showProperties ? 'lg:col-span-3' : 'hidden'} card-tactile p-5 space-y-5 animate-fade-in`}>
+              <div className="flex items-center justify-between pb-3 border-b-2 border-slate-200">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <Settings2 className="w-4 h-4 text-violet-600" />
                   <span>Question Properties</span>
                 </span>
                 <button
                   type="button"
                   onClick={() => setShowProperties(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                  title="Close Properties (Widescreen Mode)"
+                  className="w-7 h-7 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+                  title="Close Properties"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -868,74 +871,74 @@ export const CreatePage: React.FC = () => {
 
               {/* Question Type Selector */}
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
-                  Format
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-2">
+                  Question Format
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => handleSetQuestionType('multiple_choice')}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
                       (activeQuestion.type || 'multiple_choice') === 'multiple_choice'
-                        ? 'border-indigo-600 bg-indigo-50/80 ring-2 ring-indigo-200 text-indigo-950 font-bold'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                        ? 'border-violet-600 bg-violet-50 text-violet-950 font-black shadow-[0_3px_0_#7C3AED]'
+                        : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 shadow-[0_2px_0_#E2E8F0]'
                     }`}
                   >
                     <div className="text-xs font-black">Quiz</div>
-                    <div className="text-[9px] text-slate-400">Single select</div>
+                    <div className="text-[10px] text-slate-500 font-semibold">Single select</div>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleSetQuestionType('true_false')}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
                       activeQuestion.type === 'true_false'
-                        ? 'border-[#1368CE] bg-blue-50/80 ring-2 ring-blue-200 text-blue-950 font-bold'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                        ? 'border-[#1368CE] bg-blue-50 text-blue-950 font-black shadow-[0_3px_0_#1368CE]'
+                        : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 shadow-[0_2px_0_#E2E8F0]'
                     }`}
                   >
                     <div className="text-xs font-black">True / False</div>
-                    <div className="text-[9px] text-slate-400">Binary 2 options</div>
+                    <div className="text-[10px] text-slate-500 font-semibold">Binary 2 options</div>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleSetQuestionType('multi_select')}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
                       activeQuestion.type === 'multi_select'
-                        ? 'border-emerald-600 bg-emerald-50/80 ring-2 ring-emerald-200 text-emerald-950 font-bold'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-black shadow-[0_3px_0_#059669]'
+                        : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 shadow-[0_2px_0_#E2E8F0]'
                     }`}
                   >
                     <div className="text-xs font-black">Multi-Select</div>
-                    <div className="text-[9px] text-slate-400">All that apply</div>
+                    <div className="text-[10px] text-slate-500 font-semibold">All that apply</div>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleSetQuestionType('poll')}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
                       activeQuestion.type === 'poll'
-                        ? 'border-amber-500 bg-amber-50/80 ring-2 ring-amber-200 text-amber-950 font-bold'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                        ? 'border-amber-500 bg-amber-50 text-amber-950 font-black shadow-[0_3px_0_#D97706]'
+                        : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 shadow-[0_2px_0_#E2E8F0]'
                     }`}
                   >
                     <div className="text-xs font-black">Poll</div>
-                    <div className="text-[9px] text-slate-400">Opinion check</div>
+                    <div className="text-[10px] text-slate-500 font-semibold">Opinion check</div>
                   </button>
                 </div>
               </div>
 
               {/* Time Limit */}
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-1">
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5 flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-cyan-600" />
                   <span>Time Limit</span>
                 </label>
                 <select
                   value={activeQuestion.timeLimit}
                   onChange={(e) => handleUpdateActiveQuestion('timeLimit', Number(e.target.value))}
-                  className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 outline-none bg-white cursor-pointer"
+                  className="w-full input-tactile cursor-pointer"
                 >
                   <option value={10}>10 Seconds</option>
                   <option value={15}>15 Seconds</option>

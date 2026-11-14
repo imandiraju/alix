@@ -541,7 +541,7 @@ export const AdminPage: React.FC = () => {
                   type="button"
                   onClick={handleTestKey}
                   disabled={isTesting}
-                  className="px-5 py-2.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-heading font-black text-xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                  className="btn-tactile-white text-xs px-4 py-2"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin' : ''}`} />
                   <span>{isTesting ? 'Verifying OpenRouter Connection...' : 'Test Connection Live'}</span>
@@ -550,7 +550,7 @@ export const AdminPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-heading font-black text-xs shadow-md flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
+                  className="btn-tactile-primary text-xs px-5 py-2.5"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>{isSaving ? 'Saving to Database...' : 'Save Configuration'}</span>
@@ -674,14 +674,14 @@ export const AdminPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleBulkAi(true)}
-                className="px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-200 transition-all cursor-pointer"
+                className="btn-tactile-green text-xs px-3 py-1.5"
               >
                 Enable All
               </button>
               <button
                 type="button"
                 onClick={() => handleBulkAi(false)}
-                className="px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs border border-rose-200 transition-all cursor-pointer"
+                className="btn-tactile-red text-xs px-3 py-1.5"
               >
                 Disable All
               </button>
@@ -778,11 +778,9 @@ export const AdminPage: React.FC = () => {
                               type="button"
                               onClick={() => handleToggleTeacherAi(t.id, t.aiEnabled)}
                               disabled={isToggling}
-                              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer disabled:opacity-50 active:scale-95 ${
-                                t.aiEnabled
-                                  ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
-                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
-                              }`}
+                              className={`${
+                                t.aiEnabled ? 'btn-tactile-red' : 'btn-tactile-green'
+                              } text-xs px-3 py-1.5`}
                             >
                               {isToggling
                                 ? 'Updating...'

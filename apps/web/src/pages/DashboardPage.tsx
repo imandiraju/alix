@@ -388,7 +388,7 @@ export const DashboardPage: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Card 1: Orange Content From Scratch */}
-              <div className="bg-[#E25C1D] text-white p-5 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between min-h-[140px] group relative overflow-hidden">
+              <div className="bg-[#E25C1D] border-2 border-[#C04910] border-b-4 border-b-[#9E3908] text-white p-5 rounded-2xl shadow-sm flex flex-col justify-between min-h-[140px] group relative overflow-hidden">
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center shrink-0 shadow-inner">
                     <Plus className="w-6 h-6 stroke-[3] text-white" />
@@ -397,7 +397,7 @@ export const DashboardPage: React.FC = () => {
                     <h3 className="font-heading font-black text-base leading-snug">
                       Create activity from scratch
                     </h3>
-                    <p className="text-xs text-white/80 mt-1">
+                    <p className="text-xs text-white/90 font-medium mt-1">
                       Draft questions, concept checks, and polls.
                     </p>
                   </div>
@@ -406,7 +406,7 @@ export const DashboardPage: React.FC = () => {
                 <div className="pt-4 flex justify-end">
                   <Link
                     to="/create"
-                    className="px-4 py-2 bg-white text-[#E25C1D] font-black text-xs rounded-xl shadow-sm hover:bg-white/95 active:scale-95 transition-all"
+                    className="btn-tactile-white text-xs px-3.5 py-1.5"
                   >
                     Create new
                   </Link>
@@ -414,19 +414,19 @@ export const DashboardPage: React.FC = () => {
               </div>
 
               {/* Card 2: Purple AI Assisted Question Creator */}
-              <div className="bg-[#864CBF] text-white p-5 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between min-h-[140px] group relative overflow-hidden">
+              <div className="bg-[#864CBF] border-2 border-[#6D34A5] border-b-4 border-b-[#552585] text-white p-5 rounded-2xl shadow-sm flex flex-col justify-between min-h-[140px] group relative overflow-hidden">
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center shrink-0 shadow-inner">
-                    <Sparkles className="w-5 h-5 text-alix-cyan-300" />
+                    <Sparkles className="w-5 h-5 text-amber-300" />
                   </div>
                   <div>
                     <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black uppercase tracking-wider mb-1 shadow-sm">
-                      <span>👑 Premium • AI Studio</span>
+                      <span>👑 Enterprise AI Studio</span>
                     </div>
                     <h3 className="font-heading font-black text-base leading-snug">
                       Save time! Create with AI Studio
                     </h3>
-                    <p className="text-xs text-white/80 mt-0.5">
+                    <p className="text-xs text-white/90 font-medium mt-0.5">
                       Instant curriculum-aligned questions.
                     </p>
                   </div>
@@ -435,7 +435,7 @@ export const DashboardPage: React.FC = () => {
                 <div className="pt-4 flex justify-end">
                   <Link
                     to="/create?ai=true"
-                    className="px-4 py-2 bg-white text-[#864CBF] font-black text-xs rounded-xl shadow-sm hover:bg-white/95 active:scale-95 transition-all"
+                    className="btn-tactile-white text-xs px-3.5 py-1.5"
                   >
                     Start creating
                   </Link>
@@ -443,7 +443,7 @@ export const DashboardPage: React.FC = () => {
               </div>
 
               {/* Card 3: Crimson Upload Rosters */}
-              <div className="bg-[#E21B3C] text-white p-5 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between min-h-[140px] group relative overflow-hidden">
+              <div className="bg-[#E21B3C] border-2 border-[#B5142F] border-b-4 border-b-[#8B0F24] text-white p-5 rounded-2xl shadow-sm flex flex-col justify-between min-h-[140px] group relative overflow-hidden">
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center shrink-0 shadow-inner">
                     <FileSpreadsheet className="w-5 h-5 text-white" />
@@ -456,7 +456,7 @@ export const DashboardPage: React.FC = () => {
                     <h3 className="font-heading font-black text-base leading-snug">
                       Upload student roster file
                     </h3>
-                    <p className="text-xs text-white/80 mt-0.5">
+                    <p className="text-xs text-white/90 font-medium mt-0.5">
                       Excel / CSV student roll numbers whitelist.
                     </p>
                   </div>
@@ -466,7 +466,7 @@ export const DashboardPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsRosterModalOpen(true)}
-                    className="px-4 py-2 bg-white text-[#E21B3C] font-black text-xs rounded-xl shadow-sm hover:bg-white/95 active:scale-95 transition-all cursor-pointer"
+                    className="btn-tactile-white text-xs px-3.5 py-1.5"
                   >
                     Upload file
                   </button>
@@ -479,17 +479,17 @@ export const DashboardPage: React.FC = () => {
           <section className="mb-8">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h2 className="text-base sm:text-lg font-heading font-black text-slate-800 tracking-tight">
+                <h2 className="text-base sm:text-lg font-heading font-black text-slate-900 tracking-tight">
                   My Classroom Activities ({displayedQuizzes.length})
                 </h2>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs font-semibold text-slate-500">
                   Ready to launch live on your lecture hall projector screen.
                 </p>
               </div>
 
               <Link
                 to="/create"
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#1368CE] hover:bg-[#105AB3] text-white font-black text-xs shadow-sm transition-all"
+                className="btn-tactile-blue text-xs px-3.5 py-1.5"
               >
                 <Plus className="w-3.5 h-3.5 stroke-[3]" />
                 <span>New Activity</span>
@@ -497,24 +497,24 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             {isLoading ? (
-              <div className="bg-white rounded-2xl p-12 text-center text-slate-400 border border-slate-200">
-                <div className="w-6 h-6 border-2 border-alix-violet-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+              <div className="card-tactile p-12 text-center text-slate-500">
+                <div className="w-6 h-6 border-2 border-violet-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                 <span className="text-xs font-bold">Loading activities from database...</span>
               </div>
             ) : displayedQuizzes.length === 0 ? (
-              <div className="bg-white rounded-2xl p-10 text-center border border-slate-200 shadow-sm">
-                <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+              <div className="card-tactile p-10 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3 border-2 border-slate-200">
                   <BookOpen className="w-7 h-7" />
                 </div>
-                <h3 className="font-heading font-bold text-slate-800 text-base">
+                <h3 className="font-heading font-black text-slate-900 text-base">
                   No activities in this category
                 </h3>
-                <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
+                <p className="text-xs text-slate-500 font-medium max-w-sm mx-auto mt-1 mb-4">
                   Create your first quiz or concept check to launch interactive live sessions.
                 </p>
                 <Link
                   to="/create"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#26890C] hover:bg-[#20740A] text-white font-black text-xs shadow-sm transition-all"
+                  className="btn-tactile-green text-xs px-4 py-2"
                 >
                   <Plus className="w-4 h-4 stroke-[3]" />
                   <span>Create Activity</span>
@@ -525,41 +525,41 @@ export const DashboardPage: React.FC = () => {
                 {displayedQuizzes.map((quiz) => (
                   <div
                     key={quiz._id}
-                    className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+                    className="card-tactile-interactive p-5 flex flex-col justify-between group"
                   >
                     <div>
                       {/* Subject, Course Code, and Section tags */}
-                      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-alix-violet-50 text-alix-violet-800 border border-alix-violet-200">
+                      <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-violet-100 text-violet-900 border border-violet-300">
                           {quiz.subject || 'Activity'}
                         </span>
                         {quiz.courseCode && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-black bg-alix-cyan-50 text-alix-cyan-900 border border-alix-cyan-200 font-mono">
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-cyan-100 text-cyan-950 border border-cyan-300 font-mono">
                             {quiz.courseCode}
                           </span>
                         )}
                         {quiz.section && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono">
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-emerald-100 text-emerald-950 border border-emerald-300 font-mono">
                             {quiz.section}
                           </span>
                         )}
                       </div>
 
-                      <h3 className="font-heading font-black text-base text-slate-900 group-hover:text-alix-indigo transition-colors line-clamp-2">
+                      <h3 className="font-heading font-black text-base text-slate-900 group-hover:text-violet-700 transition-colors line-clamp-2">
                         {quiz.title}
                       </h3>
 
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs font-semibold text-slate-500 mt-1">
                         {quiz.questions?.length || 0} Questions • Created{' '}
                         {new Date(quiz.createdAt).toLocaleDateString()}
                       </p>
                     </div>
 
                     {/* Action Buttons: Host, Edit, Duplicate, Delete */}
-                    <div className="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                    <div className="pt-4 mt-3 border-t-2 border-slate-100 flex items-center justify-between gap-2 flex-wrap">
                       <Link
                         to={`/host/${quiz._id}`}
-                        className="px-3.5 py-1.5 rounded-xl bg-[#1368CE] hover:bg-[#105AB3] text-white font-black text-xs shadow-sm flex items-center gap-1.5 active:scale-95 transition-all"
+                        className="btn-tactile-blue text-xs px-3.5 py-1.5"
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />
                         <span>Host Live</span>
@@ -568,7 +568,7 @@ export const DashboardPage: React.FC = () => {
                       <div className="flex items-center gap-1">
                         <Link
                           to={`/create?edit=${quiz._id}`}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                          className="p-1.5 rounded-lg text-slate-600 hover:text-violet-700 hover:bg-slate-100 transition-colors"
                           title="Edit Activity"
                         >
                           <Edit3 className="w-4 h-4" />
@@ -578,7 +578,7 @@ export const DashboardPage: React.FC = () => {
                           type="button"
                           onClick={() => handleDuplicateQuiz(quiz._id)}
                           disabled={duplicatingId === quiz._id}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-cyan-600 hover:bg-cyan-50 transition-colors cursor-pointer disabled:opacity-50"
+                          className="p-1.5 rounded-lg text-slate-600 hover:text-cyan-700 hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-50"
                           title="Make a Copy (Duplicate)"
                         >
                           <Copy className="w-4 h-4" />
@@ -588,7 +588,7 @@ export const DashboardPage: React.FC = () => {
                           type="button"
                           onClick={() => handleDeleteQuiz(quiz._id)}
                           disabled={deletingId === quiz._id}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                           title="Delete Activity"
                         >
                           <Trash2 className="w-4 h-4" />
