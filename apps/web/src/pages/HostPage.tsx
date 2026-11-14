@@ -148,8 +148,22 @@ export const HostPage: React.FC = () => {
       socket.on('player-joined', (data: any) => {
         if (data.player) {
           setPlayers((prev) => {
-            const exists = prev.some((p) => p.id === data.player.id || (p.name === data.player.name && data.player.name));
-            return exists ? prev : [...prev, data.player];
+            const playerKey = (p: any) =>
+              (p.rollNo ? p.rollNo.toUpperCase() : '') + ':::' + (p.name || '').trim().toLowerCase();
+            const newKey = playerKey(data.player);
+            const existsIndex = prev.findIndex(
+              (p) => p.id === data.player.id || playerKey(p) === newKey
+            );
+            if (existsIndex >= 0) {
+              const updated = [...prev];
+              updated[existsIndex] = {
+                ...updated[existsIndex],
+                ...data.player,
+                isConnected: true,
+              };
+              return updated;
+            }
+            return [...prev, data.player];
           });
         }
         if (data.playerCount !== undefined) {
@@ -179,10 +193,52 @@ export const HostPage: React.FC = () => {
         if (data.questionResults?.totalCount !== undefined) {
           setAnswersSubmitted(data.questionResults.totalCount);
         }
+        if (Array.isArray(data.leaderboard)) {
+          setPlayers((prev) => {
+            return data.leaderboard.map((lb: any) => {
+              const match = prev.find(
+                (p) =>
+                  p.id === lb.playerId ||
+                  (p.name && lb.playerName && p.name.trim().toLowerCase() === lb.playerName.trim().toLowerCase())
+              );
+              return {
+                ...(match || {}),
+                id: lb.playerId,
+                name: lb.playerName,
+                score: typeof lb.score === 'number' ? lb.score : 0,
+                rank: lb.rank,
+                streak: lb.streak || 0,
+                avatar: match?.avatar || 'fox',
+                rollNo: match?.rollNo,
+              };
+            });
+          });
+        }
         setStage('chart');
       });
 
-      socket.on('game-ended', () => {
+      socket.on('game-ended', (data: any) => {
+        if (Array.isArray(data?.finalLeaderboard)) {
+          setPlayers((prev) => {
+            return data.finalLeaderboard.map((lb: any) => {
+              const match = prev.find(
+                (p) =>
+                  p.id === lb.playerId ||
+                  (p.name && lb.playerName && p.name.trim().toLowerCase() === lb.playerName.trim().toLowerCase())
+              );
+              return {
+                ...(match || {}),
+                id: lb.playerId,
+                name: lb.playerName,
+                score: typeof lb.score === 'number' ? lb.score : 0,
+                rank: lb.rank,
+                streak: lb.streak || 0,
+                avatar: match?.avatar || 'fox',
+                rollNo: match?.rollNo,
+              };
+            });
+          });
+        }
         setStage('victory');
       });
 
@@ -801,7 +857,7 @@ export const HostPage: React.FC = () => {
                   <div key={idx} className="p-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center font-bold text-xs">
-                        {idx + 1}
+                        {p.rank || idx + 1}
                       </span>
                       <div>
                         <span className="font-bold text-white text-sm">{p.name}</span>
@@ -811,7 +867,7 @@ export const HostPage: React.FC = () => {
                       </div>
                     </div>
                     <span className="font-mono text-sm font-bold text-alix-cyan-400">
-                      {p.score || 1000} pts
+                      {(p.score ?? 0).toLocaleString()} pts
                     </span>
                   </div>
                 ))
@@ -842,22 +898,16 @@ export const HostPage: React.FC = () => {
             {/* 3D Animated Victory Podium with Confetti */}
             <VictoryPodium
               winners={
-                players.length > 0
-                  ? [...players]
-                      .sort((a, b) => (b.score || 0) - (a.score || 0))
-                      .slice(0, 3)
-                      .map((p, idx) => ({
-                        rank: idx + 1,
-                        name: p.name,
-                        score: p.score || Math.max(500, 1000 - idx * 150),
-                        avatarId: p.avatar || (idx === 0 ? 'fox' : idx === 1 ? 'bot' : 'owl'),
-                        streak: 3,
-                      }))
-                  : [
-                      { rank: 1, name: 'Champion', score: 1000, avatarId: 'fox', streak: 4 },
-                      { rank: 2, name: 'Runner Up', score: 850, avatarId: 'bot', streak: 2 },
-                      { rank: 3, name: '3rd Place', score: 700, avatarId: 'owl', streak: 1 },
-                    ]
+                [...players]
+                  .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+                  .slice(0, 3)
+                  .map((p, idx) => ({
+                    rank: idx + 1,
+                    name: p.name,
+                    score: p.score ?? 0,
+                    avatarId: p.avatar || (idx === 0 ? 'fox' : idx === 1 ? 'bot' : 'owl'),
+                    streak: p.streak ?? 0,
+                  }))
               }
               onRestart={() => {
                 setStage('lobby');

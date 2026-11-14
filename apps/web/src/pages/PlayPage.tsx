@@ -234,19 +234,25 @@ export const PlayPage: React.FC = () => {
       // Listen for answer verification from server
       socket.on('answer-result', (data: any) => {
         setPhase('score');
-        setIsLastAnswerCorrect(!!data.correct);
+        const correct = !!data.correct;
+        setIsLastAnswerCorrect(correct);
         setLastPointsAwarded(data.points || 0);
 
-        if (data.correct) {
-          setScore(data.totalScore ?? (score + data.points));
+        if (typeof data.totalScore === 'number') {
+          setScore(data.totalScore);
+          try { sessionStorage.setItem(`alix_score_${sessionId}`, data.totalScore.toString()); } catch {}
+        }
+        if (correct) {
           const newStreak = data.streak ?? (streak + 1);
           setStreak(newStreak);
+          try { sessionStorage.setItem(`alix_streak_${sessionId}`, newStreak.toString()); } catch {}
           triggerCorrectAnswerConfetti();
           if (newStreak >= 3) {
             setTimeout(() => triggerStreakBurst(), 400);
           }
         } else {
           setStreak(0);
+          try { sessionStorage.setItem(`alix_streak_${sessionId}`, '0'); } catch {}
         }
       });
 
@@ -285,24 +291,6 @@ export const PlayPage: React.FC = () => {
     if (phase !== 'answering' && phase !== 'submitted') return;
     if (secondsRemaining <= 0) {
       setPhase('score');
-      // Apply local score evaluation if server response did not arrive
-      if (isLastAnswerCorrect) {
-        setScore((prev) => {
-          const newScore = prev + lastPointsAwarded;
-          try { sessionStorage.setItem(`alix_score_${sessionId}`, newScore.toString()); } catch {}
-          return newScore;
-        });
-        const newStreak = streak + 1;
-        setStreak(newStreak);
-        try { sessionStorage.setItem(`alix_streak_${sessionId}`, newStreak.toString()); } catch {}
-        triggerCorrectAnswerConfetti();
-        if (newStreak >= 3) {
-          setTimeout(() => triggerStreakBurst(), 400);
-        }
-      } else {
-        setStreak(0);
-        try { sessionStorage.setItem(`alix_streak_${sessionId}`, '0'); } catch {}
-      }
       return;
     }
 
@@ -340,15 +328,9 @@ export const PlayPage: React.FC = () => {
       // quiet
     }
 
-    // Local evaluation backup so student is NEVER stuck even if older server has empty session.quiz
-    const qData = quizQuestionsRef.current[currentIdxRef.current];
-    const correctIdx = qData?.correctIndex ?? 0;
-    const isCorrect = idx === correctIdx;
-    const ratio = Math.max(0, secondsRemaining / (currentQuestion.timeLimit || 30));
-    const calculatedPoints = isCorrect ? Math.round(500 + 500 * ratio) : 0;
-
-    setIsLastAnswerCorrect(isCorrect);
-    setLastPointsAwarded(calculatedPoints);
+    // Server answer-result event will provide authoritative correctness and score
+    setIsLastAnswerCorrect(false);
+    setLastPointsAwarded(0);
   };
 
   return (

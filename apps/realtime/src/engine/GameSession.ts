@@ -100,22 +100,42 @@ export class GameSessionManager {
     const session = this.sessions.get(sessionId);
     if (!session) return null;
 
-    // Check for duplicate names
-    const existingName = session.players.find(
-      (p) => p.name.toLowerCase() === name.toLowerCase() && p.isConnected,
-    );
-    const displayName = existingName ? `${name} (${session.players.length + 1})` : name;
+    const cleanName = (name || '').trim();
+    const cleanRoll = rollNo ? rollNo.trim().toUpperCase() : undefined;
+
+    // Check if player already exists (reconnection / page refresh)
+    const existingPlayer = session.players.find((p) => {
+      if (cleanRoll && (p as any).rollNo && (p as any).rollNo.toUpperCase() === cleanRoll) {
+        return true;
+      }
+      return cleanName && p.name.trim().toLowerCase() === cleanName.toLowerCase();
+    });
+
+    if (existingPlayer) {
+      const oldId = existingPlayer.id;
+      existingPlayer.id = socketId;
+      existingPlayer.isConnected = true;
+      if (avatar) existingPlayer.avatar = avatar;
+      if (cleanRoll) (existingPlayer as any).rollNo = cleanRoll;
+
+      if (oldId && session.previousRanks.has(oldId)) {
+        const prev = session.previousRanks.get(oldId);
+        session.previousRanks.delete(oldId);
+        if (prev !== undefined) session.previousRanks.set(socketId, prev);
+      }
+      return existingPlayer;
+    }
 
     const player: Player = {
       id: socketId,
-      name: displayName,
+      name: cleanName || 'Student',
       score: 0,
       streak: 0,
       answers: [],
       rank: session.players.length + 1,
       avatar: avatar || 'fox',
       isConnected: true,
-      ...(rollNo ? { rollNo } : {}),
+      ...(cleanRoll ? { rollNo: cleanRoll } : {}),
     } as any;
 
     session.players.push(player);
@@ -183,7 +203,6 @@ export class GameSessionManager {
     if (!session) return [];
 
     const sorted = [...session.players]
-      .filter((p) => p.isConnected)
       .sort((a, b) => b.score - a.score);
 
     const leaderboard: LeaderboardEntry[] = sorted.map((player, index) => {

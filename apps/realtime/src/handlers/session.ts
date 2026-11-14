@@ -265,12 +265,17 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       console.warn('[ALIX Realtime] Anti-proxy verification check failed:', err);
     }
 
-    if (session.status !== SessionStatus.WAITING && !session.settings.allowLateJoin) {
+    const isReconnecting = session.players.some((p) => {
+      if (rollNo && (p as any).rollNo && (p as any).rollNo.toUpperCase() === rollNo) return true;
+      return (payload.playerName || '').trim() && p.name.trim().toLowerCase() === (payload.playerName || '').trim().toLowerCase();
+    });
+
+    if (session.status !== SessionStatus.WAITING && !session.settings.allowLateJoin && !isReconnecting) {
       socket.emit('error', { message: 'Session already in progress', code: 'SESSION_STARTED' });
       return;
     }
 
-    if (session.players.length >= session.settings.maxPlayers) {
+    if (session.players.length >= session.settings.maxPlayers && !isReconnecting) {
       socket.emit('error', { message: 'Session is full', code: 'SESSION_FULL' });
       return;
     }
@@ -295,24 +300,40 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     socket.data.role = 'player';
     socket.data.playerId = player.id;
 
-    // Record participant with rollNo in MongoDB
+    // Record participant with rollNo in MongoDB (update if reconnecting, push if new)
     try {
-      await GameSessionModel.findOneAndUpdate(
-        { pin: sessionPin },
-        {
-          $push: {
-            participants: {
-              socketId: socket.id,
-              name: payload.playerName,
-              rollNo: rollNo || undefined,
-              avatarId: chosenAvatar,
-              score: 0,
-              streak: 0,
-              joinedAt: new Date(),
+      const matchCriteria = rollNo
+        ? { pin: sessionPin, 'participants.rollNo': rollNo }
+        : { pin: sessionPin, 'participants.name': payload.playerName };
+      const existingDoc = await GameSessionModel.findOne(matchCriteria);
+      if (existingDoc) {
+        await GameSessionModel.updateOne(
+          matchCriteria,
+          {
+            $set: {
+              'participants.$.socketId': socket.id,
+              'participants.$.avatarId': chosenAvatar,
             },
-          },
-        }
-      );
+          }
+        );
+      } else {
+        await GameSessionModel.findOneAndUpdate(
+          { pin: sessionPin },
+          {
+            $push: {
+              participants: {
+                socketId: socket.id,
+                name: payload.playerName,
+                rollNo: rollNo || undefined,
+                avatarId: chosenAvatar,
+                score: 0,
+                streak: 0,
+                joinedAt: new Date(),
+              },
+            },
+          }
+        );
+      }
     } catch (err) {
       console.warn('[ALIX Realtime] Could not save participant to DB:', err);
     }
@@ -495,7 +516,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     const currentQuestion = session.quiz?.questions[session.currentQuestionIndex];
     if (!currentQuestion) return;
 
-    const correct = payload.answer === currentQuestion.correctAnswer;
+    const correct = String(payload.answer).trim() === String(currentQuestion.correctAnswer).trim();
     const streak = correct
       ? (sessionManager.getPlayerStreak(session.id, socket.id) + 1)
       : 0;
@@ -571,7 +592,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     const leaderboard = sessionManager.getLeaderboard(session.id);
     const players = session.players;
 
-    io.to(session.id).emit('game-ended', {
+    const endPayload = {
       finalLeaderboard: leaderboard,
       sessionSummary: {
         totalQuestions: session.quiz?.questions.length ?? 0,
@@ -583,7 +604,10 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
         highestScore: players.length > 0 ? Math.max(...players.map((p: any) => p.score)) : 0,
         completionRate: 1,
       },
-    });
+    };
+
+    io.to(session.id).emit('game-ended', endPayload);
+    io.to(session.code).emit('game-ended', endPayload);
 
     console.log(`[ALIX] Game ended: ${session.code}`);
   });

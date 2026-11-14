@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
-import { Trophy, Crown, Sparkles, Flame, RotateCcw } from 'lucide-react';
+import { Trophy, Crown, Sparkles, RotateCcw } from 'lucide-react';
 import { triggerVictoryPodiumCelebration } from './CelebrationEffects';
-import { getAvatarById } from './AlixAvatars';
 import { RenderAvatarSvg } from './AlixSvgAvatars';
 
 export interface PodiumWinner {
@@ -26,31 +25,9 @@ export const VictoryPodium: React.FC<VictoryPodiumProps> = ({
     triggerVictoryPodiumCelebration();
   }, []);
 
-  const first = winners.find((w) => w.rank === 1) || {
-    rank: 1,
-    name: 'Zoe Chen',
-    score: 9840,
-    avatarId: 'fox',
-    streak: 6,
-  };
-  const second = winners.find((w) => w.rank === 2) || {
-    rank: 2,
-    name: 'Alex Rivera',
-    score: 8750,
-    avatarId: 'bot',
-    streak: 4,
-  };
-  const third = winners.find((w) => w.rank === 3) || {
-    rank: 3,
-    name: 'Marcus Taylor',
-    score: 7920,
-    avatarId: 'owl',
-    streak: 3,
-  };
-
-  const firstAvatar = getAvatarById(first.avatarId || 'fox');
-  const secondAvatar = getAvatarById(second.avatarId || 'bot');
-  const thirdAvatar = getAvatarById(third.avatarId || 'owl');
+  const first = winners.find((w) => w.rank === 1);
+  const second = winners.find((w) => w.rank === 2);
+  const third = winners.find((w) => w.rank === 3);
 
   return (
     <div className="w-full flex flex-col items-center animate-fade-in text-white select-none">
@@ -73,20 +50,32 @@ export const VictoryPodium: React.FC<VictoryPodiumProps> = ({
         {/* 2nd Place (Silver) */}
         <div className="flex-1 flex flex-col items-center animate-[alix-fade-up_0.6s_ease-out]">
           {/* Avatar & Info */}
-          <div className="flex flex-col items-center mb-3">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-slate-400 to-slate-200 flex items-center justify-center shadow-lg border-2 border-slate-300 relative p-1.5">
-              <RenderAvatarSvg avatarId={second.avatarId || 'bot'} size={56} />
-              <div className="absolute -top-2.5 -right-2 w-6 h-6 rounded-full bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center font-heading font-black text-[11px] text-slate-800">
-                2
+          {second ? (
+            <div className="flex flex-col items-center mb-3">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-slate-400 to-slate-200 flex items-center justify-center shadow-lg border-2 border-slate-300 relative p-1.5">
+                <RenderAvatarSvg avatarId={second.avatarId || 'bot'} size={56} />
+                <div className="absolute -top-2.5 -right-2 w-6 h-6 rounded-full bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center font-heading font-black text-[11px] text-slate-800">
+                  2
+                </div>
+              </div>
+              <div className="font-heading font-bold text-sm sm:text-base text-white mt-2 truncate max-w-[110px] text-center">
+                {second.name}
+              </div>
+              <div className="font-mono text-xs sm:text-sm text-slate-300 font-bold">
+                {(second.score ?? 0).toLocaleString()} pts
               </div>
             </div>
-            <div className="font-heading font-bold text-sm sm:text-base text-white mt-2 truncate max-w-[110px] text-center">
-              {second.name}
+          ) : (
+            <div className="flex flex-col items-center mb-3 opacity-40">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-dashed border-slate-400/50 flex items-center justify-center">
+                <span className="text-slate-400 font-mono text-lg">—</span>
+              </div>
+              <div className="font-heading font-bold text-xs text-slate-400 mt-2">
+                Unclaimed
+              </div>
+              <div className="font-mono text-[11px] text-slate-500">—</div>
             </div>
-            <div className="font-mono text-xs sm:text-sm text-slate-300 font-bold">
-              {second.score.toLocaleString()} pts
-            </div>
-          </div>
+          )}
           {/* Silver Step */}
           <div className="w-full h-36 sm:h-44 rounded-t-2xl bg-gradient-to-b from-slate-400 via-slate-500 to-slate-700 border-t-4 border-slate-300 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden">
             <div className="text-4xl sm:text-6xl font-black font-heading text-slate-200/50">
@@ -101,21 +90,33 @@ export const VictoryPodium: React.FC<VictoryPodiumProps> = ({
         {/* 1st Place (Gold / Champion) */}
         <div className="flex-1 flex flex-col items-center -mt-8 animate-[alix-fade-up_0.8s_ease-out]">
           {/* Crown & Avatar */}
-          <div className="flex flex-col items-center mb-3 relative">
-            <Crown className="w-8 h-8 text-amber-400 animate-bounce absolute -top-8" />
-            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center shadow-alix-glow ring-4 ring-amber-400/80 border-2 border-white relative p-1.5">
-              <RenderAvatarSvg avatarId={first.avatarId || 'fox'} size={68} />
-              <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-amber-400 border-2 border-white shadow-md flex items-center justify-center font-heading font-black text-xs text-amber-950">
-                1
+          {first ? (
+            <div className="flex flex-col items-center mb-3 relative">
+              <Crown className="w-8 h-8 text-amber-400 animate-bounce absolute -top-8" />
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center shadow-alix-glow ring-4 ring-amber-400/80 border-2 border-white relative p-1.5">
+                <RenderAvatarSvg avatarId={first.avatarId || 'fox'} size={68} />
+                <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-amber-400 border-2 border-white shadow-md flex items-center justify-center font-heading font-black text-xs text-amber-950">
+                  1
+                </div>
+              </div>
+              <div className="font-heading font-black text-base sm:text-lg text-amber-300 mt-2 truncate max-w-[130px] text-center">
+                {first.name}
+              </div>
+              <div className="font-mono text-sm sm:text-base text-white font-black">
+                {(first.score ?? 0).toLocaleString()} pts
               </div>
             </div>
-            <div className="font-heading font-black text-base sm:text-lg text-amber-300 mt-2 truncate max-w-[130px] text-center">
-              {first.name}
+          ) : (
+            <div className="flex flex-col items-center mb-3 opacity-40">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-dashed border-amber-400/50 flex items-center justify-center">
+                <span className="text-amber-300 font-mono text-xl">—</span>
+              </div>
+              <div className="font-heading font-bold text-xs text-amber-300 mt-2">
+                Awaiting Players
+              </div>
+              <div className="font-mono text-[11px] text-amber-400/60">—</div>
             </div>
-            <div className="font-mono text-sm sm:text-base text-white font-black">
-              {first.score.toLocaleString()} pts
-            </div>
-          </div>
+          )}
           {/* Gold Step */}
           <div className="w-full h-48 sm:h-60 rounded-t-2xl bg-gradient-to-b from-amber-400 via-yellow-500 to-amber-700 border-t-4 border-yellow-200 flex flex-col items-center justify-center shadow-alix-glow relative overflow-hidden">
             <div className="text-5xl sm:text-7xl font-black font-heading text-amber-900/40">
@@ -130,20 +131,32 @@ export const VictoryPodium: React.FC<VictoryPodiumProps> = ({
         {/* 3rd Place (Bronze) */}
         <div className="flex-1 flex flex-col items-center animate-[alix-fade-up_0.5s_ease-out]">
           {/* Avatar & Info */}
-          <div className="flex flex-col items-center mb-3">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-amber-700 to-orange-400 flex items-center justify-center shadow-lg border-2 border-amber-600 relative p-1.5">
-              <RenderAvatarSvg avatarId={third.avatarId || 'owl'} size={56} />
-              <div className="absolute -top-2.5 -right-2 w-6 h-6 rounded-full bg-amber-600 border-2 border-white shadow-sm flex items-center justify-center font-heading font-black text-[11px] text-amber-100">
-                3
+          {third ? (
+            <div className="flex flex-col items-center mb-3">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-amber-700 to-orange-400 flex items-center justify-center shadow-lg border-2 border-amber-600 relative p-1.5">
+                <RenderAvatarSvg avatarId={third.avatarId || 'owl'} size={56} />
+                <div className="absolute -top-2.5 -right-2 w-6 h-6 rounded-full bg-amber-600 border-2 border-white shadow-sm flex items-center justify-center font-heading font-black text-[11px] text-amber-100">
+                  3
+                </div>
+              </div>
+              <div className="font-heading font-bold text-sm sm:text-base text-white mt-2 truncate max-w-[110px] text-center">
+                {third.name}
+              </div>
+              <div className="font-mono text-xs sm:text-sm text-slate-300 font-bold">
+                {(third.score ?? 0).toLocaleString()} pts
               </div>
             </div>
-            <div className="font-heading font-bold text-sm sm:text-base text-white mt-2 truncate max-w-[110px] text-center">
-              {third.name}
+          ) : (
+            <div className="flex flex-col items-center mb-3 opacity-40">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-dashed border-amber-600/50 flex items-center justify-center">
+                <span className="text-amber-400 font-mono text-lg">—</span>
+              </div>
+              <div className="font-heading font-bold text-xs text-amber-400 mt-2">
+                Unclaimed
+              </div>
+              <div className="font-mono text-[11px] text-amber-500/60">—</div>
             </div>
-            <div className="font-mono text-xs sm:text-sm text-slate-300 font-bold">
-              {third.score.toLocaleString()} pts
-            </div>
-          </div>
+          )}
           {/* Bronze Step */}
           <div className="w-full h-28 sm:h-36 rounded-t-2xl bg-gradient-to-b from-amber-700 via-orange-800 to-stone-900 border-t-4 border-amber-500 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden">
             <div className="text-3xl sm:text-5xl font-black font-heading text-amber-300/30">
