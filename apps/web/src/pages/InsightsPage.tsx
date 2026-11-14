@@ -169,7 +169,7 @@ export const InsightsPage: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F2F2F2]">
+    <div className="min-h-screen flex flex-col bg-[#F3F3F3]">
       <Navbar />
 
       <div className="flex-1 flex max-w-[1440px] w-full mx-auto">
@@ -179,17 +179,17 @@ export const InsightsPage: React.FC = () => {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-heading font-black text-slate-900 tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-heading font-semibold text-[#252525] tracking-tight">
                 Reports & Insights
               </h1>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              <p className="text-xs sm:text-sm text-[#626262] font-normal mt-1">
                 View scores, participant attendance, and performance reports from your live games.
               </p>
             </div>
 
             <Link
               to="/dashboard"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1368CE] hover:bg-[#105AB3] text-white text-xs font-black shadow-sm transition-all"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#1368CE] hover:bg-[#0F52A4] text-white text-xs sm:text-sm font-semibold shadow-xs transition-all active:scale-95"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               <span>Host Live Game</span>
@@ -198,40 +198,40 @@ export const InsightsPage: React.FC = () => {
 
           {/* Quick Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
+            <div className="p-5 rounded-2xl bg-white border border-[#E5E5E5] shadow-xs flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span className="text-xs font-semibold text-[#626262] uppercase tracking-wider">
                   Games Hosted
                 </span>
-                <div className="text-2xl sm:text-3xl font-heading font-black text-slate-900 mt-1">
+                <div className="text-2xl sm:text-3xl font-heading font-semibold text-[#252525] mt-1">
                   {stats.totalSessions}
                 </div>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center font-bold">
+              <div className="w-12 h-12 rounded-xl bg-purple-50 text-[#46178F] flex items-center justify-center font-bold">
                 <Gamepad2 className="w-6 h-6" />
               </div>
             </div>
 
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
+            <div className="p-5 rounded-2xl bg-white border border-[#E5E5E5] shadow-xs flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span className="text-xs font-semibold text-[#626262] uppercase tracking-wider">
                   Total Players
                 </span>
-                <div className="text-2xl sm:text-3xl font-heading font-black text-slate-900 mt-1">
+                <div className="text-2xl sm:text-3xl font-heading font-semibold text-[#252525] mt-1">
                   {stats.totalLearners}
                 </div>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center font-bold">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 text-[#1368CE] flex items-center justify-center font-bold">
                 <Users className="w-6 h-6" />
               </div>
             </div>
 
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
+            <div className="p-5 rounded-2xl bg-white border border-[#E5E5E5] shadow-xs flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span className="text-xs font-semibold text-[#626262] uppercase tracking-wider">
                   Avg Participation
                 </span>
-                <div className="text-2xl sm:text-3xl font-heading font-black text-emerald-600 mt-1">
+                <div className="text-2xl sm:text-3xl font-heading font-semibold text-emerald-600 mt-1">
                   {stats.avgParticipation}%
                 </div>
               </div>
@@ -242,28 +242,28 @@ export const InsightsPage: React.FC = () => {
           </div>
 
           {/* Past Sessions List */}
-          <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <section className="bg-white rounded-2xl border border-[#E5E5E5] shadow-xs overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-[#E5E5E5] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <h2 className="text-base sm:text-lg font-heading font-black text-slate-900">
+                <h2 className="text-base sm:text-lg font-heading font-semibold text-[#252525]">
                   Recorded Sessions
                 </h2>
-                <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#F3F3F3] text-[#626262] text-xs font-medium">
                   {filteredSessions.length} {filteredSessions.length === 1 ? 'session' : 'sessions'}
                 </span>
               </div>
 
               {/* Filters and Batch Actions */}
               <div className="flex items-center gap-2.5 flex-wrap">
-                <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold">
-                  <Filter className="w-3.5 h-3.5 text-slate-400 ml-1.5" />
+                <div className="flex items-center gap-1.5 bg-[#F7F7F8] border border-[#E5E5E5] p-1 rounded-xl text-xs font-medium">
+                  <Filter className="w-3.5 h-3.5 text-[#626262] ml-1.5" />
                   <button
                     type="button"
                     onClick={() => setStatusFilter('all')}
                     className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                       statusFilter === 'all'
-                        ? 'bg-white text-slate-900 shadow-xs'
-                        : 'text-slate-500 hover:text-slate-900'
+                        ? 'bg-white text-[#252525] shadow-xs font-semibold'
+                        : 'text-[#626262] hover:text-[#252525]'
                     }`}
                   >
                     All
@@ -273,8 +273,8 @@ export const InsightsPage: React.FC = () => {
                     onClick={() => setStatusFilter('completed')}
                     className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                       statusFilter === 'completed'
-                        ? 'bg-white text-slate-900 shadow-xs'
-                        : 'text-slate-500 hover:text-slate-900'
+                        ? 'bg-white text-[#252525] shadow-xs font-semibold'
+                        : 'text-[#626262] hover:text-[#252525]'
                     }`}
                   >
                     Completed
@@ -284,8 +284,8 @@ export const InsightsPage: React.FC = () => {
                     onClick={() => setStatusFilter('waiting')}
                     className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                       statusFilter === 'waiting'
-                        ? 'bg-white text-slate-900 shadow-xs'
-                        : 'text-slate-500 hover:text-slate-900'
+                        ? 'bg-white text-[#252525] shadow-xs font-semibold'
+                        : 'text-[#626262] hover:text-[#252525]'
                     }`}
                   >
                     In Progress
@@ -296,7 +296,7 @@ export const InsightsPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleDeleteAllSessions}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition-all cursor-pointer active:scale-95 shadow-xs"
                     title="Delete all sessions"
                   >
                     <Trash2 className="w-3.5 h-3.5 text-rose-600" />
@@ -307,24 +307,24 @@ export const InsightsPage: React.FC = () => {
             </div>
 
             {isLoading ? (
-              <div className="p-12 text-center text-slate-400">
-                <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                <span className="text-xs font-bold">Loading reports...</span>
+              <div className="p-12 text-center text-[#626262]">
+                <div className="w-6 h-6 border-2 border-[#46178F] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                <span className="text-xs font-medium">Loading reports...</span>
               </div>
             ) : filteredSessions.length === 0 ? (
               <div className="p-10 text-center">
-                <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                <div className="w-12 h-12 rounded-xl bg-purple-50 text-[#46178F] flex items-center justify-center mx-auto mb-3">
                   <FileSpreadsheet className="w-6 h-6" />
                 </div>
-                <h3 className="font-heading font-bold text-slate-800 text-base">
+                <h3 className="font-heading font-semibold text-[#252525] text-base">
                   No sessions match this filter
                 </h3>
-                <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
+                <p className="text-xs text-[#626262] font-normal max-w-sm mx-auto mt-1 mb-4">
                   Host live games to populate attendance data and performance metrics.
                 </p>
                 <Link
                   to="/dashboard"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#26890C] hover:bg-[#20740A] text-white font-black text-xs shadow-sm transition-all"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#46178F] hover:bg-[#3D147D] text-white font-semibold text-xs shadow-xs transition-all"
                 >
                   <Play className="w-3.5 h-3.5 fill-current" />
                   <span>Host a Game</span>
@@ -333,7 +333,7 @@ export const InsightsPage: React.FC = () => {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs sm:text-sm">
-                  <thead className="bg-slate-50 text-slate-500 text-[11px] uppercase font-bold border-b border-slate-100">
+                  <thead className="bg-[#F7F7F8] text-[#626262] text-[11px] uppercase font-semibold border-b border-[#E5E5E5]">
                     <tr>
                       <th className="py-3 px-5">Game PIN</th>
                       <th className="py-3 px-5">Date</th>
@@ -342,25 +342,25 @@ export const InsightsPage: React.FC = () => {
                       <th className="py-3 px-5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-[#E5E5E5]">
                     {filteredSessions.map((s) => (
-                      <tr key={s._id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3.5 px-5 font-mono font-black text-slate-900">
+                      <tr key={s._id} className="hover:bg-[#F9F9F9] transition-colors">
+                        <td className="py-3.5 px-5 font-mono font-bold text-[#252525]">
                           {s.pin}
                         </td>
-                        <td className="py-3.5 px-5 text-slate-500 text-xs">
+                        <td className="py-3.5 px-5 text-[#626262] text-xs font-normal">
                           {new Date(s.createdAt).toLocaleDateString()} at{' '}
                           {new Date(s.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </td>
-                        <td className="py-3.5 px-5 font-bold text-slate-700">
+                        <td className="py-3.5 px-5 font-medium text-[#252525]">
                           {s.participants?.length || 0} learners
                         </td>
                         <td className="py-3.5 px-5">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                            className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase ${
                               s.status === 'completed'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-amber-100 text-amber-800'
+                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                : 'bg-amber-50 text-amber-800 border border-amber-200'
                             }`}
                           >
                             {s.status}
@@ -371,10 +371,10 @@ export const InsightsPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleExportAttendance(s.pin)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-[#F3F3F3] border border-[#E5E5E5] text-[#252525] text-xs font-semibold transition-all shadow-xs cursor-pointer"
                               title="Download Attendance CSV"
                             >
-                              <Download className="w-3.5 h-3.5 text-indigo-600" />
+                              <Download className="w-3.5 h-3.5 text-[#46178F]" />
                               <span>CSV</span>
                             </button>
 
@@ -382,7 +382,7 @@ export const InsightsPage: React.FC = () => {
                               type="button"
                               onClick={() => handleDeleteSession(s.pin)}
                               disabled={deletingPin === s.pin}
-                              className="p-1.5 rounded-lg border border-slate-200 hover:border-rose-300 hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                              className="p-1.5 rounded-lg border border-[#E5E5E5] hover:border-rose-300 hover:bg-rose-50 text-[#626262] hover:text-rose-600 transition-all cursor-pointer shadow-xs disabled:opacity-50"
                               title="Delete Session"
                             >
                               <Trash2 className="w-4 h-4" />

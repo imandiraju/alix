@@ -33,8 +33,8 @@ export const AlixLogo: React.FC<AlixLogoProps> = ({
   const isWhite = variant === 'white';
   const isMono = variant === 'monochrome';
 
-  const textColor = isWhite ? '#FFFFFF' : isMono ? '#1E1B4B' : '#1E1B4B';
-  const dotColor = isWhite ? '#FFFFFF' : isMono ? '#1E1B4B' : '#7C3AED';
+  const textColor = isWhite ? '#FFFFFF' : isMono ? '#252525' : '#46178F';
+  const dotColor = isWhite ? '#FFFFFF' : isMono ? '#252525' : '#46178F';
 
   if (iconOnly) {
     return (
@@ -49,8 +49,8 @@ export const AlixLogo: React.FC<AlixLogoProps> = ({
       >
         <defs>
           <linearGradient id={`alixIconGrad-${variant}`} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor={isWhite ? '#FFFFFF' : isMono ? '#1E1B4B' : '#7C3AED'} />
-            <stop offset="100%" stopColor={isWhite ? '#E2E8F0' : isMono ? '#1E1B4B' : '#4F46E5'} />
+            <stop offset="0%" stopColor={isWhite ? '#FFFFFF' : isMono ? '#252525' : '#46178F'} />
+            <stop offset="100%" stopColor={isWhite ? '#E2E8F0' : isMono ? '#252525' : '#6F2DBD'} />
           </linearGradient>
         </defs>
         {/* Abstract Stylized A Symbol */}
@@ -105,8 +105,8 @@ export const AlixLogo: React.FC<AlixLogoProps> = ({
           >
             <defs>
               <linearGradient id={`alixWordmarkGrad-${variant}`} x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor={isWhite ? '#FFFFFF' : isMono ? '#1E1B4B' : '#7C3AED'} />
-                <stop offset="100%" stopColor={isWhite ? '#EDE9FE' : isMono ? '#1E1B4B' : '#4F46E5'} />
+                <stop offset="0%" stopColor={isWhite ? '#FFFFFF' : isMono ? '#252525' : '#46178F'} />
+                <stop offset="100%" stopColor={isWhite ? '#EDE9FE' : isMono ? '#252525' : '#6F2DBD'} />
               </linearGradient>
             </defs>
 
@@ -184,7 +184,7 @@ export const AlixLogo: React.FC<AlixLogoProps> = ({
         {(withCompanyTag || withTagline) && (
           <div
             className={`font-heading font-black tracking-wider uppercase mt-0.5 ${
-              isWhite ? 'text-cyan-300/90' : 'text-[#7C3AED]'
+              isWhite ? 'text-cyan-300/90' : 'text-[#46178F]'
             } ${size === 'sm' ? 'text-[7px]' : 'text-[9px]'}`}
           >
             RKGlobal EdTech

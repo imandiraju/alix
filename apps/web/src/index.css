@@ -9,18 +9,42 @@
 
 @layer base {
   body {
-    background-color: #F4F6F9;
-    color: #0F172A;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #F3F3F3;
+    color: #252525;
+    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
+  h1 {
+    font-size: 1.625rem; /* 26px */
+    font-weight: 700;
+    line-height: 1.25;
+    color: #252525;
+  }
+
+  h2 {
+    font-size: 1.125rem; /* 18px */
+    font-weight: 600;
+    line-height: 1.35;
+    color: #252525;
+  }
+
+  h3 {
+    font-size: 1rem; /* 16px */
+    font-weight: 600;
+    line-height: 1.4;
+    color: #252525;
+  }
+
   /* Sharp focus rings */
   :focus-visible {
-    outline: 2px solid #7C3AED;
+    outline: 2px solid #46178F;
     outline-offset: 2px;
   }
 }

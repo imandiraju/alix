@@ -306,28 +306,8 @@ export const DiscoverPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F2F2F2]">
+    <div className="min-h-screen flex flex-col bg-[#F3F3F3]">
       <Navbar />
-
-      {/* Filter Category Pills Strip (Kahoot Discover Tags) */}
-      <div className="bg-white border-b border-slate-200 px-4 sm:px-8 py-2.5 overflow-x-auto scrollbar-none sticky top-16 z-30 shadow-xs">
-        <div className="max-w-[1440px] mx-auto flex items-center gap-2">
-          {filterTabs.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveCategory(tab)}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                activeCategory === tab
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-              }`}
-            >
-              {tab === 'All' ? 'Top picks for all' : tab}
-            </button>
-          ))}
-        </div>
-      </div>
 
       <div className="flex-1 flex max-w-[1440px] w-full mx-auto">
         {/* Left Sidebar */}
@@ -335,10 +315,28 @@ export const DiscoverPage: React.FC = () => {
 
         {/* Main Discover Feed */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 max-w-6xl space-y-8">
+          {/* In-page Filter Category Pills Strip */}
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+            {filterTabs.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveCategory(tab)}
+                className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer whitespace-nowrap ${
+                  activeCategory === tab
+                    ? 'bg-[#46178F] text-white font-semibold shadow-xs'
+                    : 'bg-white hover:bg-[#F3F3F3] text-[#252525] border border-[#E5E5E5] font-normal'
+                }`}
+              >
+                {tab === 'All' ? 'Top picks for all' : tab}
+              </button>
+            ))}
+          </div>
+
           {/* Explore Discover Pages (Kahoot exact 6-card banner) */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base sm:text-lg font-heading font-black text-slate-900 tracking-tight">
+              <h2 className="text-base sm:text-lg font-heading font-semibold text-[#252525] tracking-tight">
                 Explore Discover pages
               </h2>
             </div>
@@ -353,12 +351,12 @@ export const DiscoverPage: React.FC = () => {
                     else if (dp.name.includes('Social') || dp.name.includes('Energizer')) setActiveCategory('Active Learning');
                     else setActiveCategory('All');
                   }}
-                  className={`p-3.5 rounded-2xl bg-gradient-to-br ${dp.gradient} text-white shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between min-h-[90px]`}
+                  className={`p-3.5 rounded-2xl bg-gradient-to-br ${dp.gradient} text-white shadow-xs hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between min-h-[90px]`}
                 >
-                  <h3 className="font-heading font-black text-xs leading-snug">
+                  <h3 className="font-heading font-semibold text-xs leading-snug">
                     {dp.name}
                   </h3>
-                  <p className="text-[10px] text-white/70 line-clamp-1 mt-1">
+                  <p className="text-[10px] text-white/80 line-clamp-1 mt-1 font-normal">
                     {dp.desc}
                   </p>
                 </div>
@@ -370,14 +368,14 @@ export const DiscoverPage: React.FC = () => {
           <div>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg sm:text-xl font-heading font-black text-slate-900 tracking-tight">
+                <h2 className="text-lg sm:text-xl font-heading font-semibold text-[#252525] tracking-tight">
                   Featured Classroom Activities
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-[#626262] font-normal mt-0.5">
                   Ready to host immediately on your lecture projector screen.
                 </p>
               </div>
-              <span className="text-xs font-bold text-slate-500">
+              <span className="text-xs font-normal text-[#626262]">
                 {filteredActivities.length} {filteredActivities.length === 1 ? 'activity' : 'activities'}
               </span>
             </div>
@@ -386,21 +384,21 @@ export const DiscoverPage: React.FC = () => {
               {filteredActivities.map((act) => (
                 <div
                   key={act.id}
-                  className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-lg transition-all flex flex-col justify-between group"
+                  className="bg-white rounded-2xl border border-[#E5E5E5] overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
                 >
                   {/* Top Graphic Card Banner */}
                   <div className={`p-5 bg-gradient-to-br ${act.gradient} text-white relative min-h-[120px] flex flex-col justify-between overflow-hidden`}>
                     <div className="flex items-center justify-between relative z-10">
-                      <span className="px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-white text-[10px] font-black tracking-wider uppercase border border-white/20">
+                      <span className="px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-white text-[10px] font-semibold tracking-wider uppercase border border-white/20">
                         {act.subject}
                       </span>
-                      <span className="text-[11px] font-mono font-bold text-white/80">
+                      <span className="text-[11px] font-mono font-medium text-white/90">
                         {act.courseCode}
                       </span>
                     </div>
 
                     <div className="relative z-10 pt-2">
-                      <h3 className="font-heading font-black text-base text-white leading-tight group-hover:text-cyan-200 transition-colors">
+                      <h3 className="font-heading font-semibold text-base text-white leading-tight group-hover:text-cyan-200 transition-colors">
                         {act.title}
                       </h3>
                     </div>
@@ -411,15 +409,15 @@ export const DiscoverPage: React.FC = () => {
 
                   {/* Body Content */}
                   <div className="p-4 flex-1 flex flex-col justify-between">
-                    <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                    <p className="text-xs text-[#626262] font-normal leading-relaxed mb-4">
                       {act.description}
                     </p>
 
-                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 mb-4">
-                      <span className="font-bold text-slate-700">
+                    <div className="pt-3 border-t border-[#E5E5E5] flex items-center justify-between text-xs text-[#626262] mb-4">
+                      <span className="font-semibold text-[#252525]">
                         {act.questionCount} Questions
                       </span>
-                      <span className="font-mono text-slate-400">
+                      <span className="font-mono text-[#626262]">
                         ~{act.timeEstimate}
                       </span>
                     </div>
@@ -430,7 +428,7 @@ export const DiscoverPage: React.FC = () => {
                         type="button"
                         onClick={() => handleLaunchLive(act)}
                         disabled={isLaunchingId === act.id}
-                        className="w-full py-2.5 px-3 rounded-xl bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#175407] active:border-b-0 active:translate-y-1 text-white font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        className="w-full py-2 px-3 rounded-lg bg-[#1368CE] hover:bg-[#0F52A4] text-white font-semibold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />
                         <span>{isLaunchingId === act.id ? 'Starting...' : 'Host Live'}</span>
@@ -439,9 +437,9 @@ export const DiscoverPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setPreviewActivity(act)}
-                        className="w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="w-full py-2 px-3 rounded-lg bg-white hover:bg-[#F3F3F3] border border-[#E5E5E5] text-[#252525] font-semibold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        <Eye className="w-3.5 h-3.5 text-slate-500" />
+                        <Eye className="w-3.5 h-3.5 text-[#626262]" />
                         <span>Preview</span>
                       </button>
                     </div>

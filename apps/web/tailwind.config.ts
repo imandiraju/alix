@@ -9,6 +9,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        kahoot: {
+          purple: '#46178F',
+          'purple-light': '#6F2DBD',
+          blue: '#1368CE',
+          pink: '#E21B5A',
+          orange: '#E66C1C',
+          teal: '#00A6A6',
+          bg: '#F3F3F3',
+          surface: '#FFFFFF',
+          text: '#252525',
+          muted: '#626262',
+          border: '#E5E5E5',
+        },
         alix: {
           indigo: {
             DEFAULT: '#1E1B4B',
@@ -79,8 +92,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        heading: ['Space Grotesk', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['Montserrat', 'system-ui', '-apple-system', 'sans-serif'],
+        heading: ['Montserrat', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
       boxShadow: {
