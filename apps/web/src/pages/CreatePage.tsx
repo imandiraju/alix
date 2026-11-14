@@ -6,6 +6,7 @@ import Footer from '../components/layout/Footer';
 import AlixLogo from '../components/common/AlixLogo';
 import { REALTIME_URL } from '../services/socket';
 import { useAuth } from '../context/AuthContext';
+import { AiQuizStudioModal } from '../components/creator/AiQuizStudioModal';
 import {
   PlusCircle,
   Trash2,
@@ -63,6 +64,14 @@ export const CreatePage: React.FC = () => {
   const [rosters, setRosters] = useState<any[]>([]);
   const [selectedRosterId, setSelectedRosterId] = useState<string>('');
   const [showProperties, setShowProperties] = useState(true);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+
+  // Automatically open AI Studio if query param ?ai=true is present
+  React.useEffect(() => {
+    if (searchParams.get('ai') === 'true') {
+      setIsAiModalOpen(true);
+    }
+  }, [searchParams]);
 
   // Load existing quiz if in Edit mode
   React.useEffect(() => {
@@ -258,6 +267,36 @@ export const CreatePage: React.FC = () => {
     }
   };
 
+  const handleImportAiQuiz = (data: {
+    title: string;
+    subject: string;
+    description: string;
+    questions: any[];
+  }) => {
+    if (data.title) setTitle(data.title);
+    if (data.subject) setSubject(data.subject);
+    if (data.description) setDescription(data.description);
+    if (Array.isArray(data.questions) && data.questions.length > 0) {
+      const mappedQuestions: QuestionDraft[] = data.questions.map((q, idx) => ({
+        id: q.id || `q-ai-${Date.now()}-${idx}`,
+        type: q.type || 'multiple_choice',
+        text: q.text || '',
+        timeLimit: typeof q.timeLimit === 'number' ? q.timeLimit : 30,
+        points: typeof q.points === 'number' ? q.points : 1000,
+        options: Array.isArray(q.options) && q.options.length > 0
+          ? q.options
+          : ['Option 1', 'Option 2', 'Option 3', 'Option 4'],
+        correctIndex: typeof q.correctIndex === 'number' ? q.correctIndex : 0,
+        correctIndices: Array.isArray(q.correctIndices)
+          ? q.correctIndices
+          : [typeof q.correctIndex === 'number' ? q.correctIndex : 0],
+      }));
+      setQuestions(mappedQuestions);
+      setActiveQuestionId(mappedQuestions[0].id);
+    }
+    setIsAiModalOpen(false);
+  };
+
   const handleUpdateActiveQuestion = (field: keyof QuestionDraft, value: any) => {
     setQuestions(
       questions.map((q) =>
@@ -356,6 +395,16 @@ export const CreatePage: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setIsAiModalOpen(true)}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-indigo-500 hover:to-pink-400 text-white font-bold text-sm shadow-md flex items-center gap-2 transition-all cursor-pointer active:scale-95"
+                title="Generate quiz with Grok ➡️ Gemini AI via OpenRouter"
+              >
+                <Sparkles className="w-4 h-4 text-cyan-300" />
+                <span>AI Quiz Studio</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => {
@@ -605,10 +654,20 @@ export const CreatePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleAddQuestion('multiple_choice')}
-                  className="w-full py-3.5 rounded-2xl border-2 border-dashed border-slate-300 hover:border-alix-violet-500 hover:bg-alix-violet-50/50 text-slate-600 hover:text-alix-violet-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  className="w-full py-3 rounded-2xl border-2 border-dashed border-slate-300 hover:border-alix-violet-500 hover:bg-alix-violet-50/50 text-slate-600 hover:text-alix-violet-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>Add Question Slide</span>
+                </button>
+
+                {/* AI Generator Quick Trigger */}
+                <button
+                  type="button"
+                  onClick={() => setIsAiModalOpen(true)}
+                  className="w-full py-2.5 rounded-2xl bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 border border-purple-200 text-purple-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Generate with AI Studio</span>
                 </button>
               </div>
             </div>
@@ -1086,6 +1145,13 @@ export const CreatePage: React.FC = () => {
           </div>
         );
       })()}
+
+      {/* OpenRouter AI Quiz Studio Modal */}
+      <AiQuizStudioModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        onImport={handleImportAiQuiz}
+      />
 
       <Footer />
     </div>

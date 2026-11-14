@@ -434,7 +434,7 @@ export const DashboardPage: React.FC = () => {
 
                 <div className="pt-4 flex justify-end">
                   <Link
-                    to="/create"
+                    to="/create?ai=true"
                     className="px-4 py-2 bg-white text-[#864CBF] font-black text-xs rounded-xl shadow-sm hover:bg-white/95 active:scale-95 transition-all"
                   >
                     Start creating
