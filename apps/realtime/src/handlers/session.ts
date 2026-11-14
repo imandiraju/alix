@@ -581,6 +581,13 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     const session = resolveSession(socket, payload);
 
     if (!session) return;
+
+    // Only the host can advance questions — reject if this socket is a player
+    if (session.hostSocketId && session.hostSocketId !== socket.id) {
+      const isPlayer = session.players.some((p: any) => p.id === socket.id);
+      if (isPlayer) return; // silently ignore student attempting to advance
+    }
+
     session.hostSocketId = socket.id;
     socket.data.sessionId = session.id;
     socket.data.role = 'host';
@@ -597,16 +604,22 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
   (socket as any).on('sync-timer', (payload: any) => {
     const session = resolveSession(socket, payload);
     if (!session) return;
+
+    // Only the host can sync the timer
+    if (session.hostSocketId && session.hostSocketId !== socket.id) {
+      const isPlayer = session.players.some((p: any) => p.id === socket.id);
+      if (isPlayer) return;
+    }
+
     if (typeof payload?.remaining === 'number') {
       (session as any).questionRemaining = payload.remaining;
       (session as any).questionTotal = payload.total || 30;
       io.to(session.id).emit('timer-tick', { remaining: payload.remaining, total: payload.total || 30 });
       io.to(session.code).emit('timer-tick', { remaining: payload.remaining, total: payload.total || 30 });
 
-      if (payload.remaining <= 0) {
-        (io.to(session.id) as any).emit('answers-revealed', { questionIndex: session.currentQuestionIndex });
-        (io.to(session.code) as any).emit('answers-revealed', { questionIndex: session.currentQuestionIndex });
-      }
+      // NOTE: Do NOT emit answers-revealed here. The host emits 'reveal-answers'
+      // separately when timer reaches 0 (which triggers the full reveal with
+      // correctIndex, distribution, and per-player deferred results).
     }
   });
 
@@ -615,6 +628,13 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
   (socket as any).on('reveal-answers', (payload: any) => {
     const session = resolveSession(socket, payload);
     if (!session) return;
+
+    // Only the host can reveal answers
+    if (session.hostSocketId && session.hostSocketId !== socket.id) {
+      const isPlayer = session.players.some((p: any) => p.id === socket.id);
+      if (isPlayer) return;
+    }
+
     (session as any).questionRemaining = 0;
     io.to(session.id).emit('timer-tick', { remaining: 0, total: 30 });
     io.to(session.code).emit('timer-tick', { remaining: 0, total: 30 });
@@ -668,6 +688,26 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     (io.to(session.id) as any).emit('answers-revealed', revealPayload);
     (io.to(session.code) as any).emit('answers-revealed', revealPayload);
 
+    // Now send each player their personal deferred answer result
+    // (correctness and points were withheld from answer-result for anti-cheat)
+    for (const player of session.players) {
+      const playerAnswer = player.answers.find((a: any) => a.questionId === activeQ?.id);
+      if (playerAnswer && player.id) {
+        try {
+          io.to(player.id).emit('answer-result', {
+            correct: playerAnswer.correct,
+            points: playerAnswer.points,
+            streak: player.streak,
+            totalScore: player.score,
+            correctIndex: cIdx,
+            correctIndices: cIndices,
+            correctAnswer: cIdx.toString(),
+            deferred: true,  // marks this as the authoritative deferred result
+          });
+        } catch {}
+      }
+    }
+
     const updatePayload = {
       leaderboard: sessionManager.getLeaderboard(session.id),
       teamLeaderboard: sessionManager.getTeamLeaderboard(session.id),
@@ -683,6 +723,13 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
   (socket as any).on('host-question-advance', (payload: any) => {
     const session = resolveSession(socket, payload);
     if (!session) return;
+
+    // Only the host can advance questions
+    if (session.hostSocketId && session.hostSocketId !== socket.id) {
+      const isPlayer = session.players.some((p: any) => p.id === socket.id);
+      if (isPlayer) return;
+    }
+
     session.hostSocketId = socket.id;
     socket.data.sessionId = session.id;
     socket.data.role = 'host';
@@ -942,14 +989,18 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       ? Number(currentQuestion.correctAnswer)
       : 0;
 
+    // Anti-cheat: Do NOT send correctIndex/correctAnswer/correct in answer-result.
+    // Students should only learn whether they were right when 'answers-revealed' fires
+    // (after the timer expires or the host clicks "Show Answers").
+    // Points and streak are recorded server-side and sent only upon reveal.
     socket.emit('answer-result', {
-      correct,
-      points,
-      streak,
+      correct: false,        // placeholder — real result comes via answers-revealed
+      points: 0,             // placeholder — real points come via answers-revealed
+      streak: 0,
       totalScore: player?.score ?? 0,
-      correctIndex: cIdx,
-      correctIndices: (currentQuestion as any).correctIndices || [cIdx],
-      correctAnswer: cIdx.toString(),
+      correctAnswer: '',     // withheld until reveal
+      pendingPoints: points, // stored so reveal can confirm
+      pendingCorrect: correct,
     });
 
     // Broadcast live question submitted tally and updated distribution to room/host

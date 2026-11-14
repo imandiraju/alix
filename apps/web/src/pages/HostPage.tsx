@@ -290,7 +290,9 @@ export const HostPage: React.FC = () => {
             });
           });
         }
-        setStage('chart');
+        // NOTE: Do NOT setStage here — leaderboard-update is a live tally
+        // that arrives each time a student submits. Stage transitions are
+        // controlled exclusively by the host (timer expiry / button clicks).
       });
 
       socket.on('game-ended', (data: any) => {

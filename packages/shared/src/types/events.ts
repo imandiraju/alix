@@ -65,6 +65,9 @@ export interface AnswerResultPayload {
   correctAnswer: string;
   correctIndex?: number;
   correctIndices?: number[];
+  deferred?: boolean;
+  pendingPoints?: number;
+  pendingCorrect?: boolean;
 }
 
 export interface LeaderboardEntry {

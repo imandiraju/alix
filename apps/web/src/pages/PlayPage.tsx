@@ -316,9 +316,11 @@ export const PlayPage: React.FC = () => {
       socket.on('timer-tick', (data: any) => {
         if (typeof data.remaining === 'number') {
           setSecondsRemaining(data.remaining);
-          if (data.remaining <= 0) {
-            setPhase((prev) => (prev === 'answering' || prev === 'submitted' ? 'score' : prev));
-          }
+          // NOTE: Do NOT transition to 'score' here. The student should only
+          // see their result after 'answers-revealed' fires (which carries
+          // correctIndex and triggers deferred answer-result with real points).
+          // This prevents students from seeing correct/incorrect before the
+          // host officially reveals answers.
         }
       });
 
@@ -357,8 +359,13 @@ export const PlayPage: React.FC = () => {
         }
       });
 
-      // Listen for answer verification from server (Anti-Copy Rule: DO NOT reveal score immediately!)
+      // Listen for answer verification from server
+      // Anti-Cheat: The initial answer-result is a placeholder (correct=false, points=0).
+      // The real result arrives as a deferred answer-result AFTER the host reveals answers.
       socket.on('answer-result', (data: any) => {
+        // Only process the deferred (authoritative) result — ignore the placeholder ack
+        if (!data.deferred) return;
+
         const correct = !!data.correct;
         setIsLastAnswerCorrect(correct);
         setLastPointsAwarded(data.points || 0);
@@ -470,7 +477,14 @@ export const PlayPage: React.FC = () => {
   useEffect(() => {
     if (phase !== 'answering' && phase !== 'submitted') return;
     if (secondsRemaining <= 0) {
-      setPhase('score');
+      // Timer expired — but do NOT transition to 'score' here.
+      // The student stays on 'submitted' (or 'answering') until the host
+      // fires 'answers-revealed', which carries the correct answer and
+      // triggers the deferred answer-result with real points.
+      // If the student hasn't answered, lock them out of answering.
+      if (phase === 'answering') {
+        setPhase('submitted'); // lock input, show "Time's Up — waiting for results"
+      }
       return;
     }
 
@@ -903,7 +917,7 @@ export const PlayPage: React.FC = () => {
           </div>
         )}
 
-        {/* Phase: Submitted Answer */}
+        {/* Phase: Submitted Answer (waiting for reveal) */}
         {phase === 'submitted' && (
           <div className="text-center max-w-md mx-auto space-y-5 animate-scale-in py-10 px-4">
             <div className="w-20 h-20 rounded-3xl bg-white/10 text-alix-cyan-400 border border-white/20 flex items-center justify-center mx-auto shadow-2xl animate-pulse">
@@ -911,24 +925,34 @@ export const PlayPage: React.FC = () => {
             </div>
             <div>
               <h2 className="text-3xl sm:text-4xl font-heading font-black text-white">
-                {isPoll ? 'Vote Recorded!' : 'Answer Locked!'}
+                {selectedIndex === null && selectedIndices.length === 0
+                  ? "Time's Up!"
+                  : isPoll ? 'Vote Recorded!' : 'Answer Locked!'}
               </h2>
               <p className="text-xs sm:text-sm text-white/70 font-medium mt-1">
-                {isPoll
-                  ? 'Your opinion has been registered. Results will show live when the timer ends.'
-                  : 'Hang tight! Results will be revealed on the host screen as soon as the timer ends.'}
+                {selectedIndex === null && selectedIndices.length === 0
+                  ? "You didn't lock in an answer before the countdown ended."
+                  : isPoll
+                  ? 'Your opinion has been registered. Results will show live when the instructor reveals.'
+                  : 'Hang tight! Results will be revealed when the instructor ends the question.'}
               </p>
             </div>
 
-            {/* Countdown pill so the student knows when the answer will be revealed */}
+            {/* Countdown pill or waiting indicator */}
             <div className="p-3.5 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-md shadow-md text-xs font-heading font-black text-white flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-cyan-300 animate-pulse" />
-                <span>Revealing Results In:</span>
+                <span>{secondsRemaining > 0 ? 'Revealing Results In:' : 'Waiting for instructor...'}</span>
               </span>
-              <span className="px-3 py-1 rounded-xl bg-white/20 font-mono text-cyan-300 font-black text-sm">
-                {secondsRemaining}s
-              </span>
+              {secondsRemaining > 0 ? (
+                <span className="px-3 py-1 rounded-xl bg-white/20 font-mono text-cyan-300 font-black text-sm">
+                  {secondsRemaining}s
+                </span>
+              ) : (
+                <span className="px-3 py-1 rounded-xl bg-white/20 font-mono text-amber-300 font-black text-sm animate-pulse">
+                  ⏳
+                </span>
+              )}
             </div>
 
             <div className="p-4 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md shadow-md text-sm font-heading font-black text-white flex items-center justify-between">
