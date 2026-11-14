@@ -103,6 +103,7 @@ export const PlayPage: React.FC = () => {
   });
   const [lastPointsAwarded, setLastPointsAwarded] = useState(0);
   const [isLastAnswerCorrect, setIsLastAnswerCorrect] = useState(false);
+  const [serverCorrectAnswer, setServerCorrectAnswer] = useState<string | null>(null);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
 
   const [currentQuestion, setCurrentQuestion] = useState<ActiveQuestion>({
@@ -274,6 +275,7 @@ export const PlayPage: React.FC = () => {
           setSecondsRemaining(remainingSeconds);
           setIsLastAnswerCorrect(false);
           setLastPointsAwarded(0);
+          setServerCorrectAnswer(null);
 
           // Restore submission if player already locked answer before refresh
           const subKey = `alix_sub_${sessionId}_q${qIdx}`;
@@ -325,6 +327,9 @@ export const PlayPage: React.FC = () => {
         const correct = !!data.correct;
         setIsLastAnswerCorrect(correct);
         setLastPointsAwarded(data.points || 0);
+        if (data.correctAnswer !== undefined && data.correctAnswer !== null) {
+          setServerCorrectAnswer(String(data.correctAnswer));
+        }
 
         if (typeof data.totalScore === 'number') {
           setScore(data.totalScore);
@@ -881,59 +886,111 @@ export const PlayPage: React.FC = () => {
         )}
 
         {/* Phase: Score Result Screen */}
-        {phase === 'score' && (
-          <div className="text-center max-w-md mx-auto space-y-5 animate-scale-in py-8">
-            <div
-              className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-2xl border-2 ${
-                isPoll
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-400/40'
-                  : isLastAnswerCorrect
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-400/40 animate-bounce'
-                  : 'bg-rose-500/20 text-rose-400 border-rose-400/40'
-              }`}
-            >
-              {isPoll ? (
-                <BarChart3 className="w-10 h-10 stroke-[2.5]" />
-              ) : isLastAnswerCorrect ? (
-                <CheckCircle2 className="w-10 h-10 stroke-[2.5]" />
-              ) : (
-                <Clock className="w-10 h-10 stroke-[2.5]" />
+        {phase === 'score' && (() => {
+          const hasAnswered = selectedIndex !== null || selectedIndices.length > 0;
+          const correctIdxNum = serverCorrectAnswer !== null && !isNaN(Number(serverCorrectAnswer))
+            ? Number(serverCorrectAnswer)
+            : -1;
+          const correctText = correctIdxNum >= 0 && currentQuestion.options[correctIdxNum]
+            ? currentQuestion.options[correctIdxNum]
+            : serverCorrectAnswer;
+
+          return (
+            <div className="text-center max-w-md mx-auto space-y-5 animate-scale-in py-8">
+              {/* Status Icon */}
+              <div
+                className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-2xl border-2 ${
+                  isPoll
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-400/40'
+                    : hasAnswered && isLastAnswerCorrect
+                    ? 'bg-emerald-500/25 text-emerald-400 border-emerald-400/60 animate-bounce'
+                    : hasAnswered && !isLastAnswerCorrect
+                    ? 'bg-rose-500/25 text-rose-400 border-rose-400/60'
+                    : 'bg-amber-500/25 text-amber-300 border-amber-400/60'
+                }`}
+              >
+                {isPoll ? (
+                  <BarChart3 className="w-10 h-10 stroke-[2.5]" />
+                ) : hasAnswered && isLastAnswerCorrect ? (
+                  <CheckCircle2 className="w-10 h-10 stroke-[2.5]" />
+                ) : hasAnswered && !isLastAnswerCorrect ? (
+                  <X className="w-10 h-10 stroke-[3]" />
+                ) : (
+                  <Clock className="w-10 h-10 stroke-[2.5]" />
+                )}
+              </div>
+
+              {/* Status Heading & Details */}
+              <div>
+                <h2 className="text-3xl sm:text-4xl font-heading font-black text-white">
+                  {isPoll
+                    ? 'Opinion Registered!'
+                    : hasAnswered && isLastAnswerCorrect
+                    ? 'Correct!'
+                    : hasAnswered && !isLastAnswerCorrect
+                    ? 'Incorrect'
+                    : "Time's Up!"}
+                </h2>
+                <p className="text-xs sm:text-sm text-white/80 mt-1 font-medium">
+                  {isPoll
+                    ? '+100 participation points earned for contributing!'
+                    : hasAnswered && isLastAnswerCorrect
+                    ? `+${lastPointsAwarded.toLocaleString()} points earned! ${streak > 1 ? `Streak: ${streak}x 🔥` : 'Spot on!'}`
+                    : hasAnswered && !isLastAnswerCorrect
+                    ? "0 points awarded. Keep your focus on the next question!"
+                    : "You didn't lock in an answer before the countdown ended."}
+                </p>
+              </div>
+
+              {/* Answer breakdown card */}
+              {hasAnswered && (
+                <div className="p-3.5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md shadow-md text-xs sm:text-sm text-left space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-white/60 font-medium">Your submission:</span>
+                    <span className={`font-bold flex items-center gap-1.5 ${isLastAnswerCorrect ? 'text-emerald-300' : 'text-rose-300'}`}>
+                      {isLastAnswerCorrect ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      ) : (
+                        <X className="w-4 h-4 text-rose-400 shrink-0" />
+                      )}
+                      <span className="truncate max-w-[200px]">
+                        {isMultiSelect
+                          ? selectedIndices.map((i) => currentQuestion.options[i]).join(', ')
+                          : currentQuestion.options[selectedIndex ?? 0] || `Option ${(selectedIndex ?? 0) + 1}`}
+                      </span>
+                    </span>
+                  </div>
+
+                  {!isLastAnswerCorrect && correctText && (
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/10">
+                      <span className="text-white/60 font-medium">Correct answer:</span>
+                      <span className="font-bold text-emerald-300 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span className="truncate max-w-[200px]">{correctText}</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
               )}
-            </div>
 
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-heading font-black text-white">
-                {isPoll
-                  ? 'Opinion Registered!'
-                  : isLastAnswerCorrect
-                  ? 'Correct! Outstanding!'
-                  : 'Time Up / Incorrect'}
-              </h2>
-              <p className="text-xs text-white/70 mt-1">
-                {isPoll
-                  ? '+100 participation points earned for contributing!'
-                  : isLastAnswerCorrect
-                  ? `+${lastPointsAwarded.toLocaleString()} points earned! Streak: ${streak}x 🔥`
-                  : 'Check the solution breakdown on the main lecture screen.'}
-              </p>
-            </div>
+              {/* Total Score Display */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md shadow-xl">
+                <span className="text-[11px] font-black uppercase tracking-widest text-alix-cyan-300">
+                  Your Total Score
+                </span>
+                <div className="text-3xl sm:text-4xl font-mono font-black text-white mt-1">
+                  {score.toLocaleString()} <span className="text-xs text-white/60">PTS</span>
+                </div>
+              </div>
 
-            <div className="p-4 sm:p-5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md shadow-xl">
-              <span className="text-[11px] font-black uppercase tracking-widest text-alix-cyan-300">
-                Your Total Score
-              </span>
-              <div className="text-3xl sm:text-4xl font-mono font-black text-white mt-1">
-                {score.toLocaleString()} <span className="text-xs text-white/60">PTS</span>
+              {/* Teacher Synchronized Wait Banner */}
+              <div className="p-4 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-center gap-3 text-xs sm:text-sm font-black text-white/95 shadow-inner">
+                <span className="w-2.5 h-2.5 rounded-full bg-alix-cyan-400 animate-ping shrink-0" />
+                <span>Waiting for instructor to present next question...</span>
               </div>
             </div>
-
-            {/* Teacher Synchronized Wait Banner */}
-            <div className="p-4 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-center gap-3 text-xs sm:text-sm font-black text-white/95 shadow-inner">
-              <span className="w-2.5 h-2.5 rounded-full bg-alix-cyan-400 animate-ping shrink-0" />
-              <span>Waiting for instructor to present next question...</span>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Phase: Live Round Leaderboard */}
         {phase === 'leaderboard' && (
@@ -1024,59 +1081,72 @@ export const PlayPage: React.FC = () => {
               </div>
             )}
 
-            {/* Top Standings List */}
-            <div className="bg-black/30 backdrop-blur-md rounded-2xl border border-white/10 p-3 divide-y divide-white/10 text-left space-y-1 max-h-60 overflow-y-auto">
-              {leaderboardList.length === 0 ? (
-                <div className="py-6 text-center text-xs text-white/60">
-                  Tabulating latest scores from classroom...
-                </div>
-              ) : (
-                leaderboardList.slice(0, 5).map((p: any, idx: number) => {
-                  const isMe =
-                    (rollNo && p.rollNo && p.rollNo.toUpperCase() === rollNo.toUpperCase()) ||
-                    p.playerName?.trim().toLowerCase() === studentName.trim().toLowerCase();
-                  const rankNum = p.rank || idx + 1;
-                  return (
-                    <div
-                      key={p.playerId || idx}
-                      className={`py-2 px-2.5 rounded-xl flex items-center justify-between transition-all ${
-                        isMe
-                          ? 'bg-alix-cyan-500/20 border border-alix-cyan-400/50 shadow-sm'
-                          : 'hover:bg-white/5'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <span
-                          className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
-                            rankNum === 1
-                              ? 'bg-amber-400 text-slate-950 font-black'
-                              : rankNum === 2
-                              ? 'bg-slate-300 text-slate-950 font-black'
-                              : rankNum === 3
-                              ? 'bg-amber-600 text-white font-black'
-                              : 'bg-white/10 text-white/80'
-                          }`}
-                        >
-                          {rankNum === 1 ? '1' : rankNum === 2 ? '2' : rankNum === 3 ? '3' : rankNum}
-                        </span>
-                        <div>
-                          <div className="text-sm font-bold text-white flex items-center gap-1.5">
-                            <span className="truncate max-w-[130px]">{p.playerName}</span>
-                            {isMe && (
-                              <span className="px-1.5 py-0.5 rounded bg-alix-cyan-400 text-slate-950 text-[10px] font-black uppercase">
-                                You
-                              </span>
+            {/* Top 10 Standings List */}
+            <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-white/15 p-3.5 text-left space-y-2 shadow-xl">
+              <div className="flex items-center justify-between pb-2 border-b border-white/10 text-[11px] font-black uppercase tracking-wider text-cyan-300">
+                <span className="flex items-center gap-1.5">
+                  <Trophy className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Top 10 Auditorium Leaders</span>
+                </span>
+                <span className="text-white/50 text-[10px]">Points</span>
+              </div>
+
+              <div className="divide-y divide-white/10 space-y-1 max-h-72 overflow-y-auto">
+                {leaderboardList.length === 0 ? (
+                  <div className="py-6 text-center text-xs text-white/60">
+                    Tabulating latest scores from classroom...
+                  </div>
+                ) : (
+                  leaderboardList.slice(0, 10).map((p: any, idx: number) => {
+                    const isMe =
+                      (rollNo && p.rollNo && p.rollNo.toUpperCase() === rollNo.toUpperCase()) ||
+                      p.playerName?.trim().toLowerCase() === studentName.trim().toLowerCase();
+                    const rankNum = p.rank || idx + 1;
+                    return (
+                      <div
+                        key={p.playerId || idx}
+                        className={`py-2 px-2.5 rounded-xl flex items-center justify-between transition-all ${
+                          isMe
+                            ? 'bg-alix-cyan-500/20 border border-alix-cyan-400/50 shadow-sm'
+                            : 'hover:bg-white/5'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
+                              rankNum === 1
+                                ? 'bg-amber-400 text-slate-950 font-black ring-1 ring-amber-300'
+                                : rankNum === 2
+                                ? 'bg-slate-300 text-slate-950 font-black'
+                                : rankNum === 3
+                                ? 'bg-amber-600 text-white font-black'
+                                : 'bg-white/15 text-white/90 font-mono text-[11px]'
+                            }`}
+                          >
+                            {rankNum === 1 ? '🥇' : rankNum === 2 ? '🥈' : rankNum === 3 ? '🥉' : rankNum}
+                          </span>
+                          <div>
+                            <div className="text-sm font-bold text-white flex items-center gap-1.5">
+                              <span className="truncate max-w-[130px]">{p.playerName}</span>
+                              {isMe && (
+                                <span className="px-1.5 py-0.5 rounded bg-alix-cyan-400 text-slate-950 text-[10px] font-black uppercase">
+                                  You
+                                </span>
+                              )}
+                            </div>
+                            {p.teamName && (
+                              <div className="text-[10px] text-amber-300 font-medium">{p.teamName}</div>
                             )}
                           </div>
                         </div>
+                        <span className="font-mono text-xs font-bold text-alix-cyan-300">
+                          {(p.score ?? 0).toLocaleString()} pts
+                        </span>
                       </div>
-                      <span className="font-mono text-xs font-bold text-alix-cyan-300">
-                        {(p.score ?? 0).toLocaleString()} pts
-                      </span>
-                    </div>
-                  );
-                })
-              )}
+                    );
+                  })
+                )}
+              </div>
             </div>
 
             {/* Waiting for Next Question Banner */}
