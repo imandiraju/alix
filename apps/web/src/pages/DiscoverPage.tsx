@@ -32,6 +32,7 @@ import {
   Check,
   Award,
   Filter,
+  Edit3,
 } from 'lucide-react';
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -583,53 +584,6 @@ export const DiscoverPage: React.FC = () => {
   const [isLaunchingId, setIsLaunchingId] = useState<string | null>(null);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
-  // Hero Carousel State
-  const [carouselIndex, setCarouselIndex] = useState(0);
-
-  const CAROUSEL_SLIDES = [
-    {
-      id: 'slide-stem',
-      badgeText: 'FEATURED ACADEMIC CURRICULUM',
-      badgeIcon: Sparkles,
-      iconColor: 'text-amber-300',
-      title: 'University STEM Concept Inventory',
-      desc: 'Calibrated conceptual checks designed to uncover cognitive traps in Algorithms, Linear Algebra, and System Engineering.',
-      actionLabel: 'Launch Algorithms Live',
-      secondaryLabel: 'Browse All 8 Modules',
-      gradient: 'from-[#46178F] via-[#350F6E] to-[#1E053A]',
-      accent: '#00E5FF',
-      actTarget: DISCOVER_ACTIVITIES[0],
-    },
-    {
-      id: 'slide-ai',
-      badgeText: 'ENTERPRISE AI QUIZ STUDIO',
-      badgeIcon: Brain,
-      iconColor: 'text-cyan-300',
-      title: 'Instant Question Synthesis with Grok-2 & Gemini',
-      desc: 'Transform raw lecture notes, slide PDFs, or course syllabi into interactive multiple-choice assessments in under 15 seconds.',
-      actionLabel: 'Open AI Studio',
-      secondaryLabel: 'Explore Examples',
-      gradient: 'from-[#3A0CA3] via-[#46178F] to-[#250954]',
-      accent: '#FFD600',
-      isAiAction: true,
-    },
-    {
-      id: 'slide-proxy',
-      badgeText: 'ZERO-PROXY ROSTER PROTECTION',
-      badgeIcon: ShieldCheck,
-      iconColor: 'text-purple-200',
-      title: 'Zero-Proxy Institutional Roster Protection',
-      desc: 'Lock live rooms strictly to verified student roll numbers. Prevent outside guest joins and phantom attendance with one-click whitelisting.',
-      actionLabel: 'Manage Class Rosters',
-      secondaryLabel: 'Learn More',
-      gradient: 'from-[#46178F] via-[#5A189A] to-[#240046]',
-      accent: '#E0AAFF',
-      navigateTarget: '/dashboard',
-    },
-  ];
-
-  const currentSlide = CAROUSEL_SLIDES[carouselIndex];
-
   const filterTabs = [
     { label: 'All Collections', value: 'All', icon: Sparkles },
     { label: 'Computer Science', value: 'Computer Science', icon: Cpu },
@@ -696,98 +650,6 @@ export const DiscoverPage: React.FC = () => {
 
         {/* Main Content Feed */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 max-w-6xl space-y-6">
-          {/* Top Hero Carousel (Kahoot-Style Featured Spotlight) */}
-          <div className="relative rounded-3xl overflow-hidden shadow-md text-white transition-all">
-            <div className={`p-6 sm:p-10 bg-gradient-to-r ${currentSlide.gradient} flex flex-col md:flex-row items-start md:items-center justify-between gap-6 min-h-[220px] sm:min-h-[240px]`}>
-              <div className="space-y-3 max-w-2xl">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/15 backdrop-blur-md text-[11px] font-extrabold uppercase tracking-wider border border-white/20 text-white">
-                  <currentSlide.badgeIcon className={`w-3.5 h-3.5 ${currentSlide.iconColor}`} />
-                  <span>{currentSlide.badgeText}</span>
-                </div>
-                <h1 className="text-2xl sm:text-4xl font-heading font-black tracking-tight leading-tight text-white drop-shadow-sm">
-                  {currentSlide.title}
-                </h1>
-                <p className="text-xs sm:text-sm text-white/90 leading-relaxed font-normal max-w-xl">
-                  {currentSlide.desc}
-                </p>
-
-                {/* Action Buttons */}
-                <div className="pt-2 flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (currentSlide.isAiAction) {
-                        setIsAiModalOpen(true);
-                      } else if (currentSlide.actTarget) {
-                        handleLaunchLive(currentSlide.actTarget);
-                      } else if (currentSlide.navigateTarget) {
-                        navigate(currentSlide.navigateTarget);
-                      }
-                    }}
-                    className="py-2.5 px-5 rounded-xl bg-white hover:bg-slate-100 text-[#46178F] font-heading font-black text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer border-b-2 border-slate-300 active:translate-y-0.5"
-                  >
-                    <Play className="w-4 h-4 fill-current text-[#46178F]" />
-                    <span>{currentSlide.actionLabel}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (currentSlide.actTarget) {
-                        setPreviewActivity(currentSlide.actTarget);
-                      } else {
-                        setActiveCategory('All');
-                      }
-                    }}
-                    className="py-2.5 px-4 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white font-heading font-semibold text-xs sm:text-sm backdrop-blur-md transition-all cursor-pointer"
-                  >
-                    <span>{currentSlide.secondaryLabel}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Slide Navigation Controls */}
-              <div className="flex md:flex-col items-center gap-2 self-end md:self-center shrink-0">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setCarouselIndex((prev) => (prev === 0 ? CAROUSEL_SLIDES.length - 1 : prev - 1))
-                    }
-                    className="w-9 h-9 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center backdrop-blur-md transition-all cursor-pointer border border-white/20 active:scale-95"
-                    aria-label="Previous slide"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setCarouselIndex((prev) => (prev === CAROUSEL_SLIDES.length - 1 ? 0 : prev + 1))
-                    }
-                    className="w-9 h-9 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center backdrop-blur-md transition-all cursor-pointer border border-white/20 active:scale-95"
-                    aria-label="Next slide"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </div>
-                {/* Dots */}
-                <div className="flex items-center gap-1.5 pt-1">
-                  {CAROUSEL_SLIDES.map((_, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setCarouselIndex(idx)}
-                      className={`h-2 rounded-full transition-all cursor-pointer ${
-                        carouselIndex === idx ? 'w-6 bg-white' : 'w-2 bg-white/40 hover:bg-white/70'
-                      }`}
-                      aria-label={`Go to slide ${idx + 1}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Educator Toolbar (Exact Kahoot 4-Card Purple Toolbar) */}
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -1055,8 +917,8 @@ export const DiscoverPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Bottom Action Button Bar (Tactile 3D Buttons) */}
-                    <div className="p-4 pt-0 grid grid-cols-2 gap-2.5">
+                    {/* Bottom Action Button Bar (Tactile 3D Buttons: Host Live + Edit Template + Preview) */}
+                    <div className="p-4 pt-0 grid grid-cols-12 gap-2">
                       <button
                         type="button"
                         onClick={(e) => {
@@ -1064,7 +926,7 @@ export const DiscoverPage: React.FC = () => {
                           handleLaunchLive(act);
                         }}
                         disabled={isLaunchingId === act.id}
-                        className="w-full py-2.5 px-3 rounded-xl bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                        className="col-span-6 py-2.5 px-3 rounded-xl bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />
                         <span>{isLaunchingId === act.id ? 'Starting...' : 'Host Live'}</span>
@@ -1074,9 +936,22 @@ export const DiscoverPage: React.FC = () => {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
+                          navigate('/create', { state: { templateQuiz: act } });
+                        }}
+                        className="col-span-3 py-2.5 px-2 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 border-b-2 border-b-purple-300 active:border-b-0 active:translate-y-0.5 text-[#46178F] font-heading font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        title="Customize this template in Activity Creator"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setPreviewActivity(act);
                         }}
-                        className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-slate-50 border border-[#E5E5E5] border-b-2 border-b-[#D0D0D0] active:border-b-0 active:translate-y-0.5 text-[#252525] font-heading font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="col-span-3 py-2.5 px-2 rounded-xl bg-white hover:bg-slate-50 border border-[#E5E5E5] border-b-2 border-b-[#D0D0D0] active:border-b-0 active:translate-y-0.5 text-[#252525] font-heading font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5 text-[#626262]" />
                         <span>Preview</span>
@@ -1175,13 +1050,25 @@ export const DiscoverPage: React.FC = () => {
             </div>
 
             {/* Modal Bottom Action Footer */}
-            <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-200">
+            <div className="pt-3 flex flex-wrap items-center justify-end gap-2.5 border-t border-slate-200">
               <button
                 type="button"
                 onClick={() => setPreviewActivity(null)}
                 className="py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 font-heading font-bold text-xs cursor-pointer"
               >
                 Close Preview
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const act = previewActivity;
+                  setPreviewActivity(null);
+                  navigate('/create', { state: { templateQuiz: act } });
+                }}
+                className="py-2.5 px-4 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#46178F] border border-purple-200 border-b-2 border-b-purple-300 active:border-b-0 active:translate-y-0.5 font-heading font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Customize as Template</span>
               </button>
               <button
                 type="button"

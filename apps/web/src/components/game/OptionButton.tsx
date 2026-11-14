@@ -11,6 +11,7 @@ export interface OptionButtonProps {
   showDetails?: boolean;
   count?: number;
   percentage?: number;
+  colorOnly?: boolean;
 }
 
 const OPTION_THEMES = [
@@ -59,6 +60,7 @@ export const OptionButton: React.FC<OptionButtonProps> = ({
   showDetails = false,
   count = 0,
   percentage = 0,
+  colorOnly = false,
 }) => {
   const theme = OPTION_THEMES[index % OPTION_THEMES.length];
 
@@ -76,6 +78,21 @@ export const OptionButton: React.FC<OptionButtonProps> = ({
     } else {
       stateClasses = 'bg-slate-700/60 text-slate-400 border-b-4 border-slate-800 opacity-40';
     }
+  }
+
+  if (colorOnly) {
+    return (
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onClick}
+        className={`relative w-full p-8 sm:p-12 rounded-3xl transition-all duration-150 flex items-center justify-center group active:border-b-0 active:translate-y-2 disabled:active:translate-y-0 disabled:cursor-not-allowed cursor-pointer ${stateClasses}`}
+      >
+        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center font-black text-3xl sm:text-4xl shadow-inner transition-transform group-hover:scale-110 bg-black/20 text-white">
+          <span className="drop-shadow-md">{theme.shape}</span>
+        </div>
+      </button>
+    );
   }
 
   return (

@@ -440,6 +440,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
           questionIndex: session.currentQuestionIndex,
           totalQuestions: session.quiz.questions.length,
           timeLimit: activeQ.timeLimit,
+          colorOnly: Boolean((session as any).colorOnlyButtons),
         } as any);
         socket.emit('timer-tick', {
           remaining: remainingSeconds,
@@ -661,10 +662,25 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       totalQuestions: payload.totalQuestions || session.quiz?.questions?.length || 1,
       timeLimit,
       remaining: timeLimit,
+      colorOnly: Boolean(payload?.colorOnly ?? (session as any).colorOnlyButtons),
     };
+
+    if (payload?.colorOnly !== undefined) {
+      (session as any).colorOnlyButtons = Boolean(payload.colorOnly);
+    }
 
     io.to(session.id).emit('question-started', questionPayload);
     io.to(session.code).emit('question-started', questionPayload);
+  });
+
+  // ─── Host Toggle Projector / Color-Only Mode ──────────────────────────
+
+  (socket as any).on('set-display-mode', (payload: any) => {
+    const session = resolveSession(socket, payload);
+    if (!session) return;
+    (session as any).colorOnlyButtons = Boolean(payload?.colorOnly);
+    (io.to(session.id) as any).emit('display-mode-changed', { colorOnly: Boolean(payload?.colorOnly) });
+    (io.to(session.code) as any).emit('display-mode-changed', { colorOnly: Boolean(payload?.colorOnly) });
   });
 
   // ─── Host Live Leaderboard Reveal ─────────────────────────────────────
@@ -932,6 +948,7 @@ function sendNextQuestion(io: IOServer, sessionId: string): void {
     questionIndex: session.currentQuestionIndex,
     totalQuestions: activeQuiz.questions.length,
     timeLimit: question.timeLimit,
+    colorOnly: Boolean((session as any).colorOnlyButtons),
   };
 
   console.log(`[ALIX] Broadcasting question ${session.currentQuestionIndex + 1}/${activeQuiz.questions.length} ("${question.text}") to room PIN ${session.code}`);

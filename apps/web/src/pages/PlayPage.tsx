@@ -33,6 +33,7 @@ import {
   Lightbulb,
   X,
   MessageSquare,
+  Eye,
 } from 'lucide-react';
 
 interface ActiveQuestion {
@@ -105,6 +106,7 @@ export const PlayPage: React.FC = () => {
   const [isLastAnswerCorrect, setIsLastAnswerCorrect] = useState(false);
   const [serverCorrectAnswer, setServerCorrectAnswer] = useState<string | null>(null);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const [colorOnlyMode, setColorOnlyMode] = useState(false);
 
   const [currentQuestion, setCurrentQuestion] = useState<ActiveQuestion>({
     index: 1,
@@ -276,6 +278,9 @@ export const PlayPage: React.FC = () => {
           setIsLastAnswerCorrect(false);
           setLastPointsAwarded(0);
           setServerCorrectAnswer(null);
+          if (typeof data.colorOnly === 'boolean') {
+            setColorOnlyMode(data.colorOnly);
+          }
 
           // Restore submission if player already locked answer before refresh
           const subKey = `alix_sub_${sessionId}_q${qIdx}`;
@@ -312,6 +317,13 @@ export const PlayPage: React.FC = () => {
       // Listen for teacher/host revealing answers or timer reaching 0
       (socket as any).on('answers-revealed', () => {
         setPhase((prev) => (prev === 'answering' || prev === 'submitted' ? 'score' : prev));
+      });
+
+      // Listen for teacher toggling Auditorium Projector Mode (Colors Only on student devices)
+      (socket as any).on('display-mode-changed', (data: any) => {
+        if (typeof data?.colorOnly === 'boolean') {
+          setColorOnlyMode(data.colorOnly);
+        }
       });
 
       // Listen for errors (such as room already closed / finished)
@@ -408,6 +420,7 @@ export const PlayPage: React.FC = () => {
         socket.off('timer-tick');
         socket.off('answer-result');
         (socket as any).off('answers-revealed');
+        (socket as any).off('display-mode-changed');
         socket.off('show-leaderboard');
         socket.off('leaderboard-update');
         socket.off('game-ended');
@@ -765,13 +778,28 @@ export const PlayPage: React.FC = () => {
 
             {/* Prompt Banner */}
             <div className="bg-white text-slate-900 rounded-2xl border-2 border-white/30 p-5 sm:p-7 shadow-2xl text-center">
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-heading font-black leading-tight">
-                {currentQuestion.text}
-              </h2>
+              {colorOnlyMode ? (
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-[#46178F] text-xs font-heading font-black uppercase tracking-wider">
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Look Up at Projector Screen</span>
+                  </div>
+                  <h2 className="text-lg sm:text-xl font-heading font-extrabold text-[#252525] pt-1">
+                    Question & answer choices are on the main hall screen
+                  </h2>
+                  <p className="text-xs text-[#626262] font-medium">
+                    Tap the corresponding color or shape button below to lock your answer!
+                  </p>
+                </div>
+              ) : (
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-heading font-black leading-tight">
+                  {currentQuestion.text}
+                </h2>
+              )}
             </div>
 
             {/* Optional Question Visual Prompt / Diagram */}
-            {Boolean(currentQuestion.image || currentQuestion.mediaUrl) && (
+            {!colorOnlyMode && Boolean(currentQuestion.image || currentQuestion.mediaUrl) && (
               <div className="flex justify-center my-2">
                 <img
                   src={currentQuestion.image || currentQuestion.mediaUrl}
@@ -808,6 +836,7 @@ export const PlayPage: React.FC = () => {
                   key={idx}
                   index={idx}
                   text={opt}
+                  colorOnly={colorOnlyMode}
                   selected={isMultiSelect ? selectedIndices.includes(idx) : selectedIndex === idx}
                   disabled={isMultiSelect ? phase !== 'answering' : selectedIndex !== null}
                   onClick={() => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Sidebar from '../components/layout/Sidebar';
 import Footer from '../components/layout/Footer';
@@ -53,6 +53,7 @@ interface QuestionDraft {
 
 export const CreatePage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const editQuizId = searchParams.get('edit');
   const isEditMode = Boolean(editQuizId);
@@ -68,6 +69,34 @@ export const CreatePage: React.FC = () => {
   const [selectedRosterId, setSelectedRosterId] = useState<string>('');
   const [showProperties, setShowProperties] = useState(true);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [templateBanner, setTemplateBanner] = useState<string | null>(null);
+
+  // Load template quiz if navigated from Discover page
+  React.useEffect(() => {
+    const template = (location.state as any)?.templateQuiz || (location.state as any)?.importedQuiz;
+    if (template && !editQuizId) {
+      setTitle(template.title ? `${template.title} (Custom)` : 'Custom Activity');
+      setSubject(template.subject || user?.department || 'Computer Science');
+      setCourseCode(template.courseCode || '');
+      setSection(template.section || 'Section A');
+      setDescription(template.description || '');
+      if (Array.isArray(template.questions) && template.questions.length > 0) {
+        const formatted = template.questions.map((q: any, idx: number) => ({
+          id: q.id || `q-${idx + 1}`,
+          type: q.type || 'multiple_choice',
+          text: q.text || '',
+          timeLimit: q.timeLimit || 30,
+          points: q.points || 1000,
+          options: Array.isArray(q.options) && q.options.length >= 2 ? q.options : ['Option A', 'Option B', 'Option C', 'Option D'],
+          correctIndex: typeof q.correctIndex === 'number' ? q.correctIndex : 0,
+          correctIndices: q.correctIndices,
+        }));
+        setQuestions(formatted);
+        setActiveQuestionId(formatted[0].id);
+        setTemplateBanner(`Template loaded: "${template.title}". Modify questions, options, or timers and save to your account!`);
+      }
+    }
+  }, [location.state, editQuizId, user]);
 
   // Automatically open AI Studio if query param ?ai=true is present
   React.useEffect(() => {
@@ -438,6 +467,23 @@ export const CreatePage: React.FC = () => {
         <Sidebar className="hidden lg:flex" />
 
         <main className="flex-1 p-4 sm:p-6 w-full">
+          {/* Template Loaded Notice Banner */}
+          {templateBanner && (
+            <div className="p-4 rounded-2xl bg-purple-50 border border-purple-200 text-[#46178F] text-xs font-bold flex items-center justify-between shadow-xs mb-4 animate-fade-in">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                <span>{templateBanner}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTemplateBanner(null)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
           {/* Header Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>

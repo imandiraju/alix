@@ -33,6 +33,7 @@ import {
   X,
   LogOut,
   Crown,
+  Tv,
 } from 'lucide-react';
 
 interface QuizQuestion {
@@ -108,9 +109,25 @@ export const HostPage: React.FC = () => {
 
   // Anti-Proxy Classroom Protection States
   const [isLocked, setIsLocked] = useState(false);
+  const [colorOnlyMode, setColorOnlyMode] = useState(false);
   const [rollingToken, setRollingToken] = useState<string>(
     Math.floor(Date.now() / 15000).toString(36)
   );
+
+  const handleToggleColorOnlyMode = () => {
+    const nextVal = !colorOnlyMode;
+    setColorOnlyMode(nextVal);
+    try {
+      const socket = getSocket();
+      (socket as any).emit('set-display-mode', {
+        sessionId: activeSessionId || pin,
+        code: pin,
+        colorOnly: nextVal,
+      });
+    } catch (err) {
+      console.warn('Could not emit set-display-mode:', err);
+    }
+  };
 
   // Rotate dynamic rolling QR token every 15 seconds to invalidate forwarded snapshots
   useEffect(() => {
@@ -396,7 +413,16 @@ export const HostPage: React.FC = () => {
         quizId: sessionId,
         questions,
         quizTitle,
+        colorOnly: colorOnlyMode,
       } as any);
+      (socket as any).emit('host-question-advance', {
+        code: pin,
+        questionIndex: 0,
+        timeLimit: currentQ.timeLimit || 30,
+        question: currentQ,
+        totalQuestions: questions.length,
+        colorOnly: colorOnlyMode,
+      });
     } catch (err) {
       console.warn('Could not emit start-game:', err);
     }
@@ -426,6 +452,7 @@ export const HostPage: React.FC = () => {
           timeLimit: nextTimeLimit,
           question: nextQ,
           totalQuestions: questions.length,
+          colorOnly: colorOnlyMode,
         });
       } catch (err) {
         console.warn('Could not emit next-question:', err);
@@ -798,6 +825,23 @@ export const HostPage: React.FC = () => {
             </button>
           )}
 
+          {/* Teacher Projector Mode Live Toggle */}
+          <button
+            type="button"
+            onClick={handleToggleColorOnlyMode}
+            className={`px-3 py-1.5 rounded-xl font-heading font-black text-xs transition-all flex items-center gap-1.5 cursor-pointer border shadow-xs ${
+              colorOnlyMode
+                ? 'bg-amber-400 text-[#46178F] border-amber-300 font-extrabold'
+                : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
+            }`}
+            title="When active, student devices display only the 4 color shapes (▲ ◆ ● ■)"
+          >
+            <Tv className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">
+              {colorOnlyMode ? 'Projector Mode: ON' : 'Projector Mode: OFF'}
+            </span>
+          </button>
+
           {/* EXIT SESSION BUTTON (Directly resolves missing close button in live room) */}
           <button
             type="button"
@@ -911,6 +955,55 @@ export const HostPage: React.FC = () => {
                   </div>
                 </div>
               )}
+              {/* Teacher Setting: Auditorium Projector Mode (Color-Only Buttons on Student Devices) */}
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-[#E5E5E5] max-w-xl mx-auto flex items-center justify-between gap-4 text-xs shadow-xs text-left">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
+                      colorOnlyMode
+                        ? 'bg-[#46178F] text-white shadow-xs'
+                        : 'bg-[#F3F3F3] text-[#626262]'
+                    }`}
+                  >
+                    <Tv className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="font-heading font-black text-xs sm:text-sm text-[#252525] flex items-center gap-2">
+                      <span>Auditorium Projector Mode</span>
+                      <span
+                        className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                          colorOnlyMode
+                            ? 'bg-purple-100 text-[#46178F] border border-purple-200'
+                            : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {colorOnlyMode ? 'Colors Only' : 'Standard Text'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#626262] leading-tight mt-0.5">
+                      {colorOnlyMode
+                        ? 'Student screens show only the 4 color shapes (▲ ◆ ● ■). Questions & choices remain on your projector.'
+                        : 'Full question & answer option text are displayed on student phones and your projector.'}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleToggleColorOnlyMode}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    colorOnlyMode ? 'bg-[#46178F]' : 'bg-slate-300'
+                  }`}
+                  role="switch"
+                  aria-checked={colorOnlyMode}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      colorOnlyMode ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
 
             {/* Giant Kahoot-Style Join & PIN Billboard */}
