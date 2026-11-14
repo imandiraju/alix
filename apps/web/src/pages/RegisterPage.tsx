@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import AlixLogo from '../components/common/AlixLogo';
 import { useAuth } from '../context/AuthContext';
 import {
-  ShieldCheck,
   Building2,
-  GraduationCap,
   Mail,
   Lock,
   User,
@@ -38,23 +35,22 @@ export const RegisterPage: React.FC = () => {
   const handleDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.email.trim()) {
-      setError('Please fill in all required academic fields.');
+      setError('Please fill in all required fields.');
       return;
     }
     if (!agreeTerms) {
-      setError('Please agree to the Academic Integrity and Assessment Protection Terms.');
+      setError('Please accept the terms to continue.');
       return;
     }
 
     setIsLoading(true);
     setError(null);
     try {
-      // Dispatch verification OTP to their institutional email
       const res = await sendOtp(formData.email);
       setDispatchedOtp(res.code);
       setStage('otp_verify');
     } catch {
-      setError('Could not dispatch verification code to this email.');
+      setError('Could not send verification code.');
     } finally {
       setIsLoading(false);
     }
@@ -82,7 +78,7 @@ export const RegisterPage: React.FC = () => {
     e.preventDefault();
     const code = otpDigits.join('');
     if (code.length < 6) {
-      setError('Please enter the full 6-digit verification code.');
+      setError('Enter the full 6-digit code.');
       return;
     }
 
@@ -94,7 +90,7 @@ export const RegisterPage: React.FC = () => {
         await register(formData);
         navigate('/dashboard');
       } else {
-        setError('Invalid or expired confirmation code. Please check your institutional email and retry.');
+        setError('Invalid or expired code.');
       }
     } catch {
       setError('Verification failed.');
@@ -104,156 +100,135 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-alix-slate-50 select-none relative overflow-hidden">
-      {/* Background glow */}
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-alix-violet-200/40 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-alix-cyan-200/40 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#46178F] via-[#350F6E] to-[#1E0938] select-none relative overflow-hidden">
+      {/* Ambient glow */}
+      <div className="absolute -top-40 -right-40 w-[500px] h-[500px] bg-white/[0.04] rounded-full blur-2xl pointer-events-none" />
+      <div className="absolute -bottom-40 -left-40 w-[600px] h-[600px] bg-violet-500/[0.1] rounded-full blur-3xl pointer-events-none" />
 
-      {/* Header */}
-      <header className="p-6 flex items-center justify-between max-w-6xl mx-auto w-full">
+      {/* Top bar */}
+      <header className="p-4 sm:p-6 flex items-center justify-between max-w-5xl mx-auto w-full z-10">
         <Link to="/" className="transition-transform active:scale-95">
-          <AlixLogo size="md" />
+          <span className="text-xl font-heading font-black text-white tracking-tight flex items-center">
+            ALIX<span className="text-cyan-400">!</span>
+          </span>
         </Link>
         <Link
           to="/login"
-          className="text-xs font-bold text-alix-indigo hover:text-alix-violet-700 bg-white border border-alix-slate-300 px-3.5 py-1.5 rounded-full shadow-sm"
+          className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-white transition-all"
         >
-          Already registered? Sign In →
+          Already have an account? Log in
         </Link>
       </header>
 
-      {/* Main Container */}
-      <main className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-lg bg-white rounded-3xl border border-alix-slate-200 shadow-alix-lg p-6 sm:p-10 relative">
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-alix-violet-50 text-alix-violet-700 text-xs font-bold mb-2 border border-alix-violet-200">
-              <GraduationCap className="w-4 h-4 text-alix-violet-600" />
-              <span>Higher Education Faculty Registration</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-heading font-black text-alix-indigo tracking-tight">
-              {stage === 'details' ? 'Register Faculty Account' : 'Verify Academic Email'}
-            </h1>
-            <p className="text-xs sm:text-sm text-alix-slate-500 mt-1">
-              {stage === 'details'
-                ? 'Create and protect quizzes, launch live sessions, and track learning analytics.'
-                : `We sent a 6-digit confirmation code to ${formData.email}`}
-            </p>
-          </div>
+      {/* Main */}
+      <main className="flex-1 flex items-center justify-center p-4 z-10">
+        <div className="w-full max-w-[440px] bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] p-6 sm:p-8">
+          <h1 className="text-xl sm:text-2xl font-heading font-black text-slate-900 text-center mb-1">
+            {stage === 'details' ? 'Sign up' : 'Verify email'}
+          </h1>
+          <p className="text-xs text-slate-500 text-center mb-5">
+            {stage === 'details'
+              ? 'Create, host, and play interactive learning games'
+              : `Enter the code sent to ${formData.email}`}
+          </p>
 
           {/* STAGE 1: Profile Details */}
           {stage === 'details' ? (
-            <form onSubmit={handleDetailsSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <form onSubmit={handleDetailsSubmit} className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-600 mb-1.5">
-                    Full Name / Title
-                  </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-alix-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                       <User className="w-4 h-4" />
                     </div>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="e.g. Dr. Jane Smith"
+                      placeholder="Full name"
                       required
-                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-alix-slate-300 text-sm text-alix-indigo font-medium outline-none focus:border-alix-violet-600"
+                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-600 text-sm text-slate-900 font-medium outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-600 mb-1.5">
-                    Institutional Email
-                  </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-alix-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                       <Mail className="w-4 h-4" />
                     </div>
                     <input
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="professor@university.edu"
+                      placeholder="Email"
                       required
-                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-alix-slate-300 text-sm text-alix-indigo font-medium outline-none focus:border-alix-violet-600"
+                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-600 text-sm text-slate-900 font-medium outline-none"
                     />
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-600 mb-1.5">
-                  University / School Institution
-                </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-alix-slate-400">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                     <Building2 className="w-4 h-4" />
                   </div>
                   <input
                     type="text"
                     value={formData.institution}
                     onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
-                    placeholder="e.g. Stanford University"
+                    placeholder="University / Institution"
                     required
-                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-alix-slate-300 text-sm text-alix-indigo font-medium outline-none focus:border-alix-violet-600"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-600 text-sm text-slate-900 font-medium outline-none"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-600 mb-1.5">
-                    Academic Department
-                  </label>
                   <input
                     type="text"
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    placeholder="e.g. Computer Science"
+                    placeholder="Department"
                     required
-                    className="w-full px-3 py-2 rounded-xl border border-alix-slate-300 text-sm text-alix-indigo font-medium outline-none focus:border-alix-violet-600"
+                    className="w-full px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-600 text-sm text-slate-900 font-medium outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-600 mb-1.5">
-                    Master Password
-                  </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-alix-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                       <Lock className="w-4 h-4" />
                     </div>
                     <input
                       type="password"
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="••••••••••••"
+                      placeholder="Password"
                       required
-                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-alix-slate-300 text-sm text-alix-indigo font-medium outline-none focus:border-alix-violet-600"
+                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-600 text-sm text-slate-900 font-medium outline-none"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Checkbox Terms */}
-              <div className="pt-2">
-                <label className="flex items-start gap-2.5 text-xs text-alix-slate-600 cursor-pointer">
+              {/* Terms checkbox */}
+              <div className="pt-1">
+                <label className="flex items-start gap-2 text-xs text-slate-600 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={agreeTerms}
                     onChange={(e) => setAgreeTerms(e.target.checked)}
-                    className="mt-0.5 rounded text-alix-violet-600 focus:ring-alix-violet-500 w-4 h-4"
+                    className="mt-0.5 rounded text-indigo-600 w-4 h-4"
                   />
-                  <span>
-                    I confirm that I am an authorized educator/instructor and accept ALIX's Assessment Data Protection guidelines.
-                  </span>
+                  <span>I accept the terms of service and privacy policy.</span>
                 </label>
               </div>
 
               {error && (
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center">
+                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center">
                   {error}
                 </div>
               )}
@@ -261,59 +236,54 @@ export const RegisterPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 px-6 rounded-xl bg-alix-violet-600 hover:bg-alix-violet-700 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 mt-3"
+                className="w-full py-3 px-6 rounded-lg bg-[#333333] hover:bg-[#222222] border-b-4 border-[#1c1c1c] active:border-b-0 active:translate-y-1 text-white font-bold text-sm transition-all duration-100 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:border-none disabled:translate-y-0"
               >
-                <span>{isLoading ? 'Sending Verification Code...' : 'Continue to Email Verification'}</span>
+                <span>{isLoading ? 'Sending code...' : 'Sign up'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
           ) : (
-            /* STAGE 2: Email OTP Verification */
-            <form onSubmit={handleVerifyAndComplete} className="space-y-5 animate-scale-in">
-              <div className="p-3.5 rounded-2xl bg-alix-violet-50 border border-alix-violet-200 text-alix-violet-900 text-xs space-y-1">
-                <div className="flex items-center justify-between font-bold">
+            /* STAGE 2: OTP Verification */
+            <form onSubmit={handleVerifyAndComplete} className="space-y-4 animate-scale-in">
+              <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs">
+                <div className="flex items-center justify-between font-bold mb-1">
                   <span className="flex items-center gap-1.5">
-                    <KeyRound className="w-4 h-4 text-alix-violet-600" />
-                    <span>Instant Email Verification</span>
+                    <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Code sent!</span>
                   </span>
                   <button
                     type="button"
                     onClick={() => setStage('details')}
-                    className="text-[11px] text-alix-violet-700 underline font-semibold cursor-pointer"
+                    className="text-[11px] text-indigo-700 underline font-semibold cursor-pointer"
                   >
-                    Edit Info
+                    Edit
                   </button>
                 </div>
-                <p className="text-[11px] text-alix-slate-600">
-                  Please enter the 6-digit confirmation code dispatched to <strong>{formData.email}</strong>.
+                <p className="text-slate-600 text-[11px]">
+                  Enter the code sent to <strong className="text-slate-900">{formData.email}</strong>
                 </p>
               </div>
 
-              {/* 6 Digit Input Boxes */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-600 mb-2 text-center">
-                  6-Digit Institutional Code
-                </label>
-                <div className="flex justify-center gap-2">
-                  {otpDigits.map((d, i) => (
-                    <input
-                      key={i}
-                      id={`reg-otp-${i}`}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={d}
-                      onChange={(e) => handleOtpDigitChange(i, e.target.value)}
-                      onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                      className="w-11 h-14 text-center text-xl font-mono font-black rounded-xl border-2 border-alix-slate-200 focus:border-alix-violet-600 focus:ring-4 focus:ring-alix-violet-100 outline-none text-alix-indigo bg-alix-slate-50"
-                      autoFocus={i === 0}
-                    />
-                  ))}
-                </div>
+              {/* 6-Digit boxes */}
+              <div className="flex justify-center gap-2">
+                {otpDigits.map((d, i) => (
+                  <input
+                    key={i}
+                    id={`reg-otp-${i}`}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={d}
+                    onChange={(e) => handleOtpDigitChange(i, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                    className="w-11 h-13 text-center text-xl font-mono font-black rounded-lg border-2 border-slate-200 focus:border-indigo-600 outline-none text-slate-900 bg-slate-50"
+                    autoFocus={i === 0}
+                  />
+                ))}
               </div>
 
               {error && (
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center">
+                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center">
                   {error}
                 </div>
               )}
@@ -321,39 +291,44 @@ export const RegisterPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-alix-violet-600 to-alix-indigo hover:from-alix-violet-700 hover:to-alix-indigo text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+                className="w-full py-3 px-6 rounded-lg bg-[#333333] hover:bg-[#222222] border-b-4 border-[#1c1c1c] active:border-b-0 active:translate-y-1 text-white font-bold text-sm transition-all duration-100 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:border-none disabled:translate-y-0"
               >
-                <span>{isLoading ? 'Verifying...' : 'Verify Email & Enter Dashboard'}</span>
+                <span>{isLoading ? 'Verifying...' : 'Verify & continue'}</span>
                 <CheckCircle2 className="w-4 h-4" />
               </button>
 
-              <div className="flex items-center justify-center text-xs pt-2">
+              <div className="flex items-center justify-center text-xs pt-1">
                 <button
                   type="button"
                   onClick={() => sendOtp(formData.email)}
-                  className="text-alix-violet-600 hover:text-alix-violet-800 font-semibold flex items-center gap-1 cursor-pointer"
+                  className="text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1 cursor-pointer"
                 >
                   <RotateCcw className="w-3 h-3" />
-                  <span>Resend Code</span>
+                  <span>Resend code</span>
                 </button>
               </div>
             </form>
           )}
 
-          <div className="mt-5 text-center text-xs text-alix-slate-500">
-            <span>Already have credentials? </span>
+          <div className="mt-5 text-center text-xs text-slate-500">
+            <span>Already have an account? </span>
             <Link
               to="/login"
-              className="font-bold text-alix-violet-600 hover:text-alix-violet-800 underline underline-offset-4"
+              className="font-bold text-indigo-600 hover:text-indigo-800 underline underline-offset-4"
             >
-              Sign In Here
+              Log in
             </Link>
           </div>
         </div>
       </main>
 
-      <footer className="p-4 text-center text-xs text-alix-slate-400">
-        ALIX – Active Learning & Interactive Experience
+      {/* Footer */}
+      <footer className="p-4 text-center text-xs text-white/50 z-10 flex flex-wrap items-center justify-center gap-2">
+        <span>ALIX</span>
+        <span>|</span>
+        <Link to="/" className="hover:text-white transition-colors">Terms</Link>
+        <span>|</span>
+        <Link to="/" className="hover:text-white transition-colors">Privacy</Link>
       </footer>
     </div>
   );

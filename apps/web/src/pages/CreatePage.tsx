@@ -430,47 +430,55 @@ export const CreatePage: React.FC = () => {
 
               {/* Answer Choices */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-500 mb-3">
-                  Answer Options (Select correct option using the radio button)
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">
+                  Answer Choices (Click checkmark to set correct answer)
                 </label>
                 <div className="space-y-3">
-                  {activeQuestion.options.map((opt, idx) => (
-                    <div
-                      key={idx}
-                      className={`flex items-center gap-3 p-2 rounded-xl border transition-colors ${
-                        activeQuestion.correctIndex === idx
-                          ? 'border-emerald-300 bg-emerald-50/40'
-                          : 'border-alix-slate-200'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name={`correct-option-${activeQuestion.id}`}
-                        checked={activeQuestion.correctIndex === idx}
-                        onChange={() =>
-                          handleUpdateActiveQuestion('correctIndex', idx)
-                        }
-                        className="w-5 h-5 text-emerald-600 focus:ring-emerald-500 cursor-pointer ml-2"
-                        title="Mark as correct answer"
-                      />
-                      <span
-                        className={`font-bold text-xs w-6 text-center ${
-                          activeQuestion.correctIndex === idx
-                            ? 'text-emerald-700'
-                            : 'text-alix-slate-400'
+                  {activeQuestion.options.map((opt, idx) => {
+                    const themes = [
+                      { shape: '▲', bg: 'bg-[#E21B3C]', border: 'border-[#9E1329]' },
+                      { shape: '◆', bg: 'bg-[#1368CE]', border: 'border-[#0D4589]' },
+                      { shape: '●', bg: 'bg-[#D89E00]', border: 'border-[#8C6700]' },
+                      { shape: '■', bg: 'bg-[#26890C]', border: 'border-[#175407]' },
+                    ];
+                    const t = themes[idx % themes.length];
+                    const isCorrect = activeQuestion.correctIndex === idx;
+                    return (
+                      <div
+                        key={idx}
+                        className={`flex items-center gap-3 p-2.5 rounded-xl border-2 transition-all ${
+                          isCorrect
+                            ? 'border-emerald-500 bg-emerald-50/50 shadow-sm ring-2 ring-emerald-200'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
                         }`}
                       >
-                        {String.fromCharCode(65 + idx)}
-                      </span>
-                      <input
-                        type="text"
-                        value={opt}
-                        onChange={(e) => handleUpdateOption(idx, e.target.value)}
-                        className="flex-1 px-3 py-1.5 text-sm font-medium text-alix-indigo border-0 focus:ring-0 outline-none bg-transparent"
-                        placeholder={`Option ${String.fromCharCode(65 + idx)} text...`}
-                      />
-                    </div>
-                  ))}
+                        <div
+                          className={`w-9 h-9 rounded-lg ${t.bg} text-white font-black text-base flex items-center justify-center shrink-0 shadow-sm`}
+                        >
+                          {t.shape}
+                        </div>
+                        <input
+                          type="text"
+                          value={opt}
+                          onChange={(e) => handleUpdateOption(idx, e.target.value)}
+                          className="flex-1 px-3 py-1.5 text-sm font-bold text-slate-900 outline-none bg-transparent"
+                          placeholder={`Add answer ${idx + 1}...`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateActiveQuestion('correctIndex', idx)}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all cursor-pointer ${
+                            isCorrect
+                              ? 'bg-emerald-500 border-emerald-500 text-white shadow-md'
+                              : 'border-slate-300 text-slate-300 hover:border-emerald-500 hover:text-emerald-500'
+                          }`}
+                          title={isCorrect ? 'Correct answer' : 'Mark as correct answer'}
+                        >
+                          <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

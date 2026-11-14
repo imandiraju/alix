@@ -306,102 +306,85 @@ export const HostPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex flex-col justify-between selection:bg-alix-violet-500 selection:text-white relative overflow-hidden select-none">
+    <div className="min-h-screen bg-[#1B0A3C] text-white flex flex-col justify-between selection:bg-violet-500 selection:text-white relative overflow-hidden select-none">
       {/* Background ambient lighting */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-alix-violet-900/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-alix-cyan-900/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-violet-900/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-cyan-900/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Top Projector Branding Bar */}
-      <header className="p-3 sm:p-5 bg-slate-950/85 backdrop-blur-md border-b border-slate-800 flex items-center justify-between z-20">
-        <div className="flex items-center gap-4 sm:gap-6">
-          <Link to="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <AlixLogo variant="white" size="md" />
+      {/* Compact projector top bar */}
+      <header className="p-2.5 sm:p-4 bg-[#0F0524]/90 backdrop-blur-md border-b border-white/10 flex items-center justify-between z-20">
+        <div className="flex items-center gap-3 sm:gap-5">
+          <Link to="/dashboard" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+            <span className="text-lg font-heading font-black text-white">ALIX</span>
+            <span className="text-cyan-400 font-heading font-black text-lg">!</span>
           </Link>
-          <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-xs font-semibold text-alix-cyan-400">
+          <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] font-bold text-emerald-400">
             <span
-              className={`w-2 h-2 rounded-full ${
+              className={`w-1.5 h-1.5 rounded-full ${
                 isRealtimeActive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
               }`}
             />
-            <span>{isRealtimeActive ? 'Real-Time Engine Online' : 'Connecting Real-Time...'}</span>
+            <span>LIVE SESSION</span>
           </div>
         </div>
 
-        {/* Center: Dynamic Projector QR Button + PIN */}
-        <div className="flex items-center gap-2 sm:gap-4 bg-alix-indigo/70 px-3 sm:px-5 py-2 rounded-2xl border border-alix-violet-500/40 shadow-inner">
+        {/* Center: PIN display */}
+        <div className="flex items-center gap-2 sm:gap-3 bg-white/5 px-3 sm:px-5 py-2 rounded-xl border border-white/10">
           <button
             type="button"
             onClick={() => setIsQRExpanded(true)}
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-all cursor-pointer group"
-            title="Expand Fullscreen QR Code"
+            className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-all cursor-pointer"
+            title="Expand QR"
           >
-            <QrCode className="w-4 h-4 text-alix-cyan-300 group-hover:scale-110 transition-transform" />
-            <span className="hidden sm:inline">Projector QR</span>
+            <QrCode className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline text-[11px]">QR</span>
           </button>
 
-          <div className="h-6 w-px bg-white/20 hidden sm:block" />
-
-          {/* Large PIN digits */}
           <div className="text-right">
-            <div className="text-[10px] sm:text-xs text-alix-slate-300 uppercase tracking-widest font-bold">
-              Join: <span className="text-alix-cyan-400 font-mono">alix.edu/join</span>
-            </div>
-            <div className="text-lg sm:text-2xl font-mono font-black tracking-widest text-white">
-              {pin.slice(0, 3)} {pin.slice(3)}
+            <div className="text-[10px] text-white/60 uppercase tracking-widest font-bold">
+              PIN: <span className="text-cyan-400 font-mono">{pin.slice(0, 3)} {pin.slice(3)}</span>
             </div>
           </div>
         </div>
 
-        {/* Live Audience Counter & Anti-Proxy Controls */}
+        {/* Right controls */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Anti-Proxy Lock Button */}
+          {/* Lock Button */}
           <button
             type="button"
             onClick={handleToggleLock}
-            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`p-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               isLocked
-                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30'
-                : 'bg-slate-800 text-slate-300 border border-slate-700 hover:text-white'
+                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                : 'bg-white/5 text-slate-400 border border-white/10 hover:text-white'
             }`}
-            title={isLocked ? 'Room Locked (Click to allow joins)' : 'Click to lock room from latecomers'}
+            title={isLocked ? 'Room Locked' : 'Lock room'}
           >
-            {isLocked ? (
-              <>
-                <Lock className="w-3.5 h-3.5 text-rose-400" />
-                <span className="hidden md:inline">Locked</span>
-              </>
-            ) : (
-              <>
-                <Unlock className="w-3.5 h-3.5 text-slate-400" />
-                <span className="hidden md:inline">Lock Room</span>
-              </>
-            )}
+            {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
           </button>
 
-          {/* Export Attendance CSV */}
+          {/* Export CSV */}
           <button
             type="button"
             onClick={handleExportAttendance}
-            className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-            title="Export Attendance Roster to CSV"
+            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white transition-all cursor-pointer"
+            title="Export Attendance"
           >
-            <Download className="w-3.5 h-3.5 text-alix-cyan-400" />
-            <span className="hidden md:inline">Attendance</span>
+            <Download className="w-4 h-4" />
           </button>
 
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800 border border-slate-700">
-            <Users className="w-4 h-4 text-alix-cyan-400" />
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10">
+            <Users className="w-4 h-4 text-cyan-400" />
             <span className="font-mono text-sm font-bold text-white">{totalLearners}</span>
-            <span className="text-xs text-slate-400 hidden sm:inline">Joined</span>
           </div>
 
           {stage === 'lobby' ? (
             <button
               type="button"
               onClick={handleStartSession}
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 font-bold text-sm text-white transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+              className="px-5 py-2 rounded-lg bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#1a5e08] active:border-b-0 active:translate-y-1 font-bold text-sm text-white transition-all duration-100 flex items-center gap-1.5 cursor-pointer"
             >
-              <span>Start Session</span>
+              <span>Start</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
@@ -413,7 +396,7 @@ export const HostPage: React.FC = () => {
                 else if (stage === 'leaderboard') handleNextQuestion();
                 else setStage('question');
               }}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-alix-violet-600 to-alix-indigo hover:from-alix-violet-500 hover:to-alix-indigo font-bold text-sm text-white transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+              className="px-4 py-2 rounded-lg bg-[#1368CE] hover:bg-[#105AB3] border-b-4 border-[#0d4a99] active:border-b-0 active:translate-y-1 font-bold text-sm text-white transition-all duration-100 flex items-center gap-1.5 cursor-pointer"
             >
               {stage === 'question' && (
                 <>
@@ -451,61 +434,44 @@ export const HostPage: React.FC = () => {
         {/* Lobby Waiting Screen */}
         {stage === 'lobby' && (
           <div className="text-center max-w-2xl mx-auto space-y-6 animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-alix-violet-500/20 border border-alix-violet-500/30 text-xs font-bold text-alix-cyan-300">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{subject} {courseCode ? `• ${courseCode}` : ''}</span>
-            </div>
-
-            <h1 className="text-3xl sm:text-5xl font-heading font-extrabold text-white">
+            <h1 className="text-3xl sm:text-5xl font-heading font-black text-white">
               {quizTitle}
             </h1>
 
-            <p className="text-slate-300 text-sm sm:text-base">
-              Students, join on your smartphone or laptop by entering PIN{' '}
-              <strong className="text-alix-cyan-400 font-mono text-lg">{pin}</strong> at{' '}
-              <span className="text-white underline underline-offset-4">{origin}/join</span>.
+            <p className="text-white/70 text-sm sm:text-base">
+              Join at <span className="text-white font-bold">{origin}/join</span> with PIN{' '}
+              <strong className="text-cyan-400 font-mono text-lg">{pin}</strong>
             </p>
 
-            {/* Anti-Proxy Rolling Security Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-slate-300">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Anti-Proxy Protection Active: Rolling QR & Verified Roster</span>
-            </div>
-
             {/* Waiting for players grid */}
-            <div className="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 min-h-[160px] flex flex-col justify-center items-center">
+            <div className="p-6 rounded-2xl bg-white/5 border border-white/10 min-h-[140px] flex flex-col justify-center items-center">
               {players.length === 0 ? (
-                <div className="text-slate-400 text-sm flex items-center gap-2">
+                <div className="text-white/50 text-sm flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                  <span>Waiting for learners to join room...</span>
+                  <span>Waiting for players...</span>
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2 justify-center">
                   {players.map((p, idx) => (
                     <span
                       key={idx}
-                      className="px-3 py-1 rounded-full bg-alix-violet-600/30 border border-alix-violet-500/40 text-alix-cyan-300 text-xs font-bold animate-scale-in flex items-center gap-1.5"
+                      className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-cyan-300 text-xs font-bold animate-scale-in"
                     >
-                      <span>{p.name}</span>
-                      {p.rollNo && (
-                        <span className="text-[10px] text-slate-400 font-mono">({p.rollNo})</span>
-                      )}
+                      {p.name}
                     </span>
                   ))}
                 </div>
               )}
             </div>
 
-            <div className="flex items-center justify-center gap-4">
-              <button
-                type="button"
-                onClick={handleStartSession}
-                className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-alix-violet-600 to-alix-indigo hover:from-alix-violet-500 hover:to-alix-indigo text-white font-bold text-base shadow-alix-lg hover:shadow-alix-glow transition-all inline-flex items-center gap-2 cursor-pointer"
-              >
-                <span>Launch First Question ({questions.length} Total)</span>
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleStartSession}
+              className="px-8 py-3.5 rounded-xl bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#1a5e08] active:border-b-0 active:translate-y-1 text-white font-bold text-base shadow-lg transition-all duration-100 inline-flex items-center gap-2 cursor-pointer"
+            >
+              <span>Start ({questions.length} questions)</span>
+              <ArrowRight className="w-5 h-5" />
+            </button>
           </div>
         )}
 
@@ -540,78 +506,85 @@ export const HostPage: React.FC = () => {
               </h1>
             </div>
 
-            {/* Answer Options Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {currentQ.options.map((opt, idx) => (
-                <div
-                  key={idx}
-                  className="p-5 sm:p-6 rounded-2xl bg-slate-800 border-2 border-slate-700 text-white font-heading font-semibold text-lg sm:text-xl flex items-center gap-4 shadow-lg"
-                >
+            {/* Answer Options Grid (Kahoot 4-quadrant arcade style) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+              {currentQ.options.map((opt, idx) => {
+                const themes = [
+                  { shape: '▲', bg: 'bg-[#E21B3C]', border: 'border-[#9E1329]' },
+                  { shape: '◆', bg: 'bg-[#1368CE]', border: 'border-[#0D4589]' },
+                  { shape: '●', bg: 'bg-[#D89E00]', border: 'border-[#8C6700]' },
+                  { shape: '■', bg: 'bg-[#26890C]', border: 'border-[#175407]' },
+                ];
+                const t = themes[idx % themes.length];
+                return (
                   <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-lg shadow-sm ${
-                      idx === 0
-                        ? 'bg-alix-coral-500 text-white'
-                        : idx === 1
-                        ? 'bg-alix-violet-600 text-white'
-                        : idx === 2
-                        ? 'bg-alix-cyan-600 text-white'
-                        : 'bg-amber-500 text-slate-900'
-                    }`}
+                    key={idx}
+                    className={`p-5 sm:p-7 rounded-2xl ${t.bg} border-b-6 ${t.border} text-white font-heading font-black text-xl sm:text-2xl flex items-center gap-4 sm:gap-5 shadow-2xl transition-transform active:scale-[0.99]`}
                   >
-                    {String.fromCharCode(65 + idx)}
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-black/20 flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-inner">
+                      {t.shape}
+                    </div>
+                    <span className="flex-1 drop-shadow leading-snug">{opt}</span>
                   </div>
-                  <span className="flex-1">{opt}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* Stage 2: Response Distribution Breakdown */}
         {stage === 'chart' && (
-          <div className="bg-slate-800/90 rounded-3xl border border-slate-700 p-6 sm:p-10 shadow-2xl animate-scale-in">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-700 mb-6">
+          <div className="bg-[#0F0524]/90 rounded-3xl border border-white/10 p-6 sm:p-8 shadow-2xl animate-scale-in">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-alix-cyan-400">
-                  Concept Check Results
+                <span className="text-xs font-black uppercase tracking-wider text-cyan-400">
+                  Results
                 </span>
-                <h2 className="text-xl sm:text-2xl font-heading font-bold text-white mt-1">
+                <h2 className="text-xl sm:text-2xl font-heading font-black text-white mt-1">
                   {currentQ.text}
                 </h2>
               </div>
               <div className="text-right">
-                <span className="text-xs text-slate-400 uppercase font-semibold">Correct Answer</span>
-                <div className="text-lg font-bold text-emerald-400 flex items-center gap-1.5 justify-end">
+                <div className="text-sm font-black text-emerald-400 flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                  <span>Option {String.fromCharCode(65 + currentQ.correctIndex)}</span>
+                  <span>Correct: {currentQ.options[currentQ.correctIndex]}</span>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-4">
+            {/* 4 Colorful Bars */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 items-end min-h-[220px] pt-4">
               {currentQ.options.map((opt, idx) => {
+                const themes = [
+                  { shape: '▲', bg: 'bg-[#E21B3C]', border: 'border-[#9E1329]' },
+                  { shape: '◆', bg: 'bg-[#1368CE]', border: 'border-[#0D4589]' },
+                  { shape: '●', bg: 'bg-[#D89E00]', border: 'border-[#8C6700]' },
+                  { shape: '■', bg: 'bg-[#26890C]', border: 'border-[#175407]' },
+                ];
+                const t = themes[idx % themes.length];
                 const isCorrect = idx === currentQ.correctIndex;
                 return (
-                  <div
-                    key={idx}
-                    className={`p-4 rounded-2xl border transition-all ${
-                      isCorrect
-                        ? 'bg-emerald-500/10 border-emerald-500/60 ring-2 ring-emerald-500/20'
-                        : 'bg-slate-900/60 border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center font-bold text-xs text-white">
-                          {String.fromCharCode(65 + idx)}
-                        </span>
-                        <span className="text-sm sm:text-base font-semibold text-white">{opt}</span>
+                  <div key={idx} className="flex flex-col items-center gap-2 h-full justify-end">
+                    {/* Checkmark badge */}
+                    {isCorrect ? (
+                      <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg animate-bounce mb-1">
+                        <CheckCircle2 className="w-5 h-5 stroke-[3]" />
                       </div>
-                      {isCorrect && (
-                        <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                          Correct Option
-                        </span>
-                      )}
+                    ) : (
+                      <div className="w-8 h-8 opacity-0 mb-1" />
+                    )}
+
+                    {/* Arcade Option Bar */}
+                    <div
+                      className={`w-full rounded-2xl ${t.bg} border-b-6 ${t.border} p-4 sm:p-5 text-center text-white font-black shadow-lg transition-all flex flex-col justify-between items-center ${
+                        isCorrect ? 'ring-4 ring-white shadow-2xl scale-[1.02]' : 'opacity-60'
+                      }`}
+                      style={{ minHeight: isCorrect ? '150px' : '100px' }}
+                    >
+                      <span className="text-3xl sm:text-4xl drop-shadow">{t.shape}</span>
+                      <span className="text-xs sm:text-sm font-black line-clamp-2 mt-2 leading-tight drop-shadow">
+                        {opt}
+                      </span>
                     </div>
                   </div>
                 );

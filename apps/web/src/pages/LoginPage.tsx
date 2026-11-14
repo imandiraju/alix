@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import AlixLogo from '../components/common/AlixLogo';
 import { useAuth } from '../context/AuthContext';
 import {
-  ShieldCheck,
   Lock,
   Mail,
   ArrowRight,
@@ -11,7 +9,6 @@ import {
   AlertCircle,
   KeyRound,
   RotateCcw,
-  Check,
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
@@ -22,7 +19,7 @@ export const LoginPage: React.FC = () => {
   const redirectPath = searchParams.get('redirect') || '/dashboard';
 
   // Login Mode: 'otp' | 'password'
-  const [authMode, setAuthMode] = useState<'otp' | 'password'>('otp');
+  const [authMode, setAuthMode] = useState<'otp' | 'password'>('password');
 
   // OTP State
   const [otpStep, setOtpStep] = useState<'request' | 'verify'>('request');
@@ -40,7 +37,7 @@ export const LoginPage: React.FC = () => {
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
-      setError('Please enter your institutional email address.');
+      setError('Enter your email address.');
       return;
     }
 
@@ -52,7 +49,6 @@ export const LoginPage: React.FC = () => {
       setOtpStep('verify');
       setResendCooldown(30);
 
-      // Countdown timer for resend
       const timer = setInterval(() => {
         setResendCooldown((prev) => {
           if (prev <= 1) {
@@ -63,7 +59,7 @@ export const LoginPage: React.FC = () => {
         });
       }, 1000);
     } catch {
-      setError('Failed to dispatch verification code. Please retry.');
+      setError('Failed to send code. Please retry.');
     } finally {
       setIsLoading(false);
     }
@@ -77,7 +73,6 @@ export const LoginPage: React.FC = () => {
     setOtpDigits(updated);
     setError(null);
 
-    // Auto advance
     if (cleaned && index < 5) {
       document.getElementById(`otp-box-${index + 1}`)?.focus();
     }
@@ -94,7 +89,7 @@ export const LoginPage: React.FC = () => {
     e.preventDefault();
     const code = otpDigits.join('');
     if (code.length < 6) {
-      setError('Please enter the complete 6-digit verification code.');
+      setError('Enter the complete 6-digit code.');
       return;
     }
 
@@ -105,7 +100,7 @@ export const LoginPage: React.FC = () => {
       if (ok) {
         navigate(redirectPath);
       } else {
-        setError('Invalid or expired verification code. Please check your code or resend.');
+        setError('Invalid or expired code.');
       }
     } catch {
       setError('Verification failed.');
@@ -118,7 +113,7 @@ export const LoginPage: React.FC = () => {
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
-      setError('Please enter your institutional email address.');
+      setError('Enter your email address.');
       return;
     }
 
@@ -128,119 +123,109 @@ export const LoginPage: React.FC = () => {
       await login(email, password);
       navigate(redirectPath);
     } catch {
-      setError('Invalid academic credentials.');
+      setError('Invalid credentials.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-alix-slate-50 select-none relative overflow-hidden">
-      {/* Background glow */}
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-alix-violet-200/40 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-alix-cyan-200/40 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#46178F] via-[#350F6E] to-[#1E0938] select-none relative overflow-hidden">
+      {/* Ambient glow circles */}
+      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-white/[0.04] rounded-full blur-2xl pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] bg-violet-500/[0.1] rounded-full blur-3xl pointer-events-none" />
 
-      {/* Header */}
-      <header className="p-6 flex items-center justify-between max-w-6xl mx-auto w-full">
+      {/* Top bar */}
+      <header className="p-4 sm:p-6 flex items-center justify-between max-w-5xl mx-auto w-full z-10">
         <Link to="/" className="transition-transform active:scale-95">
-          <AlixLogo size="md" />
+          <span className="text-xl font-heading font-black text-white tracking-tight flex items-center">
+            ALIX<span className="text-cyan-400">!</span>
+          </span>
         </Link>
         <Link
           to="/join"
-          className="text-xs font-bold text-alix-indigo hover:text-alix-violet-700 bg-white border border-alix-slate-300 px-3.5 py-1.5 rounded-full shadow-sm"
+          className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-white transition-all"
         >
-          Student? Join with PIN →
+          Join a game
         </Link>
       </header>
 
-      {/* Main Container */}
-      <main className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-3xl border border-alix-slate-200 shadow-alix-lg p-6 sm:p-10 relative">
-          {/* Header Title */}
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-alix-violet-50 text-alix-violet-700 text-xs font-bold mb-2 border border-alix-violet-200">
-              <ShieldCheck className="w-3.5 h-3.5 text-alix-violet-600" />
-              <span>Verified Faculty Portal</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-heading font-black text-alix-indigo tracking-tight">
-              Instructor Sign In
-            </h1>
-            <p className="text-xs sm:text-sm text-alix-slate-500 mt-1">
-              Securely access quiz authoring, question banks, and learning analytics.
-            </p>
-          </div>
+      {/* Main */}
+      <main className="flex-1 flex items-center justify-center p-4 z-10">
+        <div className="w-full max-w-[400px] bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] p-6 sm:p-8">
+          {/* Title */}
+          <h1 className="text-xl sm:text-2xl font-heading font-black text-slate-900 text-center mb-1">
+            Log in
+          </h1>
+          <p className="text-xs text-slate-500 text-center mb-5">
+            Create and host interactive activities
+          </p>
 
-          {/* Security Notice if redirected */}
+          {/* Auth redirect notice */}
           {searchParams.get('redirect') && (
-            <div className="mb-5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Instructor authentication required to author questions or host live sessions.</span>
+            <div className="mb-4 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span>Sign in to continue</span>
             </div>
           )}
 
-          {/* Authentication Mode Tabs */}
-          <div className="flex bg-alix-slate-100 p-1 rounded-xl mb-6 text-xs font-bold">
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode('otp');
-                setError(null);
-              }}
-              className={`flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                authMode === 'otp'
-                  ? 'bg-white text-alix-violet-700 shadow-sm'
-                  : 'text-alix-slate-500 hover:text-alix-indigo'
-              }`}
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              <span>Quick Email OTP</span>
-            </button>
+          {/* Mode Toggle */}
+          <div className="flex bg-slate-100 p-1 rounded-lg mb-5 text-xs font-bold">
             <button
               type="button"
               onClick={() => {
                 setAuthMode('password');
                 setError(null);
               }}
-              className={`flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`flex-1 py-2 rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 authMode === 'password'
-                  ? 'bg-white text-alix-violet-700 shadow-sm'
-                  : 'text-alix-slate-500 hover:text-alix-indigo'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               <Lock className="w-3.5 h-3.5" />
-              <span>Password Sign In</span>
+              <span>Password</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('otp');
+                setError(null);
+              }}
+              className={`flex-1 py-2 rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                authMode === 'otp'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>Email OTP</span>
             </button>
           </div>
 
-          {/* MODE 1: Email OTP Verification */}
+          {/* MODE 1: Email OTP */}
           {authMode === 'otp' && (
             <>
               {otpStep === 'request' ? (
                 <form onSubmit={handleRequestOtp} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-600 mb-1.5">
-                      Institutional Email Address
-                    </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-alix-slate-400">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                         <Mail className="w-4 h-4" />
                       </div>
                       <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="professor@university.edu"
+                        placeholder="Email"
                         required
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 border-alix-slate-200 focus:border-alix-violet-600 focus:ring-4 focus:ring-alix-violet-100 outline-none text-sm text-alix-indigo font-medium"
+                        className="w-full pl-10 pr-4 py-3 rounded-lg border-2 border-slate-200 focus:border-indigo-600 outline-none text-sm text-slate-900 font-medium"
                       />
                     </div>
-                    <p className="text-[11px] text-alix-slate-400 mt-1">
-                      We'll send a 6-digit one-time password for instant access without a password.
-                    </p>
                   </div>
 
                   {error && (
-                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center">
+                    <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center">
                       {error}
                     </div>
                   )}
@@ -248,83 +233,76 @@ export const LoginPage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3.5 px-6 rounded-xl bg-alix-violet-600 hover:bg-alix-violet-700 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 mt-2"
+                    className="w-full py-3 px-6 rounded-lg bg-[#333333] hover:bg-[#222222] border-b-4 border-[#1c1c1c] active:border-b-0 active:translate-y-1 text-white font-bold text-sm transition-all duration-100 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:border-none disabled:translate-y-0"
                   >
-                    <span>{isLoading ? 'Dispatching OTP...' : 'Send Verification OTP'}</span>
+                    <span>{isLoading ? 'Sending...' : 'Send OTP'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </form>
               ) : (
                 <form onSubmit={handleVerifyOtp} className="space-y-4 animate-scale-in">
                   {/* OTP Dispatched Banner */}
-                  <div className="p-3.5 rounded-2xl bg-alix-violet-50 border border-alix-violet-200 text-alix-violet-900 text-xs space-y-1">
-                    <div className="flex items-center justify-between font-bold">
+                  <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs">
+                    <div className="flex items-center justify-between font-bold mb-1">
                       <span className="flex items-center gap-1.5">
-                        <Mail className="w-3.5 h-3.5 text-alix-violet-600" />
-                        <span>OTP Dispatched!</span>
+                        <Mail className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Code sent!</span>
                       </span>
                       <button
                         type="button"
                         onClick={() => setOtpStep('request')}
-                        className="text-[11px] text-alix-violet-700 underline font-semibold cursor-pointer"
+                        className="text-[11px] text-indigo-700 underline font-semibold cursor-pointer"
                       >
-                        Change Email
+                        Change
                       </button>
                     </div>
-                    <p className="text-alix-slate-600 text-[11px]">
-                      Enter the 6-digit code sent to <strong className="text-alix-indigo">{email}</strong>.
+                    <p className="text-slate-600 text-[11px]">
+                      Enter the 6-digit code sent to <strong className="text-slate-900">{email}</strong>
                     </p>
                   </div>
 
                   {/* 6-Digit OTP Boxes */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-600 mb-2 text-center">
-                      Enter 6-Digit Code
-                    </label>
-                    <div className="flex justify-center gap-2">
-                      {otpDigits.map((digit, idx) => (
-                        <input
-                          key={idx}
-                          id={`otp-box-${idx}`}
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={1}
-                          value={digit}
-                          onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
-                          onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                          className="w-11 h-14 text-center text-xl font-mono font-black rounded-xl border-2 border-alix-slate-200 focus:border-alix-violet-600 focus:ring-4 focus:ring-alix-violet-100 outline-none transition-all text-alix-indigo bg-alix-slate-50"
-                          autoFocus={idx === 0}
-                        />
-                      ))}
-                    </div>
+                  <div className="flex justify-center gap-2">
+                    {otpDigits.map((digit, idx) => (
+                      <input
+                        key={idx}
+                        id={`otp-box-${idx}`}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                        className="w-11 h-13 text-center text-xl font-mono font-black rounded-lg border-2 border-slate-200 focus:border-indigo-600 outline-none transition-all text-slate-900 bg-slate-50"
+                        autoFocus={idx === 0}
+                      />
+                    ))}
                   </div>
 
                   {error && (
-                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center">
+                    <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center">
                       {error}
                     </div>
                   )}
 
-                  {/* Submit OTP */}
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-alix-violet-600 to-alix-indigo hover:from-alix-violet-700 hover:to-alix-indigo/95 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+                    className="w-full py-3 px-6 rounded-lg bg-[#333333] hover:bg-[#222222] border-b-4 border-[#1c1c1c] active:border-b-0 active:translate-y-1 text-white font-bold text-sm transition-all duration-100 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:border-none disabled:translate-y-0"
                   >
-                    <span>{isLoading ? 'Verifying OTP...' : 'Verify & Enter ALIX'}</span>
+                    <span>{isLoading ? 'Verifying...' : 'Verify & Log in'}</span>
                     <CheckCircle2 className="w-4 h-4" />
                   </button>
 
-                  {/* Resend helper */}
-                  <div className="flex items-center justify-center text-xs pt-2">
+                  <div className="flex items-center justify-center text-xs pt-1">
                     <button
                       type="button"
                       disabled={resendCooldown > 0}
                       onClick={handleRequestOtp}
-                      className="text-alix-violet-600 hover:text-alix-violet-800 font-semibold disabled:text-alix-slate-400 flex items-center gap-1 cursor-pointer"
+                      className="text-indigo-600 hover:text-indigo-800 font-semibold disabled:text-slate-400 flex items-center gap-1 cursor-pointer"
                     >
                       <RotateCcw className="w-3 h-3" />
-                      <span>{resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend Code'}</span>
+                      <span>{resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}</span>
                     </button>
                   </div>
                 </form>
@@ -332,58 +310,56 @@ export const LoginPage: React.FC = () => {
             </>
           )}
 
-          {/* MODE 2: Traditional Password Sign In */}
+          {/* MODE 2: Password */}
           {authMode === 'password' && (
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-alix-slate-600 mb-1.5">
-                  Institutional Email
-                </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-alix-slate-400">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <Mail className="w-4 h-4" />
                   </div>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="professor@university.edu"
+                    placeholder="Email"
                     required
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 border-alix-slate-200 focus:border-alix-violet-600 focus:ring-4 focus:ring-alix-violet-100 outline-none text-sm text-alix-indigo font-medium"
+                    autoFocus
+                    className="w-full pl-10 pr-4 py-3 rounded-lg border-2 border-slate-200 focus:border-indigo-600 outline-none text-sm text-slate-900 font-medium"
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-alix-slate-600">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                     Password
-                  </label>
+                  </span>
                   <button
                     type="button"
                     onClick={() => setAuthMode('otp')}
-                    className="text-[11px] text-alix-violet-600 hover:underline"
+                    className="text-[11px] text-indigo-600 hover:underline cursor-pointer"
                   >
                     Use OTP instead?
                   </button>
                 </div>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-alix-slate-400">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <Lock className="w-4 h-4" />
                   </div>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••••••"
+                    placeholder="••••••••"
                     required
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 border-alix-slate-200 focus:border-alix-violet-600 focus:ring-4 focus:ring-alix-violet-100 outline-none text-sm text-alix-indigo font-medium"
+                    className="w-full pl-10 pr-4 py-3 rounded-lg border-2 border-slate-200 focus:border-indigo-600 outline-none text-sm text-slate-900 font-medium"
                   />
                 </div>
               </div>
 
               {error && (
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center">
+                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center">
                   {error}
                 </div>
               )}
@@ -391,38 +367,34 @@ export const LoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 px-6 rounded-xl bg-alix-violet-600 hover:bg-alix-violet-700 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 mt-2"
+                className="w-full py-3 px-6 rounded-lg bg-[#333333] hover:bg-[#222222] border-b-4 border-[#1c1c1c] active:border-b-0 active:translate-y-1 text-white font-bold text-sm transition-all duration-100 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:border-none disabled:translate-y-0"
               >
-                <span>{isLoading ? 'Verifying...' : 'Sign In as Instructor'}</span>
+                <span>{isLoading ? 'Signing in...' : 'Log in'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
           )}
 
           {/* Register Link */}
-          <div className="mt-5 text-center text-xs text-alix-slate-500">
-            <span>New educator to ALIX? </span>
+          <div className="mt-5 text-center text-xs text-slate-500">
+            <span>Don't have an account? </span>
             <Link
               to="/register"
-              className="font-bold text-alix-violet-600 hover:text-alix-violet-800 underline underline-offset-4"
+              className="font-bold text-indigo-600 hover:text-indigo-800 underline underline-offset-4"
             >
-              Register Faculty Account
+              Sign up
             </Link>
-          </div>
-
-          {/* Security Guarantee */}
-          <div className="mt-5 p-3 rounded-xl bg-alix-slate-50 border border-alix-slate-200 text-[11px] text-alix-slate-500 flex items-start gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-            <span>
-              <strong>Academic Integrity Protected:</strong> OTP codes expire in 10 minutes. Only verified educational emails can unlock question banks and session controls.
-            </span>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="p-4 text-center text-xs text-alix-slate-400">
-        ALIX – Active Learning & Interactive Experience
+      <footer className="p-4 text-center text-xs text-white/50 z-10 flex flex-wrap items-center justify-center gap-2">
+        <span>ALIX</span>
+        <span>|</span>
+        <Link to="/" className="hover:text-white transition-colors">Terms</Link>
+        <span>|</span>
+        <Link to="/" className="hover:text-white transition-colors">Privacy</Link>
       </footer>
     </div>
   );
