@@ -360,24 +360,14 @@ export const PlayPage: React.FC = () => {
       });
 
       // Listen for answer verification from server
-      // Anti-Cheat: The initial answer-result is a placeholder (correct=false, points=0).
-      // The real result arrives as a deferred answer-result AFTER the host reveals answers.
+      // Anti-Cheat: answer-result sends real correctness + points immediately,
+      // but we store them silently. The student stays on "Answer Locked!" screen
+      // (phase='submitted'). The data only becomes visible when 'answers-revealed'
+      // fires and transitions the phase to 'score'.
       socket.on('answer-result', (data: any) => {
-        // Only process the deferred (authoritative) result — ignore the placeholder ack
-        if (!data.deferred) return;
-
         const correct = !!data.correct;
         setIsLastAnswerCorrect(correct);
         setLastPointsAwarded(data.points || 0);
-        if (data?.correctIndex !== undefined && data?.correctIndex !== null) {
-          setServerCorrectIndex(Number(data.correctIndex));
-        }
-        if (data?.correctAnswer !== undefined && data?.correctAnswer !== null) {
-          setServerCorrectAnswer(String(data.correctAnswer));
-        }
-        if (Array.isArray(data?.correctIndices)) {
-          setServerCorrectIndices(data.correctIndices);
-        }
 
         if (typeof data.totalScore === 'number') {
           setScore(data.totalScore);
@@ -391,6 +381,8 @@ export const PlayPage: React.FC = () => {
           setStreak(0);
           try { sessionStorage.setItem(`alix_streak_${sessionId}`, '0'); } catch {}
         }
+        // NOTE: Phase is NOT changed here — student stays on 'submitted'.
+        // Only 'answers-revealed' transitions to 'score'.
       });
 
       // Listen for host presenting the live leaderboard

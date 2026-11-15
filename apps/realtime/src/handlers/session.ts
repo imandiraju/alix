@@ -688,26 +688,6 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     (io.to(session.id) as any).emit('answers-revealed', revealPayload);
     (io.to(session.code) as any).emit('answers-revealed', revealPayload);
 
-    // Now send each player their personal deferred answer result
-    // (correctness and points were withheld from answer-result for anti-cheat)
-    for (const player of session.players) {
-      const playerAnswer = player.answers.find((a: any) => a.questionId === activeQ?.id);
-      if (playerAnswer && player.id) {
-        try {
-          io.to(player.id).emit('answer-result', {
-            correct: playerAnswer.correct,
-            points: playerAnswer.points,
-            streak: player.streak,
-            totalScore: player.score,
-            correctIndex: cIdx,
-            correctIndices: cIndices,
-            correctAnswer: cIdx.toString(),
-            deferred: true,  // marks this as the authoritative deferred result
-          });
-        } catch {}
-      }
-    }
-
     const updatePayload = {
       leaderboard: sessionManager.getLeaderboard(session.id),
       teamLeaderboard: sessionManager.getTeamLeaderboard(session.id),
@@ -989,18 +969,16 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       ? Number(currentQuestion.correctAnswer)
       : 0;
 
-    // Anti-cheat: Do NOT send correctIndex/correctAnswer/correct in answer-result.
-    // Students should only learn whether they were right when 'answers-revealed' fires
-    // (after the timer expires or the host clicks "Show Answers").
-    // Points and streak are recorded server-side and sent only upon reveal.
+    // Send real correctness + points to the individual student immediately.
+    // The student's UI stays on "Answer Locked!" (phase='submitted') — it does
+    // NOT reveal this data until the host fires 'answers-revealed', which is
+    // the only event that transitions the student to the score screen.
     socket.emit('answer-result', {
-      correct: false,        // placeholder — real result comes via answers-revealed
-      points: 0,             // placeholder — real points come via answers-revealed
-      streak: 0,
+      correct,
+      points,
+      streak,
       totalScore: player?.score ?? 0,
-      correctAnswer: '',     // withheld until reveal
-      pendingPoints: points, // stored so reveal can confirm
-      pendingCorrect: correct,
+      correctAnswer: cIdx.toString(),
     });
 
     // Broadcast live question submitted tally and updated distribution to room/host
