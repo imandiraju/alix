@@ -70,16 +70,12 @@ export const AlixLogo: React.FC<AlixLogoProps> = ({
         )}
       </div>
 
-      {/* Brand Subtitle: Active Learning Platform • RKGlobal EdTech */}
+      {/* Brand Subtitle: Active Learning Platform (RKGlobal EdTech kept strictly for footer/bottom) */}
       {(withCompanyTag || withTagline) && (
         <div
           className={`font-heading font-black tracking-wider uppercase mt-1 leading-none ${taglineColor} ${tagSizes[size]}`}
         >
-          {withTagline && !withCompanyTag
-            ? 'Active Learning Platform'
-            : withTagline && withCompanyTag
-            ? 'Active Learning Platform • RKGlobal EdTech'
-            : 'RKGlobal EdTech'}
+          {withCompanyTag && !withTagline ? 'RKGlobal EdTech' : 'Active Learning Platform'}
         </div>
       )}
     </div>

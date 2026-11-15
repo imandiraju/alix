@@ -217,11 +217,13 @@ export const JoinPage: React.FC = () => {
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             to="/"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 border-b-4 border-b-black/30 active:border-b-0 active:translate-y-1 text-xs font-heading font-black text-white tracking-wide transition-all shadow-sm group"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/25 backdrop-blur-md text-xs font-heading font-black text-white tracking-wide transition-all shadow-sm group active:scale-95"
           >
-            <span className="font-heading font-black text-sm">ALIX</span>
-            <span className="text-[#00D2D3] font-black text-sm">!</span>
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-[#00D2D3] text-[#0A1A2F] tracking-wider">
+            <span className="flex items-center">
+              <span>ALIX</span>
+              <span className="text-[#00D2D3] animate-bounce font-black ml-0.5">!</span>
+            </span>
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-[#00D2D3] text-[#0A1A2F] tracking-wider ml-0.5">
               GO
             </span>
           </Link>
@@ -230,7 +232,7 @@ export const JoinPage: React.FC = () => {
           <nav className="hidden md:flex items-center gap-2">
             <Link
               to="/dashboard"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-heading font-black bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#175407] active:border-b-0 active:translate-y-1 text-white transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-heading font-black bg-[#26890C] hover:bg-[#20740A] border-b-2 border-[#175407] active:border-b-0 active:translate-y-0.5 text-white transition-all shadow-sm"
             >
               <Compass className="w-3.5 h-3.5" />
               <span>Activities</span>
@@ -238,15 +240,15 @@ export const JoinPage: React.FC = () => {
 
             <Link
               to="/dashboard?view=rosters"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-heading font-black bg-[#D89E00] hover:bg-[#BF8C00] border-b-4 border-[#8A6500] active:border-b-0 active:translate-y-1 text-slate-950 transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-heading font-black bg-[#E66C1C] hover:bg-[#D45E12] border-b-2 border-[#A84507] active:border-b-0 active:translate-y-0.5 text-white transition-all shadow-sm"
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-slate-900" />
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-200" />
               <span>Rosters</span>
             </Link>
 
             <Link
               to="/dashboard"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-heading font-black bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-heading font-black bg-[#1368CE] hover:bg-[#0E58B3] border-b-2 border-[#093D7E] active:border-b-0 active:translate-y-0.5 text-white transition-all shadow-sm"
             >
               <Play className="w-3 h-3 fill-current" />
               <span>Present</span>
@@ -254,14 +256,14 @@ export const JoinPage: React.FC = () => {
 
             <Link
               to="/create"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-heading font-black bg-[#E21B3C] hover:bg-[#C21632] border-b-4 border-[#941126] active:border-b-0 active:translate-y-1 text-white transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-heading font-black bg-[#E21B3C] hover:bg-[#C21632] border-b-2 border-[#941126] active:border-b-0 active:translate-y-0.5 text-white transition-all shadow-sm"
             >
               <PenTool className="w-3.5 h-3.5" />
               <span>Make</span>
             </Link>
 
             <div
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-heading font-black bg-[#46178F] border-b-4 border-[#2D0F5E] ring-2 ring-white/60 text-white shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-heading font-black bg-white/20 border border-white/30 text-white shadow-sm backdrop-blur-sm"
             >
               <span className="flex items-center gap-0.5 text-[10px] font-mono">
                 <span className="text-[#E21B5A]">▲</span>
@@ -274,12 +276,12 @@ export const JoinPage: React.FC = () => {
           </nav>
         </div>
 
-        {/* Right: Quick shortcuts */}
-        <div className="flex items-center gap-2">
+        {/* Right: Quick shortcuts in clean white shade */}
+        <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={() => setIsScannerOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 border-b-4 border-b-black/30 active:border-b-0 active:translate-y-1 text-xs font-heading font-black text-white transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/25 backdrop-blur-md text-xs font-heading font-bold text-white transition-all cursor-pointer shadow-sm active:scale-95"
             title="Scan Projector QR Code"
           >
             <Camera className="w-3.5 h-3.5 text-[#00D2D3]" />
@@ -288,7 +290,7 @@ export const JoinPage: React.FC = () => {
 
           <Link
             to="/login"
-            className="px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 border-b-4 border-b-black/30 active:border-b-0 active:translate-y-1 text-xs font-heading font-black text-white transition-all shadow-sm"
+            className="px-4 py-1.5 rounded-full bg-white hover:bg-slate-100 text-[#46178F] font-heading font-black text-xs shadow-md transition-all active:scale-95"
           >
             Teacher Login
           </Link>
@@ -301,10 +303,10 @@ export const JoinPage: React.FC = () => {
         <div className="text-center mb-6 animate-fade-in">
           <h1 className="text-5xl sm:text-7xl font-heading font-black tracking-tight text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.35)] flex items-center justify-center">
             <span>ALIX</span>
-            <span className="text-alix-cyan-400 animate-bounce">!</span>
+            <span className="text-[#00D2D3] animate-bounce ml-0.5">!</span>
           </h1>
-          <p className="text-xs sm:text-sm text-white/80 font-semibold tracking-wider mt-1 uppercase">
-            Active Learning Platform • RKGlobal EdTech
+          <p className="text-xs sm:text-sm text-white/80 font-bold tracking-wider mt-1 uppercase">
+            Active Learning Platform
           </p>
         </div>
 
