@@ -174,7 +174,7 @@ export const RegisterPage: React.FC = () => {
       {/* Top Header */}
       <header className="p-4 sm:p-6 flex items-center justify-between max-w-5xl mx-auto w-full z-10">
         <Link to="/" className="transition-transform active:scale-95">
-          <AlixLogo variant="primary" size="md" showEduBadge={true} withCompanyTag={true} />
+          <AlixLogo variant="primary" size="md" showEduBadge={true} withCompanyTag={false} />
         </Link>
         <Link
           to="/login"

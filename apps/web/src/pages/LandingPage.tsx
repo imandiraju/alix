@@ -191,7 +191,7 @@ export const LandingPage: React.FC = () => {
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E5E5E5] shadow-xs mb-6 animate-fade-in">
             <span className="w-2 h-2 rounded-full bg-[#00A6A6] animate-pulse" />
             <span className="text-xs font-semibold text-[#46178F] tracking-wide uppercase">
-              RKGlobal EdTech • Academic Learning Platform
+              ALIX • Academic Learning Platform
             </span>
           </div>
 
@@ -251,11 +251,11 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* Classroom Projector Simulation Strip */}
-      <section className="py-16 bg-[#F3F3F3] border-b border-[#E5E5E5]">
+      <section className="py-12 sm:py-16 bg-[#F3F3F3] border-b border-[#E5E5E5]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-[#1E0938] rounded-3xl p-6 sm:p-10 shadow-xl text-white relative overflow-hidden border border-purple-900/60">
-            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-              <div className="lg:col-span-6 space-y-4">
+          <div className="bg-[#1E0938] rounded-2xl sm:rounded-3xl p-4 sm:p-8 lg:p-10 shadow-xl text-white relative overflow-hidden border border-purple-900/60">
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
+              <div className="lg:col-span-6 space-y-3 sm:space-y-4">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold text-cyan-300 border border-white/10">
                   <Zap className="w-3.5 h-3.5 fill-current" />
                   <span>ALIX Live Projector Arena</span>
@@ -269,7 +269,7 @@ export const LandingPage: React.FC = () => {
                 <div className="pt-2 flex flex-wrap gap-4">
                   <Link
                     to="/dashboard"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-sm transition-all shadow-sm cursor-pointer"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-sm transition-all shadow-md cursor-pointer"
                   >
                     <span>Launch Educator Dashboard</span>
                     <ArrowRight className="w-4 h-4 stroke-[2.5]" />
@@ -278,9 +278,9 @@ export const LandingPage: React.FC = () => {
               </div>
 
               {/* Mock Projector Preview Card */}
-              <div className="lg:col-span-6 bg-[#0E041C]/90 backdrop-blur-md rounded-2xl p-6 border border-white/20 shadow-2xl">
-                <div className="flex items-center justify-between pb-3 border-b border-white/15 mb-4 text-xs">
-                  <div className="flex items-center gap-2">
+              <div className="lg:col-span-6 bg-[#0E041C]/90 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-white/20 shadow-2xl">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/15 mb-3 sm:mb-4 text-xs">
+                  <div className="flex items-center gap-2 shrink-0">
                     <span className="font-heading font-black text-white text-base">ALIX</span>
                     <span className="px-2 py-0.5 rounded-md bg-[#00D2D3] text-[#0A1A2F] font-bold text-[10px]">
                       EDU
@@ -289,30 +289,30 @@ export const LandingPage: React.FC = () => {
                       LIVE ARENA
                     </span>
                   </div>
-                  <span className="font-mono bg-white/10 px-3 py-1 rounded-lg text-cyan-300 font-bold text-xs tracking-wider border border-white/10">
+                  <span className="font-mono bg-white/10 px-2.5 py-1 rounded-lg text-cyan-300 font-bold text-xs tracking-wider border border-white/10 shrink-0">
                     PIN: 240 743
                   </span>
                 </div>
 
-                <div className="text-base sm:text-lg font-heading font-semibold mb-4 text-white leading-snug">
+                <div className="text-sm sm:text-base lg:text-lg font-heading font-semibold mb-3 sm:mb-4 text-white leading-snug">
                   Which algorithmic technique guarantees optimal substructure in Dynamic Programming?
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 sm:p-4 rounded-xl bg-[#E21B5A] text-white font-semibold text-xs sm:text-sm flex items-center gap-2.5 shadow-sm">
-                    <span className="w-6 h-6 rounded bg-black/20 flex items-center justify-center text-xs shrink-0">▲</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                  <div className="p-3 sm:p-3.5 rounded-xl bg-[#E21B5A] border-b-4 border-[#A31240] text-white font-heading font-bold text-xs sm:text-sm flex items-center gap-2.5 shadow-sm active:border-b-0 active:translate-y-1 transition-all select-none">
+                    <span className="w-6 h-6 rounded-lg bg-black/25 flex items-center justify-center text-xs shrink-0 font-black">▲</span>
                     <span className="truncate">Memoization</span>
                   </div>
-                  <div className="p-3 sm:p-4 rounded-xl bg-[#1368CE] text-white font-semibold text-xs sm:text-sm flex items-center gap-2.5 shadow-sm">
-                    <span className="w-6 h-6 rounded bg-black/20 flex items-center justify-center text-xs shrink-0">◆</span>
+                  <div className="p-3 sm:p-3.5 rounded-xl bg-[#1368CE] border-b-4 border-[#093D7E] text-white font-heading font-bold text-xs sm:text-sm flex items-center gap-2.5 shadow-sm active:border-b-0 active:translate-y-1 transition-all select-none">
+                    <span className="w-6 h-6 rounded-lg bg-black/25 flex items-center justify-center text-xs shrink-0 font-black">◆</span>
                     <span className="truncate">Greedy Choice</span>
                   </div>
-                  <div className="p-3 sm:p-4 rounded-xl bg-[#E66C1C] text-white font-semibold text-xs sm:text-sm flex items-center gap-2.5 shadow-sm">
-                    <span className="w-6 h-6 rounded bg-black/20 flex items-center justify-center text-xs shrink-0">●</span>
+                  <div className="p-3 sm:p-3.5 rounded-xl bg-[#E66C1C] border-b-4 border-[#B04C0E] text-white font-heading font-bold text-xs sm:text-sm flex items-center gap-2.5 shadow-sm active:border-b-0 active:translate-y-1 transition-all select-none">
+                    <span className="w-6 h-6 rounded-lg bg-black/25 flex items-center justify-center text-xs shrink-0 font-black">●</span>
                     <span className="truncate">Randomization</span>
                   </div>
-                  <div className="p-3 sm:p-4 rounded-xl bg-[#00A6A6] text-white font-semibold text-xs sm:text-sm flex items-center gap-2.5 shadow-sm">
-                    <span className="w-6 h-6 rounded bg-black/20 flex items-center justify-center text-xs shrink-0">■</span>
+                  <div className="p-3 sm:p-3.5 rounded-xl bg-[#00A6A6] border-b-4 border-[#007070] text-white font-heading font-bold text-xs sm:text-sm flex items-center gap-2.5 shadow-sm active:border-b-0 active:translate-y-1 transition-all select-none">
+                    <span className="w-6 h-6 rounded-lg bg-black/25 flex items-center justify-center text-xs shrink-0 font-black">■</span>
                     <span className="truncate">Backtracking</span>
                   </div>
                 </div>

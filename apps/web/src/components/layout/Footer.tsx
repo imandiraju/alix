@@ -8,7 +8,7 @@ export const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-5 gap-8">
         {/* Brand Column */}
         <div className="md:col-span-2 space-y-4">
-          <AlixLogo size="md" withTagline={true} withCompanyTag={true} />
+          <AlixLogo size="md" withTagline={true} withCompanyTag={false} />
           <p className="text-sm text-alix-slate-500 max-w-sm leading-relaxed">
             A premium, modern academic learning platform designed by RKGlobal EdTech to
             transform traditional lectures into engaging, collaborative and measurable

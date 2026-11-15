@@ -79,7 +79,8 @@ export const AlixLogo: React.FC<AlixLogoProps> = ({
           cx="32"
           cy="20"
           r="3"
-          fill={isWhite ? '#FFFFFF' : isMono ? '#1E1B4B' : '#06B6D4'}
+          fill={isWhite ? '#FFFFFF' : isMono ? '#1E1B4B' : '#00D2D3'}
+          className="animate-pulse"
         />
       </svg>
     );
@@ -137,7 +138,8 @@ export const AlixLogo: React.FC<AlixLogoProps> = ({
                 cx="26"
                 cy="14"
                 r="2.5"
-                fill={isWhite ? '#FFFFFF' : isMono ? '#1E1B4B' : '#06B6D4'}
+                fill={isWhite ? '#FFFFFF' : isMono ? '#1E1B4B' : '#00D2D3'}
+                className="animate-pulse"
               />
             </g>
 

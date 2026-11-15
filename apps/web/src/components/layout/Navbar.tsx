@@ -53,7 +53,7 @@ export const Navbar: React.FC = () => {
             to={isAuthenticated ? '/dashboard' : '/'}
             className="flex items-center gap-2 group transition-transform active:scale-95 shrink-0"
           >
-            <AlixLogo variant="primary" size="md" showEduBadge={true} withCompanyTag={true} />
+            <AlixLogo variant="primary" size="md" showEduBadge={true} withCompanyTag={false} />
           </Link>
         </div>
 
