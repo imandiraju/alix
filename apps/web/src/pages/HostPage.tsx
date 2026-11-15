@@ -106,6 +106,15 @@ export const HostPage: React.FC = () => {
   const [vaultCountdown, setVaultCountdown] = useState<number>(15);
   const [isVaultDueNext, setIsVaultDueNext] = useState<boolean>(false);
 
+  // Mazur Peer Discussion (Revote) Host Setting — default OFF (teacher choice)
+  const [peerDiscussionEnabled, setPeerDiscussionEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('alix_peer_discussion_enabled') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
   // Team Mode State
   const [gameMode, setGameMode] = useState<'classic' | 'team'>('classic');
   const [teamCount, setTeamCount] = useState<number>(4);
@@ -228,6 +237,7 @@ export const HostPage: React.FC = () => {
             courseCode,
             gameMode,
             code: savedPin,
+            mysteryVault: vaultSettings,
           } as any);
         }
       };
@@ -535,6 +545,7 @@ export const HostPage: React.FC = () => {
         questions,
         quizTitle,
         colorOnly: colorOnlyMode,
+        mysteryVault: vaultSettings,
       } as any);
 
       const targetCorrectIndex = typeof currentQ?.correctIndex === 'number'
@@ -674,6 +685,8 @@ export const HostPage: React.FC = () => {
         sessionId: activeSessionId || pin,
         code: pin,
         questionIndex: currentQuestionIdx,
+        settings: vaultSettings,
+        durationSeconds: vaultSettings.durationSeconds || 15,
       });
     } catch (err) {
       console.warn('Could not emit host-start-vault:', err);
@@ -1444,6 +1457,60 @@ export const HostPage: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {/* Mazur Peer Discussion (Revote) Settings Card */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#E5E5E5] max-w-xl mx-auto shadow-xs text-left transition-all">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
+                        peerDiscussionEnabled
+                          ? 'bg-rose-100 text-rose-700 shadow-xs'
+                          : 'bg-slate-100 text-slate-400'
+                      }`}
+                    >
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-heading font-black text-xs sm:text-sm text-[#252525] flex items-center gap-2">
+                        <span>Mazur Peer Discussion (Revote)</span>
+                        <span
+                          className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                            peerDiscussionEnabled
+                              ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}
+                        >
+                          {peerDiscussionEnabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#626262] leading-tight mt-0.5">
+                        Harvard STEM active learning: lets the instructor trigger a 45s squad debate to discuss misconceptions and reconcile answers.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextVal = !peerDiscussionEnabled;
+                      setPeerDiscussionEnabled(nextVal);
+                      try { localStorage.setItem('alix_peer_discussion_enabled', nextVal ? 'true' : 'false'); } catch {}
+                    }}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      peerDiscussionEnabled ? 'bg-rose-500' : 'bg-slate-300'
+                    }`}
+                    role="switch"
+                    aria-checked={peerDiscussionEnabled}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        peerDiscussionEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Giant Kahoot-Style Join & PIN Billboard */}
@@ -1833,24 +1900,26 @@ export const HostPage: React.FC = () => {
                   <span>{showAiConcept ? 'Hide AI Diagnostic' : '🧠 Reveal AI Misconception Insight'}</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={handleTriggerPeerInstruction}
-                  disabled={isPeerInstructionActive}
-                  className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-heading font-black transition-all flex items-center gap-2 cursor-pointer shadow-xs ${
-                    isPeerInstructionActive
-                      ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-300 animate-pulse'
-                      : 'bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white'
-                  }`}
-                  title="Eric Mazur's Harvard Peer Instruction: 45s squad debate & revote"
-                >
-                  <Users className="w-4 h-4" />
-                  <span>
-                    {isPeerInstructionActive
-                      ? `🤝 Peer Debate Active (${peerTimer}s)`
-                      : '🤝 Mazur Peer Discussion Round (45s)'}
-                  </span>
-                </button>
+                {peerDiscussionEnabled && (
+                  <button
+                    type="button"
+                    onClick={handleTriggerPeerInstruction}
+                    disabled={isPeerInstructionActive}
+                    className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-heading font-black transition-all flex items-center gap-2 cursor-pointer shadow-xs ${
+                      isPeerInstructionActive
+                        ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-300 animate-pulse'
+                        : 'bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white'
+                    }`}
+                    title="Eric Mazur's Harvard Peer Instruction: 45s squad debate & revote"
+                  >
+                    <Users className="w-4 h-4" />
+                    <span>
+                      {isPeerInstructionActive
+                        ? `🤝 Peer Debate Active (${peerTimer}s)`
+                        : '🤝 Mazur Peer Discussion Round (45s)'}
+                    </span>
+                  </button>
+                )}
               </div>
 
               {/* Mazur Peer Discussion Active Banner */}

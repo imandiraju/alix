@@ -135,6 +135,10 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
 
     session.hostSocketId = socket.id;
 
+    if ((payload as any).mysteryVault) {
+      sessionManager.configureMysteryVault(session.id, (payload as any).mysteryVault);
+    }
+
     // Join both session UUID and 6-digit PIN room for universal message delivery
     socket.join(session.id);
     socket.join(session.code);
@@ -589,8 +593,14 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     const duration = Number(payload?.duration) || 45;
     const questionIndex = session.currentQuestionIndex;
 
-    io.to(session.id).emit('peer-instruction-started', { duration, questionIndex });
-    io.to(session.code).emit('peer-instruction-started', { duration, questionIndex });
+    session.isPeerDiscussionActive = true;
+    setTimeout(() => {
+      session.isPeerDiscussionActive = false;
+    }, duration * 1000);
+
+    const peerPayload = { duration, questionIndex, allowRevote: true };
+    io.to(session.id).emit('peer-instruction-started', peerPayload);
+    io.to(session.code).emit('peer-instruction-started', peerPayload);
     console.log(`[ALIX] Peer Instruction (Mazur ConcepTest) triggered for Q${questionIndex + 1} (${duration}s) in PIN ${session.code}`);
   });
 
@@ -620,6 +630,10 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
 
     // Re-bind host authorization
     session.hostSocketId = socket.id;
+
+    if ((payload as any).mysteryVault) {
+      sessionManager.configureMysteryVault(session.id, (payload as any).mysteryVault);
+    }
     socket.data.sessionId = session.id;
     socket.data.role = 'host';
 
@@ -667,6 +681,10 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     }
 
     session.hostSocketId = socket.id;
+
+    if ((payload as any).mysteryVault) {
+      sessionManager.configureMysteryVault(session.id, (payload as any).mysteryVault);
+    }
     socket.data.sessionId = session.id;
     socket.data.role = 'host';
 
@@ -798,11 +816,16 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     }
 
     session.hostSocketId = socket.id;
+
+    if ((payload as any).mysteryVault) {
+      sessionManager.configureMysteryVault(session.id, (payload as any).mysteryVault);
+    }
     socket.data.sessionId = session.id;
     socket.data.role = 'host';
 
     const qIdx = typeof payload?.questionIndex === 'number' ? payload.questionIndex : (session.currentQuestionIndex + 1);
     session.currentQuestionIndex = qIdx;
+    session.isPeerDiscussionActive = false;
     (session as any).questionStartedAt = Date.now();
 
     const incomingQ = payload.question;
@@ -907,6 +930,10 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     const session = resolveSession(socket, payload);
     if (!session) return;
     session.hostSocketId = socket.id;
+
+    if ((payload as any).mysteryVault) {
+      sessionManager.configureMysteryVault(session.id, (payload as any).mysteryVault);
+    }
     socket.data.sessionId = session.id;
     socket.data.role = 'host';
 
@@ -946,10 +973,18 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     const session = resolveSession(socket, payload);
     if (!session) return;
 
-    // Only the host can start a vault round
-    if (session.hostSocketId && session.hostSocketId !== socket.id) {
-      const isPlayer = session.players.some((p: any) => p.id === socket.id);
-      if (isPlayer) return;
+    // Update authoritative host socket ID and ensure mystery vault is enabled
+    session.hostSocketId = socket.id;
+
+    if ((payload as any).mysteryVault) {
+      sessionManager.configureMysteryVault(session.id, (payload as any).mysteryVault);
+    }
+    session.mysteryVault.enabled = true;
+    if (payload?.settings) {
+      session.mysteryVault = { ...session.mysteryVault, ...payload.settings, enabled: true };
+    }
+    if (typeof payload?.durationSeconds === 'number') {
+      session.mysteryVault.durationSeconds = payload.durationSeconds;
     }
 
     const round = sessionManager.startMysteryVaultRound(
@@ -971,6 +1006,13 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
 
     io.to(session.id).emit('mystery-vault-started', startedPayload);
     io.to(session.code).emit('mystery-vault-started', startedPayload);
+
+    // Direct emission to all player sockets to guarantee mobile screens transition
+    for (const p of session.players) {
+      if (p.isConnected && p.id) {
+        io.to(p.id).emit('mystery-vault-started', startedPayload);
+      }
+    }
   });
 
   socket.on('select-vault', async (payload: { sessionId?: string; code?: string; roundIndex?: number; vaultIndex: number; idempotencyKey?: string }) => {

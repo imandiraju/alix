@@ -195,7 +195,7 @@ export interface ClientToServerEvents {
   'select-team': (payload: { sessionId?: string; code?: string; teamId: string }) => void;
   'configure-teams': (payload: { sessionId?: string; code?: string; teamCount: number; maxMembersPerTeam?: number; teams?: any[] }) => void;
   'configure-mystery-vault': (payload: { sessionId?: string; code?: string; settings: Partial<MysteryVaultSettings> }) => void;
-  'host-start-vault': (payload: { sessionId?: string; code?: string; questionIndex?: number }) => void;
+  'host-start-vault': (payload: { sessionId?: string; code?: string; questionIndex?: number; settings?: Partial<MysteryVaultSettings>; durationSeconds?: number }) => void;
   'select-vault': (payload: { sessionId?: string; code?: string; roundIndex?: number; vaultIndex: number; idempotencyKey?: string }) => void;
   'host-reveal-vault': (payload: { sessionId?: string; code?: string; roundIndex?: number }) => void;
   'host-skip-vault': (payload: { sessionId?: string; code?: string; roundIndex?: number }) => void;

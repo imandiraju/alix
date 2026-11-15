@@ -58,6 +58,7 @@ interface InternalSession {
   vaultRound: VaultRoundState | null;
   vaultTransactions: VaultTransaction[];
   vaultRoundCounter: number;
+  isPeerDiscussionActive?: boolean;
   startedAt?: string;
   finishedAt?: string;
   previousRanks: Map<string, number>;
@@ -351,15 +352,23 @@ export class GameSessionManager {
 
   // ─── Answers & Scoring ──────────────────────────────────────────────
 
-  recordAnswer(sessionId: string, playerId: string, answer: PlayerAnswer): void {
+  recordAnswer(sessionId: string, playerId: string, answer: PlayerAnswer, allowRevote: boolean = false): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
 
     const player = session.players.find((p) => p.id === playerId);
     if (!player) return;
 
-    // Prevent duplicate answers for same question
-    if (player.answers.some((a) => a.questionId === answer.questionId)) return;
+    const existingIndex = player.answers.findIndex((a) => a.questionId === answer.questionId);
+    if (existingIndex >= 0) {
+      if (!allowRevote && !session.isPeerDiscussionActive) return;
+      const prev = player.answers[existingIndex];
+      player.score = Math.max(0, player.score - prev.points);
+      player.answers[existingIndex] = answer;
+      player.score += answer.points;
+      player.streak = answer.correct ? (player.streak || 1) : 0;
+      return;
+    }
 
     player.answers.push(answer);
     player.score += answer.points;
@@ -471,7 +480,9 @@ export class GameSessionManager {
 
   startMysteryVaultRound(sessionId: string, questionIndex: number): VaultRoundState | null {
     const session = this.sessions.get(sessionId);
-    if (!session || !session.mysteryVault.enabled) return null;
+    if (!session) return null;
+    // Host explicitly triggered the vault round — ensure enabled flag is active
+    session.mysteryVault.enabled = true;
 
     session.vaultRoundCounter = (session.vaultRoundCounter || 0) + 1;
     const roundIndex = session.vaultRoundCounter;

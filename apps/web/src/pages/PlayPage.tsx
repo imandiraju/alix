@@ -109,6 +109,16 @@ export const PlayPage: React.FC = () => {
     activeStreakSavers: 0,
   });
   const [isOpeningVault, setIsOpeningVault] = useState<boolean>(false);
+  // Pending answer result — held silently until 'answers-revealed' officially fires
+  // to avoid score jumps in top header that leak answer correctness prematurely
+  const pendingAnswerResultRef = useRef<{
+    correct: boolean;
+    points: number;
+    streak: number;
+    totalScore: number;
+    activeBuffs?: any;
+  } | null>(null);
+
   const [score, setScore] = useState(() => {
     return Number(sessionStorage.getItem(`alix_score_${sessionId}`)) || 0;
   });
@@ -305,6 +315,7 @@ export const PlayPage: React.FC = () => {
           setSecondsRemaining(remainingSeconds);
 
           if (isNewQuestion) {
+            pendingAnswerResultRef.current = null;
             setIsLastAnswerCorrect(false);
             setLastPointsAwarded(0);
             setServerCorrectAnswer(null);
@@ -367,6 +378,25 @@ export const PlayPage: React.FC = () => {
 
       // Listen for teacher/host revealing answers or timer reaching 0
       (socket as any).on('answers-revealed', (data: any) => {
+        // Officially apply pending score and streak now that answer is revealed
+        if (pendingAnswerResultRef.current) {
+          const res = pendingAnswerResultRef.current;
+          setIsLastAnswerCorrect(res.correct);
+          setLastPointsAwarded(res.points);
+          if (res.activeBuffs) {
+            setActiveBuffs(res.activeBuffs);
+          }
+          setScore(res.totalScore);
+          try { sessionStorage.setItem(`alix_score_${sessionId}`, res.totalScore.toString()); } catch {}
+          setStreak(res.streak);
+          try { sessionStorage.setItem(`alix_streak_${sessionId}`, res.streak.toString()); } catch {}
+          pendingAnswerResultRef.current = null;
+        } else {
+          // If student didn't submit an answer, streak resets
+          setStreak(0);
+          try { sessionStorage.setItem(`alix_streak_${sessionId}`, '0'); } catch {}
+        }
+
         setPhase((prev) => (prev === 'answering' || prev === 'submitted' ? 'score' : prev));
         if (data?.correctIndex !== undefined && data?.correctIndex !== null) {
           setServerCorrectIndex(Number(data.correctIndex));
@@ -404,34 +434,19 @@ export const PlayPage: React.FC = () => {
 
       // Listen for answer verification from server
       // Anti-Cheat: answer-result sends real correctness + points immediately,
-      // but we store them silently. The student stays on "Answer Locked!" screen
-      // (phase='submitted'). The data only becomes visible when 'answers-revealed'
-      // fires and transitions the phase to 'score'.
+      // but we hold it silently in pendingAnswerResultRef. The student stays on "Answer Locked!" screen
+      // (phase='submitted'). Neither the top score nor the streak changes until 'answers-revealed'
+      // officially fires, preventing any score-increase answer leakage.
       socket.on('answer-result', (data: any) => {
-        const correct = !!data.correct;
-        setIsLastAnswerCorrect(correct);
-        setLastPointsAwarded(data.points || 0);
-
-        if (data.activeBuffs) {
-          setActiveBuffs(data.activeBuffs);
-        }
-
-        if (typeof data.totalScore === 'number') {
-          setScore(data.totalScore);
-          try { sessionStorage.setItem(`alix_score_${sessionId}`, data.totalScore.toString()); } catch {}
-        }
-        if (correct) {
-          setStreak((prev) => {
-            const nextStreak = typeof data.streak === 'number' ? data.streak : prev + 1;
-            try { sessionStorage.setItem(`alix_streak_${sessionId}`, nextStreak.toString()); } catch {}
-            return nextStreak;
-          });
-        } else {
-          setStreak(0);
-          try { sessionStorage.setItem(`alix_streak_${sessionId}`, '0'); } catch {}
-        }
+        pendingAnswerResultRef.current = {
+          correct: !!data.correct,
+          points: Number(data.points) || 0,
+          streak: typeof data.streak === 'number' ? data.streak : 0,
+          totalScore: typeof data.totalScore === 'number' ? data.totalScore : score,
+          activeBuffs: data.activeBuffs,
+        };
         // NOTE: Phase is NOT changed here — student stays on 'submitted'.
-        // Only 'answers-revealed' transitions to 'score'.
+        // Only 'answers-revealed' applies the score and transitions to 'score'.
       });
 
       // Listen for host presenting the live leaderboard
@@ -491,6 +506,8 @@ export const PlayPage: React.FC = () => {
       socket.on('peer-instruction-started', (data: any) => {
         setIsPeerInstruction(true);
         setPeerTimer(data?.duration || 45);
+        // During peer discussion, unlock options so students can reconsider and revote
+        setPhase((prev) => (prev === 'submitted' ? 'answering' : prev));
       });
 
       // Listen for AI Concept Flashcard broadcast
@@ -614,6 +631,7 @@ export const PlayPage: React.FC = () => {
       setPeerTimer((prev) => {
         if (prev <= 1) {
           setIsPeerInstruction(false);
+          setPhase((current) => (current === 'answering' ? 'submitted' : current));
           return 0;
         }
         return prev - 1;
@@ -680,7 +698,7 @@ export const PlayPage: React.FC = () => {
 
   // Student selects a single option
   const handleSelectOption = (idx: number) => {
-    if (selectedIndex !== null || phase !== 'answering') return;
+    if (phase !== 'answering') return;
     setSelectedIndex(idx);
     setPhase('submitted');
 
