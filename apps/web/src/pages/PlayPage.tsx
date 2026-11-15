@@ -111,6 +111,8 @@ export const PlayPage: React.FC = () => {
   const [colorOnlyMode, setColorOnlyMode] = useState(false);
   const [questionDistribution, setQuestionDistribution] = useState<Record<string, number>>({});
   const [totalRoomAnswers, setTotalRoomAnswers] = useState<number>(0);
+  const [responseTimeMs, setResponseTimeMs] = useState<number | null>(null); // how fast student answered
+  const [liveAnswerCount, setLiveAnswerCount] = useState<number>(0); // how many have answered so far
 
   const [currentQuestion, setCurrentQuestion] = useState<ActiveQuestion>({
     index: 1,
@@ -286,6 +288,8 @@ export const PlayPage: React.FC = () => {
           setServerCorrectIndices([]);
           setQuestionDistribution({});
           setTotalRoomAnswers(0);
+          setResponseTimeMs(null);
+          setLiveAnswerCount(0);
           if (typeof data.colorOnly === 'boolean') {
             setColorOnlyMode(data.colorOnly);
           }
@@ -398,8 +402,9 @@ export const PlayPage: React.FC = () => {
       });
 
       // Listen for leaderboard update (periodic score tabulation)
+      // NOTE: Do NOT setPhase here — this fires every time any student submits.
+      // Phase transitions are controlled only by 'answers-revealed'.
       socket.on('leaderboard-update', (data: any) => {
-        setPhase((prev) => (prev === 'answering' || prev === 'submitted' ? 'score' : prev));
         if (data?.gameMode === 'team') setIsTeamMode(true);
         if (Array.isArray(data?.teamLeaderboard)) {
           setTeamLeaderboard(data.teamLeaderboard);
@@ -412,6 +417,7 @@ export const PlayPage: React.FC = () => {
         }
         if (typeof data?.questionResults?.totalCount === 'number') {
           setTotalRoomAnswers(data.questionResults.totalCount);
+          setLiveAnswerCount(data.questionResults.totalCount);
         }
       });
 
@@ -560,6 +566,7 @@ export const PlayPage: React.FC = () => {
       100,
       ((currentQuestion.timeLimit || 30) - secondsRemaining) * 1000
     );
+    setResponseTimeMs(timeSpentMs);
 
     try {
       const socket = getSocket();
@@ -587,6 +594,7 @@ export const PlayPage: React.FC = () => {
       100,
       ((currentQuestion.timeLimit || 30) - secondsRemaining) * 1000
     );
+    setResponseTimeMs(timeSpentMs);
 
     try {
       const socket = getSocket();
@@ -909,12 +917,15 @@ export const PlayPage: React.FC = () => {
           </div>
         )}
 
-        {/* Phase: Submitted Answer (waiting for reveal) */}
+        {/* Phase: Submitted Answer (waiting for reveal) — Kahoot-style locked screen */}
         {phase === 'submitted' && (
-          <div className="text-center max-w-md mx-auto space-y-5 animate-scale-in py-10 px-4">
+          <div className="text-center max-w-md mx-auto space-y-4 animate-scale-in py-8 px-4">
+
+            {/* Lock icon */}
             <div className="w-20 h-20 rounded-3xl bg-white/10 text-alix-cyan-400 border border-white/20 flex items-center justify-center mx-auto shadow-2xl animate-pulse">
               <CheckCircle2 className="w-10 h-10" />
             </div>
+
             <div>
               <h2 className="text-3xl sm:text-4xl font-heading font-black text-white">
                 {selectedIndex === null && selectedIndices.length === 0
@@ -923,14 +934,41 @@ export const PlayPage: React.FC = () => {
               </h2>
               <p className="text-xs sm:text-sm text-white/70 font-medium mt-1">
                 {selectedIndex === null && selectedIndices.length === 0
-                  ? "You didn't lock in an answer before the countdown ended."
+                  ? "You didn't lock in an answer. Results are coming..."
                   : isPoll
-                  ? 'Your opinion has been registered. Results will show live when the instructor reveals.'
-                  : 'Hang tight! Results will be revealed when the instructor ends the question.'}
+                  ? 'Your opinion is in. Waiting for instructor to reveal results.'
+                  : 'Waiting for the instructor to reveal results.'}
               </p>
             </div>
 
-            {/* Countdown pill or waiting indicator */}
+            {/* Kahoot-style stats row: response time + live answer count */}
+            {(selectedIndex !== null || selectedIndices.length > 0) && (
+              <div className="grid grid-cols-2 gap-3">
+                {/* Response time */}
+                <div className="p-3 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-md text-center">
+                  <div className="text-[10px] font-black uppercase tracking-wider text-purple-300 mb-1">Your Response Time</div>
+                  <div className="text-2xl font-heading font-black text-white">
+                    {responseTimeMs !== null
+                      ? responseTimeMs < 1000
+                        ? `${responseTimeMs}ms`
+                        : `${(responseTimeMs / 1000).toFixed(1)}s`
+                      : '—'}
+                  </div>
+                  <div className="text-[10px] text-white/50 mt-0.5">faster = more points</div>
+                </div>
+
+                {/* Live answer count */}
+                <div className="p-3 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-md text-center">
+                  <div className="text-[10px] font-black uppercase tracking-wider text-purple-300 mb-1">Room Answered</div>
+                  <div className="text-2xl font-heading font-black text-white">
+                    {liveAnswerCount}
+                  </div>
+                  <div className="text-[10px] text-white/50 mt-0.5">player{liveAnswerCount !== 1 ? 's' : ''} so far</div>
+                </div>
+              </div>
+            )}
+
+            {/* Timer countdown bar */}
             <div className="p-3.5 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-md shadow-md text-xs font-heading font-black text-white flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-cyan-300 animate-pulse" />
@@ -947,6 +985,7 @@ export const PlayPage: React.FC = () => {
               )}
             </div>
 
+            {/* Selected choice display */}
             <div className="p-4 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md shadow-md text-sm font-heading font-black text-white flex items-center justify-between">
               <span>{isMultiSelect ? 'Selected Choices:' : 'Selected Choice:'}</span>
               <span className="px-3 py-1 rounded-lg bg-alix-cyan-400 text-slate-950 font-black truncate max-w-[200px]">
