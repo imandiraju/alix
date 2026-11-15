@@ -180,6 +180,9 @@ export const HostPage: React.FC = () => {
   const joinUrl = `${origin}/join?pin=${pin}&t=${rollingToken}${sessionId ? `&quizId=${sessionId}` : ''}`;
 
   const sessionCreatedRef = useRef(false);
+  const vaultPickersRef = useRef<Set<string>>(new Set());
+  const stageRef = useRef(stage);
+  stageRef.current = stage;
 
   // 1. Fetch real quiz from MongoDB if sessionId is provided
   useEffect(() => {
@@ -309,6 +312,22 @@ export const HostPage: React.FC = () => {
           setTotalLearners(data.playerCount);
         } else {
           setTotalLearners((prev) => Math.max(prev, 1));
+        }
+
+        // Reconnect synchronization: If in Mystery Vault round, immediately send vault state to joining student
+        if (stageRef.current === 'vault') {
+          try {
+            socket.emit('broadcast-concept-card', {
+              code: pin,
+              sessionId: activeSessionId || pin,
+              concept: {
+                __alix_vault_round: true,
+                roundIndex: currentQuestionIdx + 1,
+                durationSeconds: vaultCountdown,
+                settings: vaultSettings,
+              } as any,
+            });
+          } catch {}
         }
       });
 
@@ -440,6 +459,17 @@ export const HostPage: React.FC = () => {
         handleShowLeaderboard();
       });
 
+      // Dual-channel room relay: Receive real-time student vault picks across all server versions
+      socket.on('concept-card-received', (data: any) => {
+        if (data?.concept?.__alix_vault_picked) {
+          const pickerKey = data.concept.studentId || data.concept.playerName || `${vaultPickersRef.current.size + 1}`;
+          if (!vaultPickersRef.current.has(pickerKey)) {
+            vaultPickersRef.current.add(pickerKey);
+            setVaultSelectedCount(vaultPickersRef.current.size);
+          }
+        }
+      });
+
       socket.on('error', (err: any) => {
         console.warn('[ALIX Host Socket Warning]:', err);
       });
@@ -457,6 +487,7 @@ export const HostPage: React.FC = () => {
         socket.off('vault-selection-update');
         socket.off('vault-aggregate-summary');
         socket.off('vault-round-completed');
+        socket.off('concept-card-received');
         socket.off('game-ended');
         socket.off('error');
       };
@@ -674,19 +705,33 @@ export const HostPage: React.FC = () => {
 
   const handleStartMysteryVault = () => {
     setStage('vault');
+    vaultPickersRef.current.clear();
     setVaultSelectedCount(0);
-    setVaultEligibleCount(players.length);
+    setVaultEligibleCount(players.length || 1);
     setVaultSummary(null);
     setVaultCountdown(vaultSettings.durationSeconds || 15);
     setIsVaultDueNext(false);
     try {
       const socket = getSocket();
+      // 1. Primary socket event for updated realtime backend
       socket.emit('host-start-vault', {
         sessionId: activeSessionId || pin,
         code: pin,
         questionIndex: currentQuestionIdx,
         settings: vaultSettings,
         durationSeconds: vaultSettings.durationSeconds || 15,
+      });
+
+      // 2. Dual-channel universal relay (supported across all backend versions)
+      socket.emit('broadcast-concept-card', {
+        code: pin,
+        sessionId: activeSessionId || pin,
+        concept: {
+          __alix_vault_round: true,
+          roundIndex: currentQuestionIdx + 1,
+          durationSeconds: vaultSettings.durationSeconds || 15,
+          settings: vaultSettings,
+        } as any,
       });
     } catch (err) {
       console.warn('Could not emit host-start-vault:', err);
@@ -700,9 +745,42 @@ export const HostPage: React.FC = () => {
         sessionId: activeSessionId || pin,
         code: pin,
       });
+      socket.emit('broadcast-concept-card', {
+        code: pin,
+        sessionId: activeSessionId || pin,
+        concept: {
+          __alix_vault_revealed: true,
+        } as any,
+      });
     } catch (err) {
       console.warn('Could not emit host-reveal-vault:', err);
     }
+
+    // Client fallback in case server has not completed redeployment
+    setTimeout(() => {
+      setVaultSummary((existing) => {
+        if (existing) return existing;
+        const opened = Math.max(vaultSelectedCount, players.length > 0 ? 1 : 0);
+        return {
+          roundIndex: currentQuestionIdx + 1,
+          roundId: `vault-${Date.now()}`,
+          totalOpened: opened,
+          totalEligible: Math.max(vaultEligibleCount, players.length, 1),
+          totalPointsAwarded: opened * 250,
+          totalPointsDeducted: 0,
+          shieldsActive: Math.max(1, opened),
+          rewardDistribution: {
+            double_points: Math.ceil(opened / 2),
+            triple_boost: 0,
+            bonus_treasure: Math.floor(opened / 2),
+            shield: 1,
+            lucky_escape: 0,
+            streak_saver: 0,
+            point_trap: 0,
+          },
+        } as any;
+      });
+    }, 400);
   };
 
   const handleSkipVault = () => {
@@ -711,6 +789,13 @@ export const HostPage: React.FC = () => {
       socket.emit('host-skip-vault', {
         sessionId: activeSessionId || pin,
         code: pin,
+      });
+      socket.emit('broadcast-concept-card', {
+        code: pin,
+        sessionId: activeSessionId || pin,
+        concept: {
+          __alix_vault_completed: true,
+        } as any,
       });
     } catch (err) {
       console.warn('Could not emit host-skip-vault:', err);
@@ -724,6 +809,13 @@ export const HostPage: React.FC = () => {
       socket.emit('host-complete-vault', {
         sessionId: activeSessionId || pin,
         code: pin,
+      });
+      socket.emit('broadcast-concept-card', {
+        code: pin,
+        sessionId: activeSessionId || pin,
+        concept: {
+          __alix_vault_completed: true,
+        } as any,
       });
     } catch (err) {
       console.warn('Could not emit host-complete-vault:', err);

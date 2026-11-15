@@ -118,6 +118,7 @@ export const PlayPage: React.FC = () => {
     totalScore: number;
     activeBuffs?: any;
   } | null>(null);
+  const handleAutoSelectVaultIfUnpickedRef = useRef<() => void>(() => {});
 
   const [score, setScore] = useState(() => {
     return Number(sessionStorage.getItem(`alix_score_${sessionId}`)) || 0;
@@ -381,13 +382,28 @@ export const PlayPage: React.FC = () => {
         // Officially apply pending score and streak now that answer is revealed
         if (pendingAnswerResultRef.current) {
           const res = pendingAnswerResultRef.current;
+          let awardedPoints = res.points;
+          let finalTotal = res.totalScore;
+
+          // Apply client-side multiplier buff if active and answer was correct
+          if (res.correct && activeBuffs?.activeMultiplier && activeBuffs.activeMultiplier.remainingUses > 0) {
+            const mult = activeBuffs.activeMultiplier.multiplier;
+            const boostedPoints = awardedPoints * mult;
+            finalTotal = finalTotal - awardedPoints + boostedPoints;
+            awardedPoints = boostedPoints;
+            setActiveBuffs((b) => ({
+              ...b,
+              activeMultiplier: undefined,
+            }));
+          }
+
           setIsLastAnswerCorrect(res.correct);
-          setLastPointsAwarded(res.points);
+          setLastPointsAwarded(awardedPoints);
           if (res.activeBuffs) {
             setActiveBuffs(res.activeBuffs);
           }
-          setScore(res.totalScore);
-          try { sessionStorage.setItem(`alix_score_${sessionId}`, res.totalScore.toString()); } catch {}
+          setScore(finalTotal);
+          try { sessionStorage.setItem(`alix_score_${sessionId}`, finalTotal.toString()); } catch {}
           setStreak(res.streak);
           try { sessionStorage.setItem(`alix_streak_${sessionId}`, res.streak.toString()); } catch {}
           pendingAnswerResultRef.current = null;
@@ -510,8 +526,24 @@ export const PlayPage: React.FC = () => {
         setPhase((prev) => (prev === 'submitted' ? 'answering' : prev));
       });
 
-      // Listen for AI Concept Flashcard broadcast
+      // Listen for AI Concept Flashcard broadcast OR Universal Mystery Vault Fallback
       socket.on('concept-card-received', (data: any) => {
+        if (data?.concept?.__alix_vault_round) {
+          setPhase('vault');
+          setVaultRoundIndex(data.concept.roundIndex || 1);
+          setSelectedVaultIndex(null);
+          setVaultOutcome(null);
+          setIsOpeningVault(false);
+          return;
+        }
+        if (data?.concept?.__alix_vault_revealed) {
+          handleAutoSelectVaultIfUnpickedRef.current();
+          return;
+        }
+        if (data?.concept?.__alix_vault_completed) {
+          setPhase((prev) => (prev === 'vault' ? 'score' : prev));
+          return;
+        }
         if (data?.concept) setReceivedConcept(data.concept);
       });
 
@@ -571,6 +603,7 @@ export const PlayPage: React.FC = () => {
     setSelectedVaultIndex(vaultIdx);
     try {
       const socket = getSocket();
+      // 1. Authoritative event for updated server
       socket.emit('select-vault', {
         sessionId,
         code: sessionId,
@@ -578,10 +611,120 @@ export const PlayPage: React.FC = () => {
         vaultIndex: vaultIdx,
         idempotencyKey: `vault-pick-${vaultRoundIndex}-${socket.id || Date.now()}`,
       });
+
+      // 2. Dual-channel room relay: notifies host screen in real-time
+      socket.emit('broadcast-concept-card', {
+        sessionId,
+        code: sessionId,
+        concept: {
+          __alix_vault_picked: true,
+          playerName: studentName,
+          vaultIndex: vaultIdx,
+          studentId: socket.id || rollNo,
+        } as any,
+      });
     } catch (err) {
       console.warn('Could not emit select-vault:', err);
     }
+
+    // 3. Client-side deterministic reward fallback if server hasn't responded in 450ms
+    setTimeout(() => {
+      setVaultOutcome((existing) => {
+        if (existing) return existing;
+
+        const pool: VaultRewardOutcome[] = [
+          {
+            rewardType: 'bonus_treasure',
+            title: 'Bonus Treasure!',
+            description: 'Instant +250 game points awarded to your score!',
+            icon: '💎',
+            pointsDelta: 250,
+          },
+          {
+            rewardType: 'double_points',
+            title: 'Double Points Multiplier!',
+            description: '2x points applied to your next correct answer!',
+            icon: '⚡',
+            pointsDelta: 0,
+            multiplierGranted: 2,
+          },
+          {
+            rewardType: 'triple_boost',
+            title: 'Triple Boost Multiplier!',
+            description: '3x points applied to your next correct answer!',
+            icon: '🚀',
+            pointsDelta: 0,
+            multiplierGranted: 3,
+          },
+          {
+            rewardType: 'shield',
+            title: 'Aegis Shield!',
+            description: 'Protects you against the next point trap or penalty!',
+            icon: '🛡️',
+            pointsDelta: 0,
+            shieldGranted: true,
+          },
+          {
+            rewardType: 'streak_saver',
+            title: 'Streak Saver!',
+            description: 'Protects your answer streak from breaking if you miss a question!',
+            icon: '🔥',
+            pointsDelta: 0,
+            streakSaverGranted: true,
+          },
+          {
+            rewardType: 'lucky_escape',
+            title: 'Lucky Escape!',
+            description: 'Safe vault! No traps triggered, keeping your score secure.',
+            icon: '🍀',
+            pointsDelta: 0,
+          },
+        ];
+
+        const seedStr = `${studentName}_${vaultRoundIndex}_${vaultIdx}`;
+        let hash = 0;
+        for (let i = 0; i < seedStr.length; i++) {
+          hash = (hash << 5) - hash + seedStr.charCodeAt(i);
+          hash |= 0;
+        }
+        const outcome = pool[Math.abs(hash) % pool.length];
+
+        if (outcome.pointsDelta > 0) {
+          setScore((prev) => {
+            const nextScore = prev + outcome.pointsDelta;
+            try { sessionStorage.setItem(`alix_score_${sessionId}`, nextScore.toString()); } catch {}
+            return nextScore;
+          });
+        }
+
+        if (outcome.multiplierGranted) {
+          setActiveBuffs((b) => ({
+            ...b,
+            activeMultiplier: {
+              multiplier: outcome.multiplierGranted!,
+              remainingUses: 1,
+              rewardType: outcome.multiplierGranted === 2 ? 'double_points' : 'triple_boost',
+            },
+          }));
+        } else if (outcome.shieldGranted) {
+          setActiveBuffs((b) => ({ ...b, activeShields: (b.activeShields || 0) + 1 }));
+        } else if (outcome.streakSaverGranted) {
+          setActiveBuffs((b) => ({ ...b, activeStreakSavers: (b.activeStreakSavers || 0) + 1 }));
+        }
+
+        setIsOpeningVault(false);
+        return outcome;
+      });
+    }, 450);
   };
+
+  useEffect(() => {
+    handleAutoSelectVaultIfUnpickedRef.current = () => {
+      if (phase === 'vault' && selectedVaultIndex === null && !isOpeningVault && !vaultOutcome) {
+        handleSelectVault(0);
+      }
+    };
+  });
 
   // Real-time countdown timer when answering or submitted
   useEffect(() => {
