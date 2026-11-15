@@ -2,7 +2,7 @@
 
 export const ALIX_BRAND = {
   name: 'ALIX',
-  fullName: 'Active Learning & Interactive Experience',
+  fullName: 'Academic Learning Platform',
   tagline: 'Where Every Learner Participates.',
   positioning:
     'A premium, modern, interactive classroom learning platform designed to transform traditional lectures into engaging, collaborative and measurable learning experiences.',
@@ -10,7 +10,7 @@ export const ALIX_BRAND = {
     'Turn lectures into engaging experiences where every learner participates.',
   landingHeadline: 'Make Every Classroom Interactive.',
   landingSubtext: 'Turn lectures into engaging experiences where every learner participates.',
-  browserTitle: 'ALIX – Active Learning & Interactive Experience',
+  browserTitle: 'ALIX – Academic Learning Platform | RKGlobal EdTech',
   teacherDashboard: 'Welcome to ALIX',
   studentJoin: 'Join ALIX',
   liveSession: 'ALIX Live',

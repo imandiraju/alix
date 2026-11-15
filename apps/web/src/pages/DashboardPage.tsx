@@ -5,7 +5,7 @@ import Navbar from '../components/layout/Navbar';
 import Sidebar from '../components/layout/Sidebar';
 import Footer from '../components/layout/Footer';
 import { useAuth } from '../context/AuthContext';
-import { REALTIME_URL } from '../services/socket';
+import { getSocket, REALTIME_URL } from '../services/socket';
 import {
   Play,
   Plus,
@@ -84,6 +84,40 @@ export const DashboardPage: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchParams] = useSearchParams();
+
+  // Active ongoing host session (enables resuming from library/dashboard)
+  const [activeHostSession, setActiveHostSession] = useState<{
+    quizId: string;
+    pin: string;
+    quizTitle?: string;
+    subject?: string;
+    timestamp?: number;
+  } | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('alix_active_host_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.timestamp && Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+          setActiveHostSession(parsed);
+        } else {
+          localStorage.removeItem('alix_active_host_session');
+        }
+      }
+    } catch {}
+  }, []);
+
+  const handleEndActiveHostSession = () => {
+    if (activeHostSession) {
+      try {
+        const socket = getSocket();
+        socket.emit('end-game', { sessionId: activeHostSession.pin, code: activeHostSession.pin } as any);
+      } catch {}
+      localStorage.removeItem('alix_active_host_session');
+      setActiveHostSession(null);
+    }
+  };
 
   useEffect(() => {
     const viewParam = searchParams.get('view') || searchParams.get('tab');
@@ -492,6 +526,51 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Active Ongoing Host Session Banner (Allows Resuming anytime) */}
+          {activeHostSession && (
+            <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#46178F] via-[#350F6E] to-[#1368CE] text-white shadow-lg border border-purple-400/30 flex flex-col sm:flex-row items-center justify-between gap-4 animate-scale-in">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
+                  <Radio className="w-5 h-5 text-emerald-300 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-400 text-slate-950 font-black text-[10px] uppercase tracking-wider">
+                      LIVE ROOM ACTIVE
+                    </span>
+                    <span className="font-mono font-black text-cyan-200 text-sm">
+                      PIN: {activeHostSession.pin}
+                    </span>
+                  </div>
+                  <h3 className="font-heading font-black text-base text-white mt-0.5">
+                    {activeHostSession.quizTitle || 'Live Activity'}
+                  </h3>
+                  <p className="text-xs text-white/70">
+                    Your session is waiting for learners. Return to resume hosting without losing players!
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                <Link
+                  to={`/host/${activeHostSession.quizId}`}
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#175407] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-md transition-all cursor-pointer"
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                  <span>Resume Session ({activeHostSession.pin})</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleEndActiveHostSession}
+                  className="p-2.5 rounded-xl bg-white/10 hover:bg-rose-600 text-white border border-white/20 transition-all cursor-pointer"
+                  title="End session completely"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Section: My ALIX Activities Grid */}
           <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -594,13 +673,24 @@ export const DashboardPage: React.FC = () => {
 
                     {/* Action Buttons: Host, Edit, Duplicate, Delete */}
                     <div className="pt-4 mt-3 border-t border-[#E5E5E5] flex items-center justify-between gap-2 flex-wrap">
-                      <Link
-                        to={`/host/${quiz._id}`}
-                        className="inline-flex items-center gap-1.5 bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs px-3.5 py-2 rounded-xl shadow-sm transition-all cursor-pointer"
-                      >
-                        <Play className="w-3.5 h-3.5 fill-current" />
-                        <span>Host Live</span>
-                      </Link>
+                      {activeHostSession?.quizId === quiz._id ? (
+                        <Link
+                          to={`/host/${quiz._id}`}
+                          className="inline-flex items-center gap-1.5 bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#175407] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs px-3.5 py-2 rounded-xl shadow-sm transition-all cursor-pointer animate-pulse"
+                          title="Click to resume your active live room"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                          <span>Resume Live ({activeHostSession.pin})</span>
+                        </Link>
+                      ) : (
+                        <Link
+                          to={`/host/${quiz._id}`}
+                          className="inline-flex items-center gap-1.5 bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs px-3.5 py-2 rounded-xl shadow-sm transition-all cursor-pointer"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                          <span>Host Live</span>
+                        </Link>
+                      )}
 
                       <div className="flex items-center gap-1">
                         <Link

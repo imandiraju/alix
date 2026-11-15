@@ -114,7 +114,25 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
 
   socket.on('create-session', async (payload: CreateSessionPayload) => {
     const gameMode = (payload as any).gameMode === 'team' ? 'team' : 'classic';
-    const session = sessionManager.createSession(payload.quizId, payload.hostId, gameMode);
+
+    // Allow host to resume existing active session for this quiz or PIN code
+    let session: any = undefined;
+    if (!(payload as any).forceNew) {
+      if ((payload as any).code) {
+        session = sessionManager.findByCode(String((payload as any).code).toUpperCase());
+      } else if ((payload as any).sessionId) {
+        session = sessionManager.getSession((payload as any).sessionId);
+      }
+      if (!session && payload.quizId) {
+        session = sessionManager.findByQuizId(payload.quizId);
+      }
+    }
+
+    const isResumed = !!session && session.status !== SessionStatus.FINISHED;
+    if (!isResumed) {
+      session = sessionManager.createSession(payload.quizId, payload.hostId, gameMode);
+    }
+
     session.hostSocketId = socket.id;
 
     // Join both session UUID and 6-digit PIN room for universal message delivery
@@ -199,7 +217,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
         createdBy: payload.hostId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        tags: ['Active Learning'],
+        tags: ['Academic Learning'],
         settings: DEFAULT_QUIZ_SETTINGS,
       });
       totalQuestions = defaultQuestions.length;
@@ -232,9 +250,41 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       code: session.code,
       gameMode: session.gameMode,
       teams: session.teams,
+      isResumed,
+      status: session.status,
+      currentQuestionIndex: session.currentQuestionIndex,
     } as any);
 
-    console.log(`[ALIX] Session created: ${session.code} (${session.id}) [Mode: ${session.gameMode}] for quiz "${quizTitle}" (${totalQuestions} Qs)`);
+    // If resumed, immediately sync already-joined players back to the host
+    if (isResumed && Array.isArray(session.players) && session.players.length > 0) {
+      session.players.forEach((p: any) => {
+        socket.emit('player-joined', {
+          player: p,
+          playerCount: session.players.length,
+          gameMode: session.gameMode,
+          teams: session.teams,
+          teamLeaderboard: sessionManager.getTeamLeaderboard(session.id),
+        } as any);
+      });
+    }
+
+    // If session was already playing, also deliver current question state to host
+    if (isResumed && session.status === SessionStatus.PLAYING && session.currentQuestionIndex >= 0 && session.quiz) {
+      const activeQ = session.quiz.questions[session.currentQuestionIndex];
+      if (activeQ) {
+        socket.emit('question-started', {
+          question: activeQ,
+          questionIndex: session.currentQuestionIndex,
+          totalQuestions: session.quiz.questions.length,
+          timeLimit: activeQ.timeLimit || 30,
+          remaining: typeof (session as any).questionRemaining === 'number'
+            ? (session as any).questionRemaining
+            : (activeQ.timeLimit || 30),
+        } as any);
+      }
+    }
+
+    console.log(`[ALIX] Session ${isResumed ? 'resumed' : 'created'}: ${session.code} (${session.id}) [Mode: ${session.gameMode}] for quiz "${quizTitle}" (${totalQuestions} Qs)`);
   });
 
   // ─── Join Session ─────────────────────────────────────────────────────
@@ -558,7 +608,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
           createdBy: session.hostId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          tags: ['Active Learning'],
+          tags: ['Academic Learning'],
           settings: DEFAULT_QUIZ_SETTINGS,
         });
       }

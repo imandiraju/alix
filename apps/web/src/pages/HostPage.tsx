@@ -21,6 +21,8 @@ import {
   Download,
   ShieldCheck,
   ChevronRight,
+  ChevronLeft,
+  ArrowLeft,
   Clock,
   RotateCw,
   Radio,
@@ -53,7 +55,7 @@ export const HostPage: React.FC = () => {
   const [pin, setPin] = useState<string>('842915');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [quizTitle, setQuizTitle] = useState('Interactive Classroom Quiz');
-  const [subject, setSubject] = useState('Active Learning');
+  const [subject, setSubject] = useState('Academic Learning');
   const [courseCode, setCourseCode] = useState('');
   const [questions, setQuestions] = useState<QuizQuestion[]>([
     {
@@ -76,6 +78,7 @@ export const HostPage: React.FC = () => {
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
   const [players, setPlayers] = useState<any[]>([]);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [showBackModal, setShowBackModal] = useState(false);
 
   // Team Mode State
   const [gameMode, setGameMode] = useState<'classic' | 'team'>('classic');
@@ -179,6 +182,17 @@ export const HostPage: React.FC = () => {
         setIsRealtimeActive(true);
         if (!sessionCreatedRef.current) {
           sessionCreatedRef.current = true;
+          let savedPin: string | undefined;
+          try {
+            const savedActive = localStorage.getItem('alix_active_host_session');
+            if (savedActive) {
+              const parsed = JSON.parse(savedActive);
+              if (parsed.quizId === sessionId && parsed.pin) {
+                savedPin = parsed.pin;
+              }
+            }
+          } catch {}
+
           socket.emit('create-session', {
             quizId: sessionId || 'default',
             hostId: user?.id || 'host-teacher',
@@ -187,6 +201,7 @@ export const HostPage: React.FC = () => {
             subject,
             courseCode,
             gameMode,
+            code: savedPin,
           } as any);
         }
       };
@@ -200,12 +215,31 @@ export const HostPage: React.FC = () => {
       socket.on('session-created', (data: any) => {
         if (data.code) {
           setPin(data.code);
+          try {
+            localStorage.setItem(
+              'alix_active_host_session',
+              JSON.stringify({
+                quizId: sessionId,
+                pin: data.code,
+                sessionId: data.sessionId,
+                quizTitle,
+                subject,
+                timestamp: Date.now(),
+              })
+            );
+          } catch {}
         }
         if (data.sessionId) {
           setActiveSessionId(data.sessionId);
         }
         if (data.gameMode) {
           setGameMode(data.gameMode);
+        }
+        if (data.isResumed && (data.status === 'playing' || typeof data.currentQuestionIndex === 'number' && data.currentQuestionIndex >= 0)) {
+          setStage('question');
+          if (typeof data.currentQuestionIndex === 'number') {
+            setCurrentQuestionIdx(data.currentQuestionIndex);
+          }
         }
       });
 
@@ -322,6 +356,9 @@ export const HostPage: React.FC = () => {
             });
           });
         }
+        try {
+          localStorage.removeItem('alix_active_host_session');
+        } catch {}
         setStage('victory');
       });
 
@@ -682,6 +719,60 @@ export const HostPage: React.FC = () => {
     <div className="min-h-screen bg-[#F8F9FA] text-[#252525] flex flex-col justify-between selection:bg-[#46178F] selection:text-white relative overflow-hidden select-none font-sans">
       <LightWiringBackground />
 
+      {/* Back to Library / Resume Session Modal */}
+      {showBackModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white text-[#252525] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-[#E5E5E5] text-center space-y-4 animate-scale-in">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-[#46178F] border border-purple-200 flex items-center justify-center mx-auto shadow-xs">
+              <ArrowLeft className="w-7 h-7 text-[#46178F]" />
+            </div>
+            <h3 className="font-heading font-black text-xl text-[#252525]">
+              Return to Library?
+            </h3>
+            <p className="text-xs sm:text-sm text-[#626262] leading-relaxed">
+              Your live room <span className="font-mono font-bold text-[#46178F] bg-purple-50 px-2 py-0.5 rounded">PIN: {pin}</span> will stay open in the background. Learners can continue joining, and you can resume anytime from your Dashboard!
+            </p>
+            <div className="space-y-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBackModal(false);
+                  navigate('/dashboard');
+                }}
+                className="w-full py-3 rounded-xl bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs sm:text-sm transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
+                <span>Keep Room Open & Go to Dashboard</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBackModal(false);
+                  try {
+                    localStorage.removeItem('alix_active_host_session');
+                    const socket = getSocket();
+                    socket.emit('end-game', { sessionId: activeSessionId || pin, code: pin } as any);
+                  } catch {}
+                  navigate('/dashboard');
+                }}
+                className="w-full py-2.5 rounded-xl bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 font-heading font-bold text-xs transition-all cursor-pointer"
+              >
+                End Session & Disconnect Everyone
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowBackModal(false)}
+                className="w-full py-2 text-slate-400 hover:text-slate-600 text-xs font-semibold cursor-pointer"
+              >
+                Stay in Live Session
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Exit Live Session Confirmation Modal */}
       {showExitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
@@ -693,28 +784,42 @@ export const HostPage: React.FC = () => {
               Exit Live Session?
             </h3>
             <p className="text-xs sm:text-sm text-[#626262] leading-relaxed">
-              Are you sure you want to end this live session and return to your Dashboard? Connected learners will be disconnected.
+              Do you want to keep this room open so you can resume later, or end it completely?
             </p>
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowExitModal(false)}
-                className="flex-1 py-3 rounded-xl bg-[#F3F3F3] hover:bg-[#E5E5E5] text-[#252525] font-heading font-black text-xs transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
+            <div className="space-y-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => {
+                  setShowExitModal(false);
+                  navigate('/dashboard');
+                }}
+                className="w-full py-3 rounded-xl bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs sm:text-sm transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
+              >
+                <span>Leave & Keep Session Open (Can Resume)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowExitModal(false);
                   try {
+                    localStorage.removeItem('alix_active_host_session');
                     const socket = getSocket();
                     socket.emit('end-game', { sessionId: activeSessionId || pin, code: pin } as any);
                   } catch {}
                   navigate('/dashboard');
                 }}
-                className="flex-1 py-3 rounded-xl bg-[#E21B5A] hover:bg-[#C2154B] border-b-4 border-[#9E103D] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs transition-all cursor-pointer shadow-md"
+                className="w-full py-2.5 rounded-xl bg-[#E21B5A] hover:bg-[#C2154B] border-b-4 border-[#9E103D] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs transition-all cursor-pointer shadow-md"
               >
-                Exit to Dashboard
+                End Session Completely
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowExitModal(false)}
+                className="w-full py-2 text-slate-400 hover:text-slate-600 text-xs font-semibold cursor-pointer"
+              >
+                Cancel
               </button>
             </div>
           </div>
@@ -723,7 +828,18 @@ export const HostPage: React.FC = () => {
 
       {/* Royal Purple Top Session Bar */}
       <header className="p-2.5 sm:p-3.5 bg-[#46178F] text-white shadow-md border-b border-[#350F6E] flex items-center justify-between z-20">
-        <div className="flex items-center gap-3 sm:gap-5">
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Back to Library Navigation (Active on ALL screens, including Lobby) */}
+          <button
+            type="button"
+            onClick={() => setShowBackModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-heading font-black text-xs transition-all border border-white/20 shadow-xs cursor-pointer"
+            title="Return to library while keeping session alive to resume later"
+          >
+            <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+            <span className="hidden sm:inline">Back to Library</span>
+          </button>
+
           <Link to="/dashboard" className="flex items-center gap-1.5 hover:opacity-90 transition-opacity">
             <AlixLogo variant="white" size="sm" showEduBadge={true} />
           </Link>
