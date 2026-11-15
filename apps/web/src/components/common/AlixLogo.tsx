@@ -15,188 +15,73 @@ export const AlixLogo: React.FC<AlixLogoProps> = ({
   size = 'md',
   withTagline = false,
   withCompanyTag = false,
-  showEduBadge = true,
+  showEduBadge = false,
   iconOnly = false,
   className = '',
 }) => {
-  // Size mappings
-  const heightMap = {
-    sm: iconOnly ? 24 : 26,
-    md: iconOnly ? 36 : 34,
-    lg: iconOnly ? 48 : 46,
-    xl: iconOnly ? 64 : 58,
-  };
-
-  const height = heightMap[size];
-
   // Colors based on variant
   const isWhite = variant === 'white';
   const isMono = variant === 'monochrome';
 
-  const textColor = isWhite ? '#FFFFFF' : isMono ? '#252525' : '#46178F';
-  const dotColor = isWhite ? '#FFFFFF' : isMono ? '#252525' : '#46178F';
+  const textColor = isWhite ? 'text-white' : isMono ? 'text-[#252525]' : 'text-[#46178F]';
+  const taglineColor = isWhite ? 'text-white/80' : isMono ? 'text-[#626262]' : 'text-[#46178F]';
+
+  // Typography scaling
+  const textSizes = {
+    sm: 'text-xl sm:text-2xl',
+    md: 'text-2xl sm:text-3xl',
+    lg: 'text-4xl sm:text-5xl',
+    xl: 'text-5xl sm:text-7xl',
+  };
+
+  const tagSizes = {
+    sm: 'text-[7px]',
+    md: 'text-[8px] sm:text-[9px]',
+    lg: 'text-[10px] sm:text-xs',
+    xl: 'text-xs sm:text-sm',
+  };
 
   if (iconOnly) {
     return (
-      <svg
-        width={height}
-        height={height}
-        viewBox="0 0 64 64"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className={className}
-        aria-label="ALIX Icon"
-      >
-        <defs>
-          <linearGradient id={`alixIconGrad-${variant}`} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor={isWhite ? '#FFFFFF' : isMono ? '#252525' : '#46178F'} />
-            <stop offset="100%" stopColor={isWhite ? '#E2E8F0' : isMono ? '#252525' : '#6F2DBD'} />
-          </linearGradient>
-        </defs>
-        {/* Abstract Stylized A Symbol */}
-        <path
-          d="M18 52L30 14L34 14L46 52"
-          stroke={`url(#alixIconGrad-${variant})`}
-          strokeWidth="6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M23 52L34 18L37 18L49 52"
-          stroke={`url(#alixIconGrad-${variant})`}
-          strokeWidth="3.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity={isWhite ? '0.6' : '0.45'}
-        />
-        <path
-          d="M21 38H43"
-          stroke={`url(#alixIconGrad-${variant})`}
-          strokeWidth="5"
-          strokeLinecap="round"
-        />
-        <circle
-          cx="32"
-          cy="20"
-          r="3"
-          fill={isWhite ? '#FFFFFF' : isMono ? '#1E1B4B' : '#00D2D3'}
-          className="animate-pulse"
-        />
-      </svg>
+      <div className={`inline-flex items-center font-heading font-black tracking-tight leading-none select-none ${className}`}>
+        <span className={textColor}>A</span>
+        <span className="text-[#00D2D3] animate-bounce ml-0.5">!</span>
+      </div>
     );
   }
 
-  // Full Wordmark
-  const viewBoxWidth = 145;
-  const viewBoxHeight = 52;
-  const computedWidth = (height / viewBoxHeight) * viewBoxWidth;
-
   return (
-    <div className={`inline-flex items-center gap-1.5 select-none ${className}`}>
-      <div className="flex flex-col">
-        <div className="flex items-center gap-1.5">
-          <svg
-            width={computedWidth}
-            height={height}
-            viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-label="ALIX Logo"
-            className="shrink-0"
+    <div className={`inline-flex flex-col select-none ${className}`}>
+      <div className="flex items-center leading-none">
+        <span className={`font-heading font-black tracking-tight leading-none ${textColor} ${textSizes[size]}`}>
+          ALIX
+        </span>
+        <span className={`font-heading font-black tracking-tight leading-none text-[#00D2D3] animate-bounce ml-0.5 ${textSizes[size]}`}>
+          !
+        </span>
+        {showEduBadge && (
+          <span
+            className={`ml-1.5 px-1.5 py-0.5 rounded-md font-heading font-black tracking-wider shadow-xs shrink-0 ${
+              size === 'sm' ? 'text-[8px]' : 'text-[10px]'
+            } bg-[#00D2D3] text-[#0A1A2F] border border-cyan-300/40`}
           >
-            <defs>
-              <linearGradient id={`alixWordmarkGrad-${variant}`} x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor={isWhite ? '#FFFFFF' : isMono ? '#252525' : '#46178F'} />
-                <stop offset="100%" stopColor={isWhite ? '#EDE9FE' : isMono ? '#252525' : '#6F2DBD'} />
-              </linearGradient>
-            </defs>
-
-            {/* Stylized A */}
-            <g transform="translate(6, 4)">
-              <path
-                d="M14 40L24 8L28 8L38 40"
-                stroke={`url(#alixWordmarkGrad-${variant})`}
-                strokeWidth="4.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M18 40L27 12L31 12L41 40"
-                stroke={`url(#alixWordmarkGrad-${variant})`}
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                opacity={isWhite ? '0.6' : '0.4'}
-              />
-              <path
-                d="M17 29H35"
-                stroke={`url(#alixWordmarkGrad-${variant})`}
-                strokeWidth="4"
-                strokeLinecap="round"
-              />
-              <circle
-                cx="26"
-                cy="14"
-                r="2.5"
-                fill={isWhite ? '#FFFFFF' : isMono ? '#1E1B4B' : '#00D2D3'}
-                className="animate-pulse"
-              />
-            </g>
-
-            {/* L */}
-            <path
-              d="M60 12V44H76"
-              stroke={textColor}
-              strokeWidth="4.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-
-            {/* I */}
-            <path
-              d="M88 12V44"
-              stroke={textColor}
-              strokeWidth="4.5"
-              strokeLinecap="round"
-            />
-            <circle cx="88" cy="6" r="3" fill={dotColor} />
-
-            {/* X */}
-            <path
-              d="M104 12L124 44M124 12L104 44"
-              stroke={textColor}
-              strokeWidth="4.5"
-              strokeLinecap="round"
-            />
-          </svg>
-
-          {/* Consistent Cyan EDU Pill */}
-          {showEduBadge && (
-            <span
-              className={`px-1.5 py-0.5 rounded-md font-black tracking-wider shadow-sm shrink-0 ${
-                size === 'sm' ? 'text-[8px]' : size === 'lg' || size === 'xl' ? 'text-xs' : 'text-[10px]'
-              } bg-[#00D2D3] text-[#0A1A2F] border border-cyan-300/40`}
-            >
-              EDU
-            </span>
-          )}
-        </div>
-
-        {/* Brand Subtitle: RKGlobal EdTech & Academic Learning Platform */}
-        {(withCompanyTag || withTagline) && (
-          <div
-            className={`font-heading font-black tracking-wider uppercase mt-0.5 ${
-              isWhite ? 'text-cyan-300/90' : 'text-[#46178F]'
-            } ${size === 'sm' ? 'text-[7px]' : 'text-[9px]'}`}
-          >
-            {withTagline && !withCompanyTag
-              ? 'Academic Learning Platform'
-              : withTagline && withCompanyTag
-              ? 'Academic Learning Platform • RKGlobal EdTech'
-              : 'RKGlobal EdTech'}
-          </div>
+            EDU
+          </span>
         )}
       </div>
+
+      {/* Brand Subtitle: Active Learning Platform • RKGlobal EdTech */}
+      {(withCompanyTag || withTagline) && (
+        <div
+          className={`font-heading font-black tracking-wider uppercase mt-1 leading-none ${taglineColor} ${tagSizes[size]}`}
+        >
+          {withTagline && !withCompanyTag
+            ? 'Active Learning Platform'
+            : withTagline && withCompanyTag
+            ? 'Active Learning Platform • RKGlobal EdTech'
+            : 'RKGlobal EdTech'}
+        </div>
+      )}
     </div>
   );
 };

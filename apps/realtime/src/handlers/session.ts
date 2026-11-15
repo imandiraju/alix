@@ -217,7 +217,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
         createdBy: payload.hostId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        tags: ['Academic Learning'],
+        tags: ['Active Learning'],
         settings: DEFAULT_QUIZ_SETTINGS,
       });
       totalQuestions = defaultQuestions.length;
@@ -608,7 +608,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
           createdBy: session.hostId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          tags: ['Academic Learning'],
+          tags: ['Active Learning'],
           settings: DEFAULT_QUIZ_SETTINGS,
         });
       }

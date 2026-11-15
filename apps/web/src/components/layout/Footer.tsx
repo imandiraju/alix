@@ -8,14 +8,14 @@ export const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-5 gap-8">
         {/* Brand Column */}
         <div className="md:col-span-2 space-y-4">
-          <AlixLogo size="md" withTagline={true} withCompanyTag={false} />
+          <AlixLogo size="md" withTagline={true} withCompanyTag={true} />
           <p className="text-sm text-alix-slate-500 max-w-sm leading-relaxed">
-            A premium, modern academic learning platform designed by RKGlobal EdTech to
+            A premium, modern active learning platform designed by RKGlobal EdTech to
             transform traditional lectures into engaging, collaborative and measurable
             learning experiences.
           </p>
           <div className="text-xs text-alix-slate-400">
-            &copy; {new Date().getFullYear()} ALIX (Academic Learning Platform) · RKGlobal EdTech. All rights reserved.
+            &copy; {new Date().getFullYear()} ALIX (Active Learning Platform) · RKGlobal EdTech. All rights reserved.
           </div>
         </div>
 
@@ -98,7 +98,7 @@ export const Footer: React.FC = () => {
           </p>
           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-purple-50 text-[11px] font-semibold text-[#46178F] border border-purple-200">
             <span className="w-1.5 h-1.5 rounded-full bg-[#46178F]" />
-            RKGlobal EdTech • Academic Learning Platform
+            RKGlobal EdTech • Active Learning Platform
           </div>
         </div>
       </div>

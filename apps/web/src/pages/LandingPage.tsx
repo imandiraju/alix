@@ -191,7 +191,7 @@ export const LandingPage: React.FC = () => {
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E5E5E5] shadow-xs mb-6 animate-fade-in">
             <span className="w-2 h-2 rounded-full bg-[#00A6A6] animate-pulse" />
             <span className="text-xs font-semibold text-[#46178F] tracking-wide uppercase">
-              ALIX • Academic Learning Platform
+              ALIX • Active Learning Platform
             </span>
           </div>
 
@@ -280,12 +280,10 @@ export const LandingPage: React.FC = () => {
               {/* Mock Projector Preview Card */}
               <div className="lg:col-span-6 bg-[#0E041C]/90 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-white/20 shadow-2xl">
                 <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/15 mb-3 sm:mb-4 text-xs">
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0">
                     <span className="font-heading font-black text-white text-base">ALIX</span>
-                    <span className="px-2 py-0.5 rounded-md bg-[#00D2D3] text-[#0A1A2F] font-bold text-[10px]">
-                      EDU
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium text-[10px] border border-emerald-500/30">
+                    <span className="text-[#00D2D3] font-heading font-black text-base animate-bounce">!</span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium text-[10px] border border-emerald-500/30 ml-1">
                       LIVE ARENA
                     </span>
                   </div>
@@ -326,7 +324,7 @@ export const LandingPage: React.FC = () => {
       <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-14">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-[#46178F] mb-2">
-            Academic Learning Modules
+            Active Learning Modules
           </h2>
           <h3 className="text-3xl sm:text-4xl font-heading font-bold text-[#252525] tracking-tight">
             Built for High-Energy Classrooms

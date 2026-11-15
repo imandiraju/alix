@@ -53,7 +53,7 @@ export const Navbar: React.FC = () => {
             to={isAuthenticated ? '/dashboard' : '/'}
             className="flex items-center gap-2 group transition-transform active:scale-95 shrink-0"
           >
-            <AlixLogo variant="primary" size="md" showEduBadge={true} withCompanyTag={false} />
+            <AlixLogo variant="primary" size="md" withTagline={true} withCompanyTag={true} />
           </Link>
         </div>
 
@@ -217,7 +217,7 @@ export const Navbar: React.FC = () => {
               </Link>
               <Link
                 to="/register"
-                className="px-4 py-2 rounded-lg bg-[#46178F] hover:bg-[#391275] text-white font-semibold text-xs sm:text-sm shadow-sm active:scale-95 transition-all"
+                className="px-4 py-2 rounded-xl bg-[#46178F] hover:bg-[#3D147D] border-b-4 border-[#2D0F5E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs sm:text-sm shadow-sm transition-all cursor-pointer"
               >
                 Sign up FREE
               </Link>

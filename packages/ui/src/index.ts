@@ -1,6 +1,6 @@
 /**
  * @alix/ui — Core Design System & Asset Library
- * Academic Learning Platform
+ * Active Learning Platform
  */
 
 export const ALIX_THEME = {

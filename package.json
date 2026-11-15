@@ -1,7 +1,7 @@
 {
   "name": "alix",
   "private": true,
-  "description": "ALIX – Academic Learning Platform | RKGlobal EdTech",
+  "description": "ALIX – Active Learning Platform | RKGlobal EdTech",
   "scripts": {
     "dev": "pnpm -r --parallel dev",
     "dev:web": "pnpm --filter alix-web dev",

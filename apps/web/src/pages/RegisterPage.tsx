@@ -174,7 +174,7 @@ export const RegisterPage: React.FC = () => {
       {/* Top Header */}
       <header className="p-4 sm:p-6 flex items-center justify-between max-w-5xl mx-auto w-full z-10">
         <Link to="/" className="transition-transform active:scale-95">
-          <AlixLogo variant="primary" size="md" showEduBadge={true} withCompanyTag={false} />
+          <AlixLogo variant="primary" size="lg" withTagline={true} withCompanyTag={true} />
         </Link>
         <Link
           to="/login"
@@ -388,7 +388,7 @@ export const RegisterPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="p-4 text-center text-xs text-[#626262] z-10 flex flex-wrap items-center justify-center gap-2">
-        <span>Academic Learning Platform • RKGlobal EdTech</span>
+        <span>Active Learning Platform • RKGlobal EdTech</span>
         <span>•</span>
         <Link to="/" className="hover:text-[#252525] transition-colors">Terms</Link>
         <span>•</span>

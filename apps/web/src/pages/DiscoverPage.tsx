@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * DISCOVER ACTIVITIES DATA (Curated Academic Learning Collections)
+ * DISCOVER ACTIVITIES DATA (Curated Active Learning Collections)
  * ─────────────────────────────────────────────────────────────────────────── */
 
 interface DiscoverActivity {
@@ -44,7 +44,7 @@ interface DiscoverActivity {
   title: string;
   subject: string;
   courseCode: string;
-  category: 'Computer Science' | 'Mathematics' | 'Engineering' | 'Academic Learning';
+  category: 'Computer Science' | 'Mathematics' | 'Engineering' | 'Active Learning';
   level: string;
   description: string;
   questionCount: number;
@@ -316,9 +316,9 @@ const DISCOVER_ACTIVITIES: DiscoverActivity[] = [
     title: 'Morning Energizer: Speed Trivia & STEM Facts',
     subject: 'General STEM',
     courseCode: 'ICE 101',
-    category: 'Academic Learning',
+    category: 'Active Learning',
     level: 'All Levels',
-    description: 'High-speed academic learning energizer to kick off your morning lecture and awaken student minds.',
+    description: 'High-speed active learning energizer to kick off your morning lecture and awaken student minds.',
     questionCount: 3,
     timeEstimate: '2 mins',
     plays: '3.1k',
@@ -356,7 +356,7 @@ const DISCOVER_ACTIVITIES: DiscoverActivity[] = [
     title: 'Interactive Concept Pulse & Lecture Checkpoint',
     subject: 'Academic Pedagogy',
     courseCode: 'GEN 100',
-    category: 'Academic Learning',
+    category: 'Active Learning',
     level: 'Mid-Lecture Check',
     description: 'Quick formative check to uncover lecture confusion and gather immediate classroom sentiment.',
     questionCount: 3,
@@ -589,7 +589,7 @@ export const DiscoverPage: React.FC = () => {
     { label: 'Computer Science', value: 'Computer Science', icon: Cpu },
     { label: 'Mathematics', value: 'Mathematics', icon: Calculator },
     { label: 'Engineering', value: 'Engineering', icon: Layers },
-    { label: 'Academic Learning', value: 'Academic Learning', icon: GraduationCap },
+    { label: 'Active Learning', value: 'Active Learning', icon: GraduationCap },
   ];
 
   // Filtering
@@ -713,7 +713,7 @@ export const DiscoverPage: React.FC = () => {
               {/* Card 3: Harvard Peer Instruction */}
               <div
                 onClick={() => {
-                  setActiveCategory('Academic Learning');
+                  setActiveCategory('Active Learning');
                 }}
                 className="p-4 rounded-2xl bg-[#46178F] hover:bg-[#3E147F] text-white shadow-xs hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between border border-white/10 min-h-[140px] group"
               >
