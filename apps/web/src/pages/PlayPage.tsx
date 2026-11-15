@@ -126,7 +126,11 @@ export const PlayPage: React.FC = () => {
 
   // Cached quiz questions from DB for instant client-side resiliency
   const quizQuestionsRef = useRef<any[]>([]);
-  const currentIdxRef = useRef<number>(0);
+  const currentIdxRef = useRef<number>(-1);
+  const responseTimeRef = useRef<number | null>(null);
+  const liveAnswerCountRef = useRef<number>(0);
+  const selectedTeamIdRef = useRef(selectedTeamId);
+  selectedTeamIdRef.current = selectedTeamId;
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
 
@@ -204,6 +208,10 @@ export const PlayPage: React.FC = () => {
       setSecondsRemaining(q.timeLimit || 30);
       setSelectedIndex(null);
       setSelectedIndices([]);
+      setResponseTimeMs(null);
+      setLiveAnswerCount(0);
+      responseTimeRef.current = null;
+      liveAnswerCountRef.current = 0;
       setPhase('answering');
     }
   };
@@ -219,7 +227,7 @@ export const PlayPage: React.FC = () => {
           playerName: studentName,
           rollNo: rollNo || undefined,
           avatarId: avatar.id,
-          teamId: selectedTeamId,
+          teamId: selectedTeamIdRef.current,
         } as any);
       };
       const onDisconnect = () => setIsSocketConnected(false);
@@ -261,6 +269,7 @@ export const PlayPage: React.FC = () => {
           const finalOpts = nonBlank.length >= 2 ? nonBlank : rawOpts;
 
           const qIdx = data.questionIndex ?? 0;
+          const isNewQuestion = currentIdxRef.current !== qIdx;
           currentIdxRef.current = qIdx;
 
           const remainingSeconds = typeof data.remaining === 'number'
@@ -281,15 +290,21 @@ export const PlayPage: React.FC = () => {
             mediaUrl: data.question.mediaUrl || data.question.image,
           });
           setSecondsRemaining(remainingSeconds);
-          setIsLastAnswerCorrect(false);
-          setLastPointsAwarded(0);
-          setServerCorrectAnswer(null);
-          setServerCorrectIndex(null);
-          setServerCorrectIndices([]);
-          setQuestionDistribution({});
-          setTotalRoomAnswers(0);
-          setResponseTimeMs(null);
-          setLiveAnswerCount(0);
+
+          if (isNewQuestion) {
+            setIsLastAnswerCorrect(false);
+            setLastPointsAwarded(0);
+            setServerCorrectAnswer(null);
+            setServerCorrectIndex(null);
+            setServerCorrectIndices([]);
+            setQuestionDistribution({});
+            setTotalRoomAnswers(0);
+            setResponseTimeMs(null);
+            setLiveAnswerCount(0);
+            responseTimeRef.current = null;
+            liveAnswerCountRef.current = 0;
+          }
+
           if (typeof data.colorOnly === 'boolean') {
             setColorOnlyMode(data.colorOnly);
           }
@@ -303,12 +318,21 @@ export const PlayPage: React.FC = () => {
             } else {
               setSelectedIndex(Number(existingSub));
             }
+            const timeKey = `alix_time_${sessionId}_q${qIdx}`;
+            const savedTime = sessionStorage.getItem(timeKey);
+            if (savedTime) {
+              const parsedTime = Number(savedTime);
+              setResponseTimeMs(parsedTime);
+              responseTimeRef.current = parsedTime;
+            }
+            liveAnswerCountRef.current = Math.max(liveAnswerCountRef.current, 1);
+            setLiveAnswerCount((prev) => Math.max(prev, 1));
             if (remainingSeconds <= 0) {
               setPhase('score');
             } else {
               setPhase('submitted');
             }
-          } else {
+          } else if (isNewQuestion) {
             setSelectedIndex(null);
             setSelectedIndices([]);
             setPhase('answering');
@@ -345,6 +369,8 @@ export const PlayPage: React.FC = () => {
         }
         if (typeof data?.questionResults?.totalCount === 'number') {
           setTotalRoomAnswers(data.questionResults.totalCount);
+          setLiveAnswerCount(data.questionResults.totalCount);
+          liveAnswerCountRef.current = data.questionResults.totalCount;
         }
       });
 
@@ -378,9 +404,11 @@ export const PlayPage: React.FC = () => {
           try { sessionStorage.setItem(`alix_score_${sessionId}`, data.totalScore.toString()); } catch {}
         }
         if (correct) {
-          const newStreak = data.streak ?? (streak + 1);
-          setStreak(newStreak);
-          try { sessionStorage.setItem(`alix_streak_${sessionId}`, newStreak.toString()); } catch {}
+          setStreak((prev) => {
+            const nextStreak = typeof data.streak === 'number' ? data.streak : prev + 1;
+            try { sessionStorage.setItem(`alix_streak_${sessionId}`, nextStreak.toString()); } catch {}
+            return nextStreak;
+          });
         } else {
           setStreak(0);
           try { sessionStorage.setItem(`alix_streak_${sessionId}`, '0'); } catch {}
@@ -418,6 +446,7 @@ export const PlayPage: React.FC = () => {
         if (typeof data?.questionResults?.totalCount === 'number') {
           setTotalRoomAnswers(data.questionResults.totalCount);
           setLiveAnswerCount(data.questionResults.totalCount);
+          liveAnswerCountRef.current = data.questionResults.totalCount;
         }
       });
 
@@ -469,7 +498,7 @@ export const PlayPage: React.FC = () => {
     } catch {
       // fallback
     }
-  }, [sessionId, studentName, rollNo, avatar.id, score, streak]);
+  }, [sessionId, studentName, rollNo, avatar.id]);
 
   // Real-time countdown timer when answering or submitted
   useEffect(() => {
@@ -490,7 +519,7 @@ export const PlayPage: React.FC = () => {
       setSecondsRemaining((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(interval);
-  }, [secondsRemaining, phase, isLastAnswerCorrect, lastPointsAwarded, streak, sessionId]);
+  }, [secondsRemaining, phase]);
 
   // Trigger celebration effects ONLY when score is revealed (after timer ends)
   useEffect(() => {
@@ -558,15 +587,19 @@ export const PlayPage: React.FC = () => {
     if (phase !== 'answering' || selectedIndices.length === 0) return;
     setPhase('submitted');
 
-    try {
-      sessionStorage.setItem(`alix_sub_${sessionId}_q${currentIdxRef.current}`, selectedIndices.join(','));
-    } catch {}
-
     const timeSpentMs = Math.max(
       100,
       ((currentQuestion.timeLimit || 30) - secondsRemaining) * 1000
     );
+    responseTimeRef.current = timeSpentMs;
     setResponseTimeMs(timeSpentMs);
+    liveAnswerCountRef.current = Math.max(liveAnswerCountRef.current, 1);
+    setLiveAnswerCount((prev) => Math.max(prev, 1));
+
+    try {
+      sessionStorage.setItem(`alix_sub_${sessionId}_q${currentIdxRef.current}`, selectedIndices.join(','));
+      sessionStorage.setItem(`alix_time_${sessionId}_q${currentIdxRef.current}`, timeSpentMs.toString());
+    } catch {}
 
     try {
       const socket = getSocket();
@@ -585,16 +618,20 @@ export const PlayPage: React.FC = () => {
     setSelectedIndex(idx);
     setPhase('submitted');
 
-    // Save choice to session storage to persist across student refreshes
-    try {
-      sessionStorage.setItem(`alix_sub_${sessionId}_q${currentIdxRef.current}`, idx.toString());
-    } catch {}
-
     const timeSpentMs = Math.max(
       100,
       ((currentQuestion.timeLimit || 30) - secondsRemaining) * 1000
     );
+    responseTimeRef.current = timeSpentMs;
     setResponseTimeMs(timeSpentMs);
+    liveAnswerCountRef.current = Math.max(liveAnswerCountRef.current, 1);
+    setLiveAnswerCount((prev) => Math.max(prev, 1));
+
+    // Save choice and response time to session storage to persist across student refreshes
+    try {
+      sessionStorage.setItem(`alix_sub_${sessionId}_q${currentIdxRef.current}`, idx.toString());
+      sessionStorage.setItem(`alix_time_${sessionId}_q${currentIdxRef.current}`, timeSpentMs.toString());
+    } catch {}
 
     try {
       const socket = getSocket();
@@ -616,6 +653,7 @@ export const PlayPage: React.FC = () => {
       sessionStorage.removeItem(`alix_streak_${sessionId}`);
       for (let i = 0; i < 50; i++) {
         sessionStorage.removeItem(`alix_sub_${sessionId}_q${i}`);
+        sessionStorage.removeItem(`alix_time_${sessionId}_q${i}`);
       }
     } catch {}
     navigate('/join');
@@ -948,11 +986,11 @@ export const PlayPage: React.FC = () => {
                 <div className="p-3 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-md text-center">
                   <div className="text-[10px] font-black uppercase tracking-wider text-purple-300 mb-1">Your Response Time</div>
                   <div className="text-2xl font-heading font-black text-white">
-                    {responseTimeMs !== null
-                      ? responseTimeMs < 1000
-                        ? `${responseTimeMs}ms`
-                        : `${(responseTimeMs / 1000).toFixed(1)}s`
-                      : '—'}
+                    {(() => {
+                      const t = responseTimeMs ?? responseTimeRef.current;
+                      if (t === null || isNaN(t)) return '—';
+                      return t < 1000 ? `${t}ms` : `${(t / 1000).toFixed(1)}s`;
+                    })()}
                   </div>
                   <div className="text-[10px] text-white/50 mt-0.5">faster = more points</div>
                 </div>
@@ -961,9 +999,11 @@ export const PlayPage: React.FC = () => {
                 <div className="p-3 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-md text-center">
                   <div className="text-[10px] font-black uppercase tracking-wider text-purple-300 mb-1">Room Answered</div>
                   <div className="text-2xl font-heading font-black text-white">
-                    {liveAnswerCount}
+                    {Math.max(liveAnswerCount, liveAnswerCountRef.current, 1)}
                   </div>
-                  <div className="text-[10px] text-white/50 mt-0.5">player{liveAnswerCount !== 1 ? 's' : ''} so far</div>
+                  <div className="text-[10px] text-white/50 mt-0.5">
+                    player{Math.max(liveAnswerCount, liveAnswerCountRef.current, 1) !== 1 ? 's' : ''} so far
+                  </div>
                 </div>
               </div>
             )}
