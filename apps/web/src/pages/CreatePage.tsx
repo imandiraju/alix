@@ -1136,7 +1136,7 @@ export const CreatePage: React.FC = () => {
                     setRevealSolution(false);
                     setIsFullscreenPresentation(true);
                   }}
-                  className="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm"
+                  className="w-full py-2.5 px-3 rounded-xl bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm"
                 >
                   <Play className="w-3.5 h-3.5 fill-current text-cyan-400" />
                   <span>Present Slide Deck</span>
@@ -1179,9 +1179,9 @@ export const CreatePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate(`/host/${createdQuizId}`)}
-                className="w-full py-3.5 px-4 rounded-xl bg-alix-indigo hover:bg-alix-indigo/90 text-white font-bold text-sm shadow-alix-md hover:shadow-alix-glow transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3.5 px-4 rounded-xl bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Play className="w-4 h-4 fill-current text-alix-cyan-400" />
+                <Play className="w-4 h-4 fill-current text-white" />
                 <span>Launch Live Session Now</span>
               </button>
 

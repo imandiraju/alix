@@ -189,7 +189,7 @@ export const InsightsPage: React.FC = () => {
 
             <Link
               to="/dashboard"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#1368CE] hover:bg-[#0F52A4] text-white text-xs sm:text-sm font-semibold shadow-xs transition-all active:scale-95"
+              className="inline-flex items-center gap-1.5 bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs sm:text-sm px-4 py-2 rounded-xl shadow-sm transition-all cursor-pointer"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               <span>Host Live Game</span>

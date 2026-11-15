@@ -507,9 +507,9 @@ export const DashboardPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Link
                   to="/create"
-                  className="inline-flex items-center gap-1.5 bg-[#1368CE] hover:bg-[#0F52A4] text-white font-semibold text-xs sm:text-sm px-3.5 py-2 rounded-lg shadow-xs transition-all active:scale-95"
+                  className="inline-flex items-center gap-1.5 bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs sm:text-sm px-4 py-2 rounded-xl shadow-sm transition-all cursor-pointer"
                 >
-                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                  <Plus className="w-4 h-4 stroke-[3]" />
                   <span>New Activity</span>
                 </Link>
               </div>
@@ -551,9 +551,9 @@ export const DashboardPage: React.FC = () => {
                 </p>
                 <Link
                   to="/create"
-                  className="inline-flex items-center gap-1.5 bg-[#46178F] hover:bg-[#3D147D] text-white font-semibold text-xs px-4 py-2 rounded-lg transition-all shadow-xs"
+                  className="inline-flex items-center gap-1.5 bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all cursor-pointer"
                 >
-                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                  <Plus className="w-4 h-4 stroke-[3]" />
                   <span>Create Activity</span>
                 </Link>
               </div>
@@ -596,7 +596,7 @@ export const DashboardPage: React.FC = () => {
                     <div className="pt-4 mt-3 border-t border-[#E5E5E5] flex items-center justify-between gap-2 flex-wrap">
                       <Link
                         to={`/host/${quiz._id}`}
-                        className="inline-flex items-center gap-1.5 bg-[#1368CE] hover:bg-[#0F52A4] text-white font-semibold text-xs px-3.5 py-1.5 rounded-lg shadow-xs transition-colors"
+                        className="inline-flex items-center gap-1.5 bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs px-3.5 py-2 rounded-xl shadow-sm transition-all cursor-pointer"
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />
                         <span>Host Live</span>
@@ -955,7 +955,7 @@ export const DashboardPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSavingRoster || parsedStudents.length === 0}
-                  className="px-5 py-2.5 rounded-xl bg-[#46178F] hover:bg-[#350F6E] border-b-2 border-[#240A4B] active:border-b-0 active:translate-y-0.5 text-white text-xs font-heading font-black transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white text-xs font-heading font-black transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <ShieldCheck className="w-4 h-4" />
                   <span>

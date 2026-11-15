@@ -56,31 +56,31 @@
    * ========================================================================= */
 
   .btn-tactile-primary {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-heading font-extrabold text-sm rounded-xl border-b-4 border-violet-800 active:border-b-0 active:translate-y-1 transition-all duration-75 shadow-sm cursor-pointer select-none disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#46178F] hover:bg-[#3D147D] text-white font-heading font-black text-sm rounded-xl border-b-4 border-[#2D0F5E] active:border-b-0 active:translate-y-1 transition-all duration-75 shadow-sm cursor-pointer select-none disabled:opacity-50 disabled:pointer-events-none;
   }
 
   .btn-tactile-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-heading font-extrabold text-sm rounded-xl border-b-4 border-slate-950 active:border-b-0 active:translate-y-1 transition-all duration-75 shadow-sm cursor-pointer select-none disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-heading font-black text-sm rounded-xl border-b-4 border-slate-950 active:border-b-0 active:translate-y-1 transition-all duration-75 shadow-sm cursor-pointer select-none disabled:opacity-50 disabled:pointer-events-none;
   }
 
   .btn-tactile-white {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-800 font-heading font-extrabold text-sm rounded-xl border-2 border-slate-300 border-b-4 border-b-slate-400 active:border-b-2 active:translate-y-1 transition-all duration-75 shadow-sm cursor-pointer select-none disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 text-slate-800 font-heading font-black text-sm rounded-xl border border-slate-300 border-b-4 border-b-slate-400 active:border-b active:translate-y-1 transition-all duration-75 shadow-sm cursor-pointer select-none disabled:opacity-50 disabled:pointer-events-none;
   }
 
   .btn-tactile-blue {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1368CE] hover:bg-[#1877F2] text-white font-heading font-extrabold text-sm rounded-xl border-b-4 border-[#0F52A4] active:border-b-0 active:translate-y-1 transition-all duration-75 shadow-sm cursor-pointer select-none disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#1368CE] hover:bg-[#0E58B3] text-white font-heading font-black text-sm rounded-xl border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 transition-all duration-75 shadow-sm cursor-pointer select-none disabled:opacity-50 disabled:pointer-events-none;
   }
 
   .btn-tactile-green {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#26890C] hover:bg-[#2EA810] text-white font-heading font-extrabold text-sm rounded-xl border-b-4 border-[#1C6409] active:border-b-0 active:translate-y-1 transition-all duration-75 shadow-sm cursor-pointer select-none disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#26890C] hover:bg-[#20740A] text-white font-heading font-black text-sm rounded-xl border-b-4 border-[#175407] active:border-b-0 active:translate-y-1 transition-all duration-75 shadow-sm cursor-pointer select-none disabled:opacity-50 disabled:pointer-events-none;
   }
 
   .btn-tactile-red {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#E21B3C] hover:bg-[#F0284A] text-white font-heading font-extrabold text-sm rounded-xl border-b-4 border-[#B5142F] active:border-b-0 active:translate-y-1 transition-all duration-75 shadow-sm cursor-pointer select-none disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#E21B3C] hover:bg-[#C91433] text-white font-heading font-black text-sm rounded-xl border-b-4 border-[#990F26] active:border-b-0 active:translate-y-1 transition-all duration-75 shadow-sm cursor-pointer select-none disabled:opacity-50 disabled:pointer-events-none;
   }
 
   .btn-tactile-amber {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#D89E00] hover:bg-[#E8AA00] text-white font-heading font-extrabold text-sm rounded-xl border-b-4 border-[#A77A00] active:border-b-0 active:translate-y-1 transition-all duration-75 shadow-sm cursor-pointer select-none disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#D89E00] hover:bg-[#B88600] text-white font-heading font-black text-sm rounded-xl border-b-4 border-[#8A6500] active:border-b-0 active:translate-y-1 transition-all duration-75 shadow-sm cursor-pointer select-none disabled:opacity-50 disabled:pointer-events-none;
   }
 
   /* Tactile Solid Cards */

@@ -76,7 +76,7 @@ export const Navbar: React.FC = () => {
           {/* Quick Join Game PIN Link */}
           <Link
             to="/join"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E5E5E5] text-[#252525] hover:bg-[#F3F3F3] hover:border-slate-300 font-medium text-xs sm:text-sm transition-all"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 border-b-4 border-b-slate-400 bg-white hover:bg-slate-50 text-[#252525] font-heading font-bold text-xs sm:text-sm active:border-b-2 active:translate-y-0.5 transition-all shadow-xs cursor-pointer"
           >
             <span className="flex items-center gap-0.5 text-[10px]">
               <span className="text-[#E21B5A]">▲</span>
@@ -93,20 +93,20 @@ export const Navbar: React.FC = () => {
               {user.role === 'admin' && (
                 <Link
                   to="/admin"
-                  className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 hover:bg-amber-100 text-xs font-semibold transition-all shadow-xs"
+                  className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 border-b-4 border-amber-700 active:border-b-0 active:translate-y-1 text-white text-xs font-heading font-black transition-all shadow-xs cursor-pointer"
                   title="Platform Admin & OpenRouter Key Vault"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-white" />
                   <span>Admin Portal</span>
                 </Link>
               )}
 
-              {/* Signature Kahoot-Blue Create Button */}
+              {/* Signature Kahoot-Blue Tactile Create Button */}
               <Link
                 to="/create"
-                className="inline-flex items-center gap-1.5 bg-[#1368CE] hover:bg-[#0F52A4] text-white font-semibold text-xs sm:text-sm px-4 py-2 rounded-lg shadow-xs active:scale-95 transition-all"
+                className="inline-flex items-center gap-1.5 bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-xs sm:text-sm px-4 py-2 rounded-xl shadow-sm transition-all cursor-pointer"
               >
-                <Plus className="w-4 h-4 stroke-[2.5]" />
+                <Plus className="w-4 h-4 stroke-[3]" />
                 <span>Create</span>
               </Link>
 

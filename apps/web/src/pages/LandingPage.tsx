@@ -210,7 +210,7 @@ export const LandingPage: React.FC = () => {
             {/* Student Quick Join PIN */}
             <Link
               to="/join"
-              className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-[#46178F] hover:bg-[#391275] text-white font-semibold text-base shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2.5 cursor-pointer"
+              className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-[#46178F] hover:bg-[#3D147D] border-b-4 border-[#2D0F5E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-base shadow-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer"
             >
               <span className="flex items-center gap-0.5 text-xs">
                 <span className="text-[#E21B5A]">▲</span>
@@ -225,7 +225,7 @@ export const LandingPage: React.FC = () => {
             {/* Teacher Create Game */}
             <Link
               to="/create"
-              className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-[#1368CE] hover:bg-[#0F52A4] text-white font-semibold text-base shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-base shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <PlusSquare className="w-4 h-4 stroke-[2.5]" />
               <span>Create an Activity</span>
@@ -269,10 +269,10 @@ export const LandingPage: React.FC = () => {
                 <div className="pt-2 flex flex-wrap gap-4">
                   <Link
                     to="/dashboard"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#1368CE] hover:bg-[#0F52A4] text-white font-semibold text-sm transition-all shadow-sm"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-sm transition-all shadow-sm cursor-pointer"
                   >
                     <span>Launch Educator Dashboard</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                   </Link>
                 </div>
               </div>
