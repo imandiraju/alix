@@ -309,7 +309,7 @@ export const AdminPage: React.FC = () => {
                 Platform Admin & AI Gateway Settings
               </h1>
               <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
-                Centralized cloud management for OpenRouter API keys, model failover sequences (Grok ➡️ Gemini), and platform metrics. Changes apply instantly across all active lecture sessions with zero server interruption.
+                Centralized cloud management for platform AI gateway credentials, multi-tier neural failover sequences, and platform metrics. Changes apply instantly across all active lecture sessions with zero server interruption.
               </p>
             </div>
 
@@ -509,12 +509,12 @@ export const AdminPage: React.FC = () => {
                     onChange={(e) => setPrimaryModel(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 outline-none focus:border-indigo-600 cursor-pointer"
                   >
-                    <option value="x-ai/grok-2-vision-1212">xAI Grok 2 Vision (Recommended)</option>
-                    <option value="x-ai/grok-beta">xAI Grok Beta</option>
-                    <option value="google/gemini-2.0-flash-exp:free">Google Gemini 2.0 Flash (Free)</option>
-                    <option value="google/gemini-2.0-flash-001">Google Gemini 2.0 Flash (Production)</option>
-                    <option value="anthropic/claude-3.5-sonnet">Anthropic Claude 3.5 Sonnet</option>
-                    <option value="openai/gpt-4o">OpenAI GPT-4o</option>
+                    <option value="x-ai/grok-2-vision-1212">ALIX High-Performance Neural Engine (Recommended)</option>
+                    <option value="x-ai/grok-beta">ALIX Precision Reasoning Engine</option>
+                    <option value="google/gemini-2.0-flash-exp:free">ALIX Ultra-Fast Inference Engine (Standard)</option>
+                    <option value="google/gemini-2.0-flash-001">ALIX Ultra-Fast Production Engine</option>
+                    <option value="anthropic/claude-3.5-sonnet">ALIX Deep Pedagogical Synthesis Engine</option>
+                    <option value="openai/gpt-4o">ALIX Comprehensive Curriculum Engine</option>
                   </select>
                 </div>
 
@@ -527,10 +527,10 @@ export const AdminPage: React.FC = () => {
                     onChange={(e) => setFallbackModel(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 outline-none focus:border-indigo-600 cursor-pointer"
                   >
-                    <option value="google/gemini-2.0-flash-exp:free">Google Gemini 2.0 Flash (Free Tier)</option>
-                    <option value="google/gemini-flash-1.5">Google Gemini Flash 1.5</option>
-                    <option value="meta-llama/llama-3.3-70b-instruct:free">Meta Llama 3.3 70B (Free)</option>
-                    <option value="qwen/qwen-2.5-72b-instruct:free">Qwen 2.5 72B (Free)</option>
+                    <option value="google/gemini-2.0-flash-exp:free">ALIX Ultra-Fast Inference Engine (Standard)</option>
+                    <option value="google/gemini-flash-1.5">ALIX Balanced Academic Engine</option>
+                    <option value="meta-llama/llama-3.3-70b-instruct:free">ALIX High-Capacity Backup Engine</option>
+                    <option value="qwen/qwen-2.5-72b-instruct:free">ALIX Multilingual Reasoning Engine</option>
                   </select>
                 </div>
               </div>
@@ -572,7 +572,7 @@ export const AdminPage: React.FC = () => {
                 <div className="p-3 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2 font-bold text-purple-900">
                     <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px]">1</span>
-                    <span>xAI Grok 2 Vision</span>
+                    <span>ALIX Primary Neural Engine</span>
                   </div>
                   <span className="text-[10px] font-black uppercase text-purple-700">Primary</span>
                 </div>
@@ -580,7 +580,7 @@ export const AdminPage: React.FC = () => {
                 <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2 font-bold text-indigo-900">
                     <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">2</span>
-                    <span>Google Gemini 2.0 Flash</span>
+                    <span>ALIX Accelerated Failover Engine</span>
                   </div>
                   <span className="text-[10px] font-black uppercase text-indigo-700">Failover</span>
                 </div>
@@ -588,7 +588,7 @@ export const AdminPage: React.FC = () => {
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2 font-bold text-slate-700">
                     <span className="w-5 h-5 rounded-full bg-slate-600 text-white flex items-center justify-center text-[10px]">3</span>
-                    <span>Meta Llama 3.3 Free</span>
+                    <span>ALIX High-Capacity Backup Engine</span>
                   </div>
                   <span className="text-[10px] font-black uppercase text-slate-500">Backup</span>
                 </div>
@@ -665,7 +665,7 @@ export const AdminPage: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                AI Studio is a Premium feature. Only educators with active licenses enabled below can generate questions using the platform OpenRouter gateway.
+                AI Studio is a Premium feature. Only educators with active licenses enabled below can generate questions using the platform ALIX AI gateway.
               </p>
             </div>
 

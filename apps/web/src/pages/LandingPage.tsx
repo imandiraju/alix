@@ -157,7 +157,7 @@ export const LandingPage: React.FC = () => {
     {
       name: 'AI Quiz Studio',
       tagline: 'Instant Question Generation',
-      desc: 'Synthesize curriculum-aligned quiz questions in seconds from your lecture notes or syllabus prompts using Grok-2 & Gemini 2.0.',
+      desc: 'Synthesize curriculum-aligned quiz questions in seconds from your lecture notes or syllabus prompts using ALIX AI.',
       icon: Sparkles,
       shape: '★',
       accent: 'border-[#E5E5E5] hover:border-[#46178F] bg-white',

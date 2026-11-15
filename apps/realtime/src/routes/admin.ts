@@ -101,7 +101,7 @@ router.post('/config', async (req: Request, res: Response) => {
             value: trimmed,
             maskedValue: maskSecretKey(trimmed),
             category: 'ai',
-            description: 'Platform OpenRouter AI API Key for Grok & Gemini',
+            description: 'Platform AI Gateway API Key (Multi-tier ALIX AI)',
             status: 'untested',
             updatedBy: editorName,
           },
@@ -266,9 +266,9 @@ router.get('/overview', async (req: Request, res: Response) => {
         status: keyConfig?.status || (process.env.OPENROUTER_API_KEY ? 'active' : 'unconfigured'),
         lastTested: keyConfig?.lastTestedAt || null,
         modelsConfigured: [
-          'x-ai/grok-2-vision-1212 (Primary)',
-          'google/gemini-2.0-flash-exp:free (Fast Failover)',
-          'meta-llama/llama-3.3-70b-instruct:free (Backup)',
+          'ALIX High-Performance Neural Engine (Primary)',
+          'ALIX Ultra-Fast Inference Engine (Failover)',
+          'ALIX High-Capacity Backup Engine (Backup)',
         ],
       },
     });

@@ -676,7 +676,7 @@ export const DiscoverPage: React.FC = () => {
                       AI Question Synthesis
                     </h3>
                     <p className="text-[11px] text-white/80 line-clamp-2 mt-1 font-normal leading-relaxed">
-                      Auto-generate curriculum-aligned slides using Grok-2 & Gemini 2.0.
+                      Auto-generate curriculum-aligned slides using ALIX AI.
                     </p>
                   </div>
                 </div>

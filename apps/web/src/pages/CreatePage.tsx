@@ -501,7 +501,7 @@ export const CreatePage: React.FC = () => {
                 type="button"
                 onClick={() => setIsAiModalOpen(true)}
                 className="btn-tactile-primary"
-                title="Generate quiz with Grok ➡️ Gemini AI (Enterprise Feature)"
+                title="Generate quiz with ALIX AI (Enterprise Feature)"
               >
                 <Sparkles className="w-4 h-4 text-amber-300" />
                 <span>AI Quiz Studio</span>

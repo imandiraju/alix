@@ -102,7 +102,7 @@ export const AiQuizStudioModal: React.FC<AiQuizStudioModalProps> = ({
     setGenerationStep('Step 1/3: 🔍 Extracting pedagogical concepts & boundary conditions...');
 
     const step2Timer = setTimeout(() => {
-      setGenerationStep('Step 2/3: 🧠 Connecting OpenRouter (Grok-2 ➡️ Gemini 2.0 Flash Failover)...');
+      setGenerationStep('Step 2/3: 🧠 Engaging ALIX AI Neural Engine...');
     }, 1500);
 
     const step3Timer = setTimeout(() => {
@@ -134,7 +134,7 @@ export const AiQuizStudioModal: React.FC<AiQuizStudioModalProps> = ({
       const data = await res.json();
       if (res.ok && data.success && data.quiz) {
         setGeneratedQuiz(data.quiz);
-        setModelUsed(data.modelUsed || 'OpenRouter Multi-Model Engine');
+        setModelUsed(data.modelUsed || 'ALIX AI Pedagogical Engine');
       } else {
         setErrorMessage(data.error || 'AI generation failed. Please try again.');
       }
@@ -178,7 +178,7 @@ export const AiQuizStudioModal: React.FC<AiQuizStudioModalProps> = ({
                 </span>
               </div>
               <p className="text-xs font-semibold text-slate-500">
-                Automated Question Synthesis • Grok-2 & Gemini 2.0 Flash Engine
+                Automated Question Synthesis • ALIX AI Pedagogical Engine
               </p>
             </div>
           </div>
@@ -218,7 +218,7 @@ export const AiQuizStudioModal: React.FC<AiQuizStudioModalProps> = ({
                   AI Quiz Studio License Inactive
                 </h3>
                 <p className="text-sm font-medium text-slate-600 leading-relaxed">
-                  Automatic question synthesis using <strong>Grok-2 & Gemini 2.0 Flash</strong> is controlled centrally by the Platform Administrator for RKGlobal EdTech.
+                  Automatic question synthesis using <strong>ALIX AI</strong> is controlled centrally by the Platform Administrator for RKGlobal EdTech.
                 </p>
               </div>
 

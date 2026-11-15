@@ -6,8 +6,25 @@ import { Teacher } from '../models/Teacher.js';
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'alix-edtech-secret-jwt-key-2026';
 
+// Brand formatting helper to maintain strict ALIX AI proprietary identity
+function formatBrandModelName(rawModelName: string): string {
+  if (rawModelName.includes('grok-2') || rawModelName.includes('vision')) {
+    return 'ALIX High-Performance Neural Engine';
+  }
+  if (rawModelName.includes('grok')) {
+    return 'ALIX Precision Reasoning Engine';
+  }
+  if (rawModelName.includes('gemini-2') || rawModelName.includes('flash')) {
+    return 'ALIX Ultra-Fast Inference Engine';
+  }
+  if (rawModelName.includes('heuristic')) {
+    return 'ALIX Pedagogical Engine';
+  }
+  return 'ALIX AI Neural Engine';
+}
+
 // Model failover priority list
-// 1. Grok (x-ai) -> 2. Gemini (Google) -> 3. Llama / OpenRouter Free
+// 1. High-Performance Neural Engine -> 2. Ultra-Fast Inference Engine -> 3. High-Capacity Failover Engine
 const GROK_MODELS = ['x-ai/grok-2-vision-1212', 'x-ai/grok-beta'];
 const GEMINI_MODELS = [
   'google/gemini-2.0-flash-exp:free',
@@ -253,9 +270,9 @@ Ensure the questions test practical problem solving and identify common student 
     const heuristicQuiz = generateHeuristicQuiz(topic, subject, materialText, count);
     return res.json({
       success: true,
-      modelUsed: 'heuristic-pedagogical-engine',
+      modelUsed: 'ALIX Pedagogical Engine',
       quiz: heuristicQuiz,
-      notice: 'Generated with ALIX Pedagogical Engine. Connect OpenRouter API key for live Grok/Gemini models.',
+      notice: 'Generated with ALIX Pedagogical Engine. Connect platform AI key for live high-throughput synthesis.',
     });
   }
 
@@ -354,7 +371,7 @@ Ensure the questions test practical problem solving and identify common student 
 
         return res.json({
           success: true,
-          modelUsed: modelName,
+          modelUsed: formatBrandModelName(modelName),
           quiz: {
             title: parsedQuiz.title || topic || 'AI Generated Assessment',
             subject: parsedQuiz.subject || subject || 'General',
@@ -366,7 +383,7 @@ Ensure the questions test practical problem solving and identify common student 
     } catch (err: any) {
       console.warn(`[ALIX AI] Error with model ${modelName}:`, err.message);
       lastError = err;
-      // Continue to next model in failover chain (Grok -> Gemini -> Fallback)
+      // Continue to next model in failover chain
     }
   }
 
@@ -375,7 +392,7 @@ Ensure the questions test practical problem solving and identify common student 
   const fallbackQuiz = generateHeuristicQuiz(topic, subject, materialText, count);
   return res.json({
     success: true,
-    modelUsed: 'heuristic-pedagogical-engine (failover fallback)',
+    modelUsed: 'ALIX Pedagogical Engine (Adaptive Failover)',
     quiz: fallbackQuiz,
     errorNotice: lastError ? lastError.message : undefined,
   });
