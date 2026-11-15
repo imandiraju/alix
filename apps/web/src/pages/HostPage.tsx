@@ -8,6 +8,10 @@ import VictoryPodium from '../components/game/VictoryPodium';
 import { RenderAvatarSvg } from '../components/game/AlixSvgAvatars';
 import { getSocket, REALTIME_URL } from '../services/socket';
 import { useAuth } from '../context/AuthContext';
+import type {
+  MysteryVaultSettings,
+  VaultAggregateSummaryPayload,
+} from '@alix/shared';
 import {
   Users,
   Trophy,
@@ -36,6 +40,11 @@ import {
   LogOut,
   Crown,
   Tv,
+  Gift,
+  Zap,
+  Flame,
+  Coins,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface QuizQuestion {
@@ -69,7 +78,7 @@ export const HostPage: React.FC = () => {
   ]);
 
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
-  const [stage, setStage] = useState<'lobby' | 'question' | 'chart' | 'leaderboard' | 'victory'>('lobby');
+  const [stage, setStage] = useState<'lobby' | 'question' | 'chart' | 'vault' | 'leaderboard' | 'victory'>('lobby');
   const [timer, setTimer] = useState(30);
   const [answersSubmitted, setAnswersSubmitted] = useState(0);
   const [totalLearners, setTotalLearners] = useState(0);
@@ -79,6 +88,23 @@ export const HostPage: React.FC = () => {
   const [players, setPlayers] = useState<any[]>([]);
   const [showExitModal, setShowExitModal] = useState(false);
   const [showBackModal, setShowBackModal] = useState(false);
+
+  // Mystery Vault Host Settings & Round State
+  const [vaultSettings, setVaultSettings] = useState<MysteryVaultSettings>({
+    enabled: true,
+    frequency: 3,
+    intensity: 'balanced',
+    allowNegative: true,
+    maxBonusMultiplier: 3,
+    maxDeduction: 300,
+    bonusPoints: 300,
+    trapPoints: 200,
+  });
+  const [vaultSelectedCount, setVaultSelectedCount] = useState<number>(0);
+  const [vaultEligibleCount, setVaultEligibleCount] = useState<number>(0);
+  const [vaultSummary, setVaultSummary] = useState<VaultAggregateSummaryPayload | null>(null);
+  const [vaultCountdown, setVaultCountdown] = useState<number>(15);
+  const [isVaultDueNext, setIsVaultDueNext] = useState<boolean>(false);
 
   // Team Mode State
   const [gameMode, setGameMode] = useState<'classic' | 'team'>('classic');
@@ -235,6 +261,9 @@ export const HostPage: React.FC = () => {
         if (data.gameMode) {
           setGameMode(data.gameMode);
         }
+        if (data.mysteryVault) {
+          setVaultSettings((prev) => ({ ...prev, ...data.mysteryVault }));
+        }
         if (data.isResumed && (data.status === 'playing' || typeof data.currentQuestionIndex === 'number' && data.currentQuestionIndex >= 0)) {
           setStage('question');
           if (typeof data.currentQuestionIndex === 'number') {
@@ -362,6 +391,45 @@ export const HostPage: React.FC = () => {
         setStage('victory');
       });
 
+      socket.on('answers-revealed', (data: any) => {
+        if (data?.isVaultDue) {
+          setIsVaultDueNext(true);
+        }
+      });
+
+      socket.on('mystery-vault-started', (data: any) => {
+        setStage('vault');
+        setVaultSelectedCount(0);
+        setVaultEligibleCount(players.length);
+        setVaultSummary(null);
+        setVaultCountdown(data.durationSeconds || data.timeLimitSeconds || 15);
+      });
+
+      socket.on('vault-selection-update', (data: any) => {
+        setVaultSelectedCount(data.totalSelected ?? data.selectedCount ?? 0);
+        setVaultEligibleCount(data.eligibleCount ?? data.totalEligible ?? players.length);
+      });
+
+      socket.on('vault-aggregate-summary', (data: any) => {
+        setVaultSummary(data);
+        if (Array.isArray(data.leaderboard)) {
+          setPlayers((prev) => {
+            return data.leaderboard.map((lb: any) => {
+              const match = prev.find(
+                (p) =>
+                  p.id === lb.playerId ||
+                  (p.name && lb.playerName && p.name.trim().toLowerCase() === lb.playerName.trim().toLowerCase())
+              );
+              return { ...(match || {}), ...lb };
+            });
+          });
+        }
+      });
+
+      socket.on('vault-round-completed', () => {
+        handleShowLeaderboard();
+      });
+
       socket.on('error', (err: any) => {
         console.warn('[ALIX Host Socket Warning]:', err);
       });
@@ -374,6 +442,11 @@ export const HostPage: React.FC = () => {
         socket.off('question-started');
         socket.off('timer-tick');
         socket.off('leaderboard-update');
+        socket.off('answers-revealed');
+        socket.off('mystery-vault-started');
+        socket.off('vault-selection-update');
+        socket.off('vault-aggregate-summary');
+        socket.off('vault-round-completed');
         socket.off('game-ended');
         socket.off('error');
       };
@@ -551,6 +624,98 @@ export const HostPage: React.FC = () => {
     } catch (err) {
       console.warn('Could not emit host-show-leaderboard:', err);
     }
+  };
+
+  // Mystery Vault Timer Countdown & Actions
+  useEffect(() => {
+    let timerId: any = null;
+    if (stage === 'vault' && !vaultSummary && vaultCountdown > 0) {
+      timerId = setInterval(() => {
+        setVaultCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerId);
+            handleRevealVault();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (timerId) clearInterval(timerId);
+    };
+  }, [stage, vaultSummary, vaultCountdown]);
+
+  const handleUpdateVaultSettings = (newSettings: Partial<MysteryVaultSettings>) => {
+    const updated = { ...vaultSettings, ...newSettings };
+    setVaultSettings(updated);
+    try {
+      const socket = getSocket();
+      socket.emit('configure-mystery-vault', {
+        sessionId: activeSessionId || pin,
+        code: pin,
+        settings: updated,
+      });
+    } catch (err) {
+      console.warn('Could not emit configure-mystery-vault:', err);
+    }
+  };
+
+  const handleStartMysteryVault = () => {
+    setStage('vault');
+    setVaultSelectedCount(0);
+    setVaultEligibleCount(players.length);
+    setVaultSummary(null);
+    setVaultCountdown(vaultSettings.durationSeconds || 15);
+    setIsVaultDueNext(false);
+    try {
+      const socket = getSocket();
+      socket.emit('host-start-vault', {
+        sessionId: activeSessionId || pin,
+        code: pin,
+        questionIndex: currentQuestionIdx,
+      });
+    } catch (err) {
+      console.warn('Could not emit host-start-vault:', err);
+    }
+  };
+
+  const handleRevealVault = () => {
+    try {
+      const socket = getSocket();
+      socket.emit('host-reveal-vault', {
+        sessionId: activeSessionId || pin,
+        code: pin,
+      });
+    } catch (err) {
+      console.warn('Could not emit host-reveal-vault:', err);
+    }
+  };
+
+  const handleSkipVault = () => {
+    try {
+      const socket = getSocket();
+      socket.emit('host-skip-vault', {
+        sessionId: activeSessionId || pin,
+        code: pin,
+      });
+    } catch (err) {
+      console.warn('Could not emit host-skip-vault:', err);
+    }
+    handleShowLeaderboard();
+  };
+
+  const handleCompleteVault = () => {
+    try {
+      const socket = getSocket();
+      socket.emit('host-complete-vault', {
+        sessionId: activeSessionId || pin,
+        code: pin,
+      });
+    } catch (err) {
+      console.warn('Could not emit host-complete-vault:', err);
+    }
+    handleShowLeaderboard();
   };
 
   // Anti-Proxy Shield: Close Room Doors to Outsiders
@@ -1160,6 +1325,125 @@ export const HostPage: React.FC = () => {
                   />
                 </button>
               </div>
+
+              {/* ALIX Mystery Vault Session Settings Card */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#E5E5E5] max-w-xl mx-auto shadow-xs text-left transition-all">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
+                        vaultSettings.enabled
+                          ? 'bg-amber-100 text-amber-700 shadow-xs'
+                          : 'bg-slate-100 text-slate-400'
+                      }`}
+                    >
+                      <Gift className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-heading font-black text-xs sm:text-sm text-[#252525] flex items-center gap-2">
+                        <span>ALIX Mystery Vault</span>
+                        <span
+                          className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                            vaultSettings.enabled
+                              ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}
+                        >
+                          {vaultSettings.enabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#626262] leading-tight mt-0.5">
+                        Surprise rewards, score multipliers, shields & traps between questions.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateVaultSettings({ enabled: !vaultSettings.enabled })}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      vaultSettings.enabled ? 'bg-amber-500' : 'bg-slate-300'
+                    }`}
+                    role="switch"
+                    aria-checked={vaultSettings.enabled}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        vaultSettings.enabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {vaultSettings.enabled && (
+                  <div className="mt-4 pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3 animate-fade-in">
+                    {/* Frequency */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                        Frequency
+                      </label>
+                      <div className="flex rounded-xl bg-slate-100 p-0.5 gap-1">
+                        {[2, 3, 5].map((freq) => (
+                          <button
+                            key={freq}
+                            type="button"
+                            onClick={() => handleUpdateVaultSettings({ frequency: freq })}
+                            className={`flex-1 py-1 rounded-lg text-xs font-heading font-black transition-all ${
+                              vaultSettings.frequency === freq
+                                ? 'bg-white text-amber-700 shadow-xs border-b-2 border-amber-300'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            Every {freq}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Intensity */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                        Intensity
+                      </label>
+                      <div className="flex rounded-xl bg-slate-100 p-0.5 gap-1">
+                        {(['low', 'balanced', 'high'] as const).map((lvl) => (
+                          <button
+                            key={lvl}
+                            type="button"
+                            onClick={() => handleUpdateVaultSettings({ intensity: lvl })}
+                            className={`flex-1 py-1 rounded-lg text-xs font-heading font-black capitalize transition-all ${
+                              vaultSettings.intensity === lvl
+                                ? 'bg-white text-purple-700 shadow-xs border-b-2 border-purple-300'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            {lvl}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Allow Traps */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                        Traps (-Pts)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateVaultSettings({ allowNegative: !vaultSettings.allowNegative })}
+                        className={`w-full py-1.5 px-2.5 rounded-xl text-xs font-heading font-black border transition-all flex items-center justify-between ${
+                          vaultSettings.allowNegative
+                            ? 'bg-rose-50 text-rose-700 border-rose-200'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        }`}
+                      >
+                        <span>{vaultSettings.allowNegative ? 'Allowed' : 'Blocked'}</span>
+                        <span className="text-[10px]">{vaultSettings.allowNegative ? '⚠️ On' : '🛡️ Safe'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Giant Kahoot-Style Join & PIN Billboard */}
@@ -1308,16 +1592,16 @@ export const HostPage: React.FC = () => {
               )}
             </div>
 
-            {/* Giant 3D Launchpad Start Button */}
+            {/* Giant 3D Launchpad Start Button (Aligned with 3D Host Live style) */}
             <div className="pt-2">
               <button
                 type="button"
                 onClick={handleStartSession}
                 disabled={displayLearnerCount === 0}
-                className={`px-10 py-4 sm:py-5 rounded-2xl text-white font-heading font-black text-lg sm:text-2xl shadow-xl transition-all duration-100 inline-flex items-center gap-3 ${
+                className={`px-10 py-4 sm:py-5 rounded-2xl text-white font-heading font-black text-lg sm:text-2xl transition-all duration-100 inline-flex items-center gap-3 ${
                   displayLearnerCount === 0
-                    ? 'bg-slate-300 border-b-6 border-slate-400 opacity-60 cursor-not-allowed text-slate-600'
-                    : 'bg-[#26890C] hover:bg-[#20740A] border-b-6 border-[#175407] active:border-b-0 active:translate-y-1.5 cursor-pointer group shadow-emerald-900/30'
+                    ? 'bg-slate-200 border-b-4 border-slate-300 shadow-[0_4px_0_#cbd5e1] text-slate-400 cursor-not-allowed'
+                    : 'bg-[#0B63E5] hover:bg-[#0952c4] border-b-4 border-[#063b8d] shadow-[0_5px_0_#04265c] active:translate-y-1 active:border-b-2 active:shadow-none cursor-pointer group shadow-blue-900/20'
                 }`}
               >
                 <span>
@@ -1658,19 +1942,31 @@ export const HostPage: React.FC = () => {
               <div className="pt-8 flex flex-wrap items-center justify-center gap-4">
                 {currentQuestionIdx + 1 < questions.length ? (
                   <>
-                    <button
-                      type="button"
-                      onClick={handleNextQuestion}
-                      className="px-8 py-3.5 rounded-2xl bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#175407] active:border-b-0 active:translate-y-1 text-white font-heading font-black text-lg sm:text-xl shadow-lg flex items-center gap-3 cursor-pointer transition-all"
-                    >
-                      <span>Next Question ({currentQuestionIdx + 2} of {questions.length})</span>
-                      <ArrowRight className="w-5 h-5 stroke-[3]" />
-                    </button>
+                    {vaultSettings.enabled && (isVaultDueNext || (currentQuestionIdx + 1) % (vaultSettings.frequency || 3) === 0) ? (
+                      <button
+                        type="button"
+                        onClick={handleStartMysteryVault}
+                        className="px-9 py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 hover:from-amber-600 hover:to-yellow-500 text-slate-950 font-heading font-black text-lg sm:text-xl shadow-[0_5px_0_#92400e] active:translate-y-1 active:shadow-none flex items-center gap-3 cursor-pointer transition-all animate-pulse"
+                      >
+                        <Sparkles className="w-6 h-6 text-amber-950 animate-spin" />
+                        <span>Open ALIX Mystery Vault!</span>
+                        <ArrowRight className="w-5 h-5 stroke-[3]" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleNextQuestion}
+                        className="px-8 py-3.5 rounded-2xl bg-[#0B63E5] hover:bg-[#0952c4] shadow-[0_4px_0_#063b8d] active:translate-y-1 active:shadow-none text-white font-heading font-black text-lg sm:text-xl flex items-center gap-3 cursor-pointer transition-all"
+                      >
+                        <span>Next Question ({currentQuestionIdx + 2} of {questions.length})</span>
+                        <ArrowRight className="w-5 h-5 stroke-[3]" />
+                      </button>
+                    )}
 
                     <button
                       type="button"
                       onClick={handleShowLeaderboard}
-                      className="px-6 py-3.5 rounded-2xl bg-[#F3F3F3] hover:bg-[#E5E5E5] border border-[#E0E0E0] text-[#252525] font-heading font-black text-sm sm:text-base flex items-center gap-2 cursor-pointer shadow-xs transition-all"
+                      className="px-6 py-3.5 rounded-2xl bg-[#F3F3F3] hover:bg-[#E5E5E5] border border-[#E0E0E0] shadow-[0_3px_0_#d4d4d4] active:translate-y-0.5 active:shadow-none text-[#252525] font-heading font-black text-sm sm:text-base flex items-center gap-2 cursor-pointer transition-all"
                     >
                       <Trophy className="w-4 h-4 text-amber-500" />
                       <span>View Leaderboard</span>
@@ -1680,7 +1976,7 @@ export const HostPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleNextQuestion}
-                    className="px-10 py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 border-b-6 border-amber-700 active:border-b-0 active:translate-y-1.5 text-white font-heading font-black text-xl sm:text-2xl shadow-xl flex items-center gap-3 cursor-pointer transition-all"
+                    className="px-10 py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 shadow-[0_6px_0_#b45309] active:translate-y-1.5 active:shadow-none text-white font-heading font-black text-xl sm:text-2xl flex items-center gap-3 cursor-pointer transition-all"
                   >
                     <Trophy className="w-6 h-6 stroke-[2.5]" />
                     <span>Final Podium & Results</span>
@@ -1691,6 +1987,150 @@ export const HostPage: React.FC = () => {
             </div>
           );
         })()}
+
+        {/* Stage: ALIX Mystery Vault Arena (Host Projector View) */}
+        {stage === 'vault' && (
+          <div className="space-y-6 sm:space-y-8 animate-fade-in max-w-5xl mx-auto w-full">
+            {/* Arena Header */}
+            <div className="bg-gradient-to-r from-[#46178F] via-[#350F6E] to-[#2B0C54] rounded-3xl p-6 sm:p-10 text-white shadow-xl relative overflow-hidden border border-white/10 text-center">
+              <div className="relative z-10 space-y-2">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-400/20 border border-amber-300/40 text-amber-300 font-heading font-black text-xs sm:text-sm tracking-wider uppercase mb-1 animate-pulse">
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>ALIX Mystery Vault Round</span>
+                </div>
+                <h2 className="text-3xl sm:text-5xl font-heading font-black tracking-tight drop-shadow-md">
+                  Choose Your Mystery Vault!
+                </h2>
+                <p className="text-sm sm:text-base text-white/80 max-w-xl mx-auto">
+                  Learners are selecting one of three surprise vaults on their mobile screens.
+                </p>
+
+                {/* Progress & Live Selection Bar */}
+                <div className="mt-6 max-w-md mx-auto space-y-2">
+                  <div className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-white/90">
+                    <span className="flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-cyan-300" />
+                      <span>{vaultSelectedCount} of {vaultEligibleCount || players.length} Learners Opened</span>
+                    </span>
+                    {!vaultSummary && (
+                      <span className="flex items-center gap-1 font-mono text-amber-300">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>{vaultCountdown}s</span>
+                      </span>
+                    )}
+                  </div>
+                  <div className="h-3 w-full bg-white/15 rounded-full overflow-hidden p-0.5 backdrop-blur-sm">
+                    <div
+                      className="h-full bg-gradient-to-r from-amber-400 to-cyan-400 rounded-full transition-all duration-500 shadow-sm"
+                      style={{
+                        width: `${
+                          vaultEligibleCount > 0
+                            ? Math.min(100, Math.round((vaultSelectedCount / vaultEligibleCount) * 100))
+                            : 0
+                        }%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* The 3 Golden Mystery Chests */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[0, 1, 2].map((idx) => {
+                const chestTitles = ['Vault Alpha', 'Vault Beta', 'Vault Gamma'];
+                return (
+                  <div
+                    key={idx}
+                    className="p-8 rounded-3xl bg-white border border-slate-200 shadow-md text-center flex flex-col items-center justify-center space-y-4 relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 group"
+                  >
+                    <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-amber-300 via-amber-400 to-yellow-600 shadow-[0_8px_0_#92400e] flex items-center justify-center text-5xl border-2 border-amber-200 transform group-hover:scale-105 transition-transform animate-bounce">
+                      🎁
+                    </div>
+                    <div>
+                      <h4 className="font-heading font-black text-xl text-slate-900">{chestTitles[idx]}</h4>
+                      <p className="text-xs text-slate-500 mt-1">Contains a surprise reward or trap</p>
+                    </div>
+                    <div className="px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-black tracking-wide">
+                      ⚡ 2x Double · 🚀 3x Boost · 💎 Bonus · 🛡️ Shield
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Aggregate Reveal Summary (Shown after countdown or reveal button) */}
+            {vaultSummary && (
+              <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200 shadow-lg text-slate-900 space-y-6 animate-scale-in">
+                <div className="text-center space-y-1 border-b border-slate-100 pb-4">
+                  <span className="text-xs font-black uppercase tracking-widest text-[#46178F]">Collective Outcome</span>
+                  <h3 className="text-2xl sm:text-3xl font-heading font-black">Mystery Vault Results Distributed!</h3>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                  <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
+                    <span className="block text-2xl font-black text-emerald-600">
+                      +{vaultSummary.totalPointsAwarded?.toLocaleString() || 0}
+                    </span>
+                    <span className="text-xs font-bold text-emerald-800">Bonus Points Awarded</span>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200">
+                    <span className="block text-2xl font-black text-rose-600">
+                      -{vaultSummary.totalPointsDeducted?.toLocaleString() || 0}
+                    </span>
+                    <span className="text-xs font-bold text-rose-800">Points Trapped</span>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-cyan-50 border border-cyan-200">
+                    <span className="block text-2xl font-black text-cyan-600">
+                      {((vaultSummary.rewardDistribution?.double_points || 0) + (vaultSummary.rewardDistribution?.triple_boost || 0))}
+                    </span>
+                    <span className="text-xs font-bold text-cyan-800">Multipliers Armed</span>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
+                    <span className="block text-2xl font-black text-amber-600">
+                      {vaultSummary.shieldsActive || 0}
+                    </span>
+                    <span className="text-xs font-bold text-amber-800">Active Aegis Shields</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Host Action Control Buttons */}
+            <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+              {!vaultSummary ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleRevealVault}
+                    className="px-8 py-3.5 rounded-2xl bg-[#0B63E5] hover:bg-[#0952c4] text-white font-heading font-black text-base sm:text-lg shadow-[0_4px_0_#063b8d] active:translate-y-1 active:shadow-none flex items-center gap-2 cursor-pointer transition-all"
+                  >
+                    <Sparkles className="w-5 h-5" />
+                    <span>Reveal All Vaults Now</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSkipVault}
+                    className="px-6 py-3.5 rounded-2xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-heading font-bold text-sm shadow-[0_3px_0_#94a3b8] active:translate-y-0.5 active:shadow-none cursor-pointer transition-all"
+                  >
+                    Skip Vault Round
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleCompleteVault}
+                  className="px-10 py-4 rounded-2xl bg-[#26890C] hover:bg-[#20740A] text-white font-heading font-black text-lg sm:text-xl shadow-[0_4px_0_#175407] active:translate-y-1 active:shadow-none flex items-center gap-3 cursor-pointer transition-all animate-pulse"
+                >
+                  <Trophy className="w-6 h-6" />
+                  <span>Proceed to Leaderboard</span>
+                  <ArrowRight className="w-5 h-5 stroke-[3]" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Stage 3: Live Session Leaderboard */}
         {stage === 'leaderboard' && (() => {

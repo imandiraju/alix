@@ -1,5 +1,7 @@
 // ─── Session Types ──────────────────────────────────────────────────────────
 
+import type { MysteryVaultSettings, PlayerActiveBuffs } from './mysteryVault.js';
+
 export enum SessionStatus {
   WAITING = 'WAITING',
   PLAYING = 'PLAYING',
@@ -39,6 +41,9 @@ export interface Player {
   teamId?: string;
   teamName?: string;
   teamColor?: string;
+  activeBuffs?: PlayerActiveBuffs;
+  vaultPointsEarned?: number;
+  vaultPointsDeducted?: number;
 }
 
 export interface SessionSettings {
@@ -50,6 +55,7 @@ export interface SessionSettings {
   teamCount?: number;
   maxMembersPerTeam?: number; // 0 or undefined = unlimited
   teams?: Team[];
+  mysteryVault?: MysteryVaultSettings;
 }
 
 export interface GameSession {
@@ -61,6 +67,7 @@ export interface GameSession {
   players: Player[];
   currentQuestionIndex: number;
   settings: SessionSettings;
+  mysteryVault?: MysteryVaultSettings;
   gameMode?: 'classic' | 'team';
   teams?: Team[];
   section?: string;

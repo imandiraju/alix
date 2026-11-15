@@ -250,6 +250,7 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       code: session.code,
       gameMode: session.gameMode,
       teams: session.teams,
+      mysteryVault: session.mysteryVault,
       isResumed,
       status: session.status,
       currentQuestionIndex: session.currentQuestionIndex,
@@ -499,6 +500,33 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       }
     }
 
+    // If a Mystery Vault round is currently active, deliver state to the reconnecting/joining player
+    if (session.vaultRound && (session.vaultRound.status === 'selecting' || session.vaultRound.status === 'revealed')) {
+      socket.emit('mystery-vault-started', {
+        roundIndex: session.vaultRound.roundIndex,
+        roundId: session.vaultRound.roundId,
+        questionIndex: session.vaultRound.questionIndex,
+        durationSeconds: session.vaultRound.durationSeconds,
+        timeLimitSeconds: session.vaultRound.durationSeconds,
+        vaultCount: 3,
+        eligible: true,
+        settings: session.mysteryVault,
+      });
+
+      if (session.vaultRound.selections[socket.id]) {
+        const sel = session.vaultRound.selections[socket.id];
+        socket.emit('vault-reward-revealed', {
+          roundIndex: session.vaultRound.roundIndex,
+          roundId: session.vaultRound.roundId,
+          vaultIndex: sel.vaultIndex,
+          outcome: sel.outcome,
+          currentScore: player.score,
+          totalScore: player.score,
+          activeBuffs: player.activeBuffs || { activeShields: 0, activeStreakSavers: 0 },
+        });
+      }
+    }
+
     console.log(`[ALIX] Player "${player.name}" (${rollNo || 'Guest'}) joined session ${session.code}`);
   });
 
@@ -722,11 +750,20 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       ? payload.correctIndices
       : [cIdx];
 
+    const qNum = session.currentQuestionIndex + 1;
+    const totalQ = session.quiz?.questions.length || 0;
+    const isVaultDue =
+      Boolean(session.mysteryVault?.enabled) &&
+      qNum % (session.mysteryVault?.frequency || 3) === 0 &&
+      qNum < totalQ;
+
     const revealPayload = {
       questionIndex: session.currentQuestionIndex,
       correctIndex: cIdx,
       correctAnswer: cIdx.toString(),
       correctIndices: cIndices,
+      isVaultDue,
+      mysteryVaultSettings: session.mysteryVault,
       questionResults: {
         questionId: activeQ?.id,
         correctCount: answers.filter((a: any) => a.correct).length,
@@ -887,6 +924,169 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     (io.to(session.code) as any).emit('show-leaderboard', leaderboardPayload);
   });
 
+  // ─── Mystery Vault Realtime Handlers ──────────────────────────────────
+
+  (socket as any).on('configure-mystery-vault', (payload: any) => {
+    const session = resolveSession(socket, payload);
+    if (!session) return;
+
+    const updated = sessionManager.configureMysteryVault(session.id, payload.settings || {});
+    if (updated) {
+      (io.to(session.id) as any).emit('mystery-vault-configured', { settings: updated });
+      (io.to(session.code) as any).emit('mystery-vault-configured', { settings: updated });
+
+      GameSessionModel.findOneAndUpdate(
+        { pin: session.code },
+        { $set: { mysteryVaultSettings: updated } }
+      ).catch(() => {});
+    }
+  });
+
+  (socket as any).on('host-start-vault', (payload: any) => {
+    const session = resolveSession(socket, payload);
+    if (!session) return;
+
+    // Only the host can start a vault round
+    if (session.hostSocketId && session.hostSocketId !== socket.id) {
+      const isPlayer = session.players.some((p: any) => p.id === socket.id);
+      if (isPlayer) return;
+    }
+
+    const round = sessionManager.startMysteryVaultRound(
+      session.id,
+      typeof payload?.questionIndex === 'number' ? payload.questionIndex : session.currentQuestionIndex
+    );
+    if (!round) return;
+
+    const startedPayload = {
+      roundIndex: round.roundIndex,
+      roundId: round.roundId,
+      questionIndex: round.questionIndex,
+      durationSeconds: round.durationSeconds,
+      timeLimitSeconds: round.durationSeconds,
+      vaultCount: 3,
+      eligible: true,
+      settings: session.mysteryVault,
+    };
+
+    io.to(session.id).emit('mystery-vault-started', startedPayload);
+    io.to(session.code).emit('mystery-vault-started', startedPayload);
+  });
+
+  socket.on('select-vault', async (payload: { sessionId?: string; code?: string; roundIndex?: number; vaultIndex: number; idempotencyKey?: string }) => {
+    const session = resolveSession(socket, payload);
+    if (!session || !session.vaultRound || session.vaultRound.status !== 'selecting') {
+      return;
+    }
+
+    const player = session.players.find((p: any) => p.id === socket.id);
+    if (!player) return;
+
+    const result = sessionManager.recordVaultSelection(session.id, socket.id, payload.vaultIndex);
+    if (!result) return;
+
+    // 1. Deliver authoritative reward reveal to the individual selecting student
+    socket.emit('vault-reward-revealed', {
+      roundIndex: result.round.roundIndex,
+      roundId: result.round.roundId,
+      vaultIndex: payload.vaultIndex,
+      outcome: result.outcome,
+      currentScore: player.score,
+      totalScore: player.score,
+      activeBuffs: player.activeBuffs || { activeShields: 0, activeStreakSavers: 0 },
+    });
+
+    // 2. Broadcast live selection progress counter to the room/host screen
+    const selectedCount = Object.keys(result.round.selections).length;
+    const totalEligible = result.round.eligiblePlayerIds.length;
+
+    io.to(session.id).emit('vault-selection-update', {
+      roundIndex: result.round.roundIndex,
+      roundId: result.round.roundId,
+      totalSelected: selectedCount,
+      selectedCount,
+      eligibleCount: totalEligible,
+      totalEligible,
+    });
+    io.to(session.code).emit('vault-selection-update', {
+      roundIndex: result.round.roundIndex,
+      roundId: result.round.roundId,
+      totalSelected: selectedCount,
+      selectedCount,
+      eligibleCount: totalEligible,
+      totalEligible,
+    });
+
+    // 3. Persist transaction and player buffs in MongoDB
+    if (result.isNew && result.transaction) {
+      try {
+        await GameSessionModel.findOneAndUpdate(
+          { pin: session.code },
+          {
+            $push: { vaultTransactions: result.transaction },
+            $set: {
+              'participants.$[p].score': player.score,
+              'participants.$[p].activeBuffs': player.activeBuffs,
+              'participants.$[p].vaultPointsEarned': player.vaultPointsEarned,
+              'participants.$[p].vaultPointsDeducted': player.vaultPointsDeducted,
+            },
+          },
+          { arrayFilters: [{ 'p.socketId': socket.id }] }
+        );
+      } catch (err) {
+        // quiet
+      }
+    }
+  });
+
+  (socket as any).on('host-reveal-vault', async (payload: any) => {
+    const session = resolveSession(socket, payload);
+    if (!session || !session.vaultRound) return;
+
+    const closeRes = sessionManager.closeVaultSelection(session.id);
+    if (!closeRes) return;
+
+    // 1. Notify all connected devices that vault selection is closed
+    io.to(session.id).emit('vault-selection-closed', { roundIndex: closeRes.round.roundIndex });
+    io.to(session.code).emit('vault-selection-closed', { roundIndex: closeRes.round.roundIndex });
+
+    // 2. Broadcast aggregate summary
+    io.to(session.id).emit('vault-aggregate-summary', closeRes.summary);
+    io.to(session.code).emit('vault-aggregate-summary', closeRes.summary);
+
+    // 3. Persist round summary to MongoDB
+    try {
+      await GameSessionModel.findOneAndUpdate(
+        { pin: session.code },
+        { $push: { vaultRounds: closeRes.round } }
+      );
+    } catch (err) {
+      // quiet
+    }
+  });
+
+  (socket as any).on('host-skip-vault', (payload: any) => {
+    const session = resolveSession(socket, payload);
+    if (!session) return;
+
+    const rIdx = session.vaultRound?.roundIndex ?? 0;
+    sessionManager.skipVaultRound(session.id);
+
+    io.to(session.id).emit('vault-round-completed', { roundIndex: rIdx, skipped: true });
+    io.to(session.code).emit('vault-round-completed', { roundIndex: rIdx, skipped: true });
+  });
+
+  (socket as any).on('host-complete-vault', (payload: any) => {
+    const session = resolveSession(socket, payload);
+    if (!session) return;
+
+    const rIdx = session.vaultRound?.roundIndex ?? 0;
+    sessionManager.completeVaultRound(session.id);
+
+    io.to(session.id).emit('vault-round-completed', { roundIndex: rIdx, skipped: false });
+    io.to(session.code).emit('vault-round-completed', { roundIndex: rIdx, skipped: false });
+  });
+
   // ─── Submit Answer ────────────────────────────────────────────────────
 
   socket.on('submit-answer', async (payload: SubmitAnswerPayload) => {
@@ -966,11 +1166,20 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
       }
     }
 
-    const streak = correct
-      ? (sessionManager.getPlayerStreak(session.id, socket.id) + 1)
-      : 0;
+    let streak = 0;
+    if (correct) {
+      streak = sessionManager.getPlayerStreak(session.id, socket.id) + 1;
+    } else {
+      // Check if Streak Saver shield/flame is active to protect player's streak!
+      const streakSaved = sessionManager.applyStreakSaver(session.id, socket.id);
+      if (streakSaved) {
+        streak = sessionManager.getPlayerStreak(session.id, socket.id);
+      } else {
+        streak = 0;
+      }
+    }
 
-    const points = isPoll
+    const basePoints = isPoll
       ? 100 // Flat participation score for polls
       : calculateScore(
           correct,
@@ -979,35 +1188,58 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
           streak,
         );
 
+    // If correct and student holds an active multiplier (e.g. 2x double_points or 3x triple_boost), apply it!
+    let finalPoints = basePoints;
+    let multiplierApplied = 1;
+    let multiplierTx: any = null;
+
+    if (correct && basePoints > 0) {
+      const multRes = sessionManager.applyMultiplierToAnswer(
+        session.id,
+        socket.id,
+        basePoints,
+        String(currentQuestion.id || session.currentQuestionIndex)
+      );
+      finalPoints = multRes.finalPoints;
+      multiplierApplied = multRes.multiplierApplied;
+      multiplierTx = multRes.transaction;
+    }
+
     sessionManager.recordAnswer(session.id, socket.id, {
       questionId: payload.questionId,
       answer: payload.answer,
       timeMs: payload.timeMs,
       correct,
-      points,
+      points: finalPoints,
     });
 
     const player = session.players.find((p: any) => p.id === socket.id);
 
     try {
+      const updateDoc: any = {
+        $push: {
+          responses: {
+            questionId: payload.questionId,
+            playerName: player?.name || 'Anonymous',
+            rollNo: (player as any)?.rollNo,
+            teamId: player?.teamId,
+            teamName: player?.teamName,
+            answer: payload.answer,
+            isCorrect: correct,
+            timeMs: payload.timeMs,
+            pointsAwarded: finalPoints,
+            submittedAt: new Date(),
+          },
+        },
+      };
+
+      if (multiplierTx) {
+        updateDoc.$push.vaultTransactions = multiplierTx;
+      }
+
       await GameSessionModel.findOneAndUpdate(
         { pin: session.code },
-        {
-          $push: {
-            responses: {
-              questionId: payload.questionId,
-              playerName: player?.name || 'Anonymous',
-              rollNo: (player as any)?.rollNo,
-              teamId: player?.teamId,
-              teamName: player?.teamName,
-              answer: payload.answer,
-              isCorrect: correct,
-              timeMs: payload.timeMs,
-              pointsAwarded: points,
-              submittedAt: new Date(),
-            },
-          },
-        }
+        updateDoc
       );
     } catch (err) {
       // quiet
@@ -1025,10 +1257,12 @@ export function registerSessionHandlers(io: IOServer, socket: IOSocket): void {
     // the only event that transitions the student to the score screen.
     socket.emit('answer-result', {
       correct,
-      points,
+      points: finalPoints,
       streak,
       totalScore: player?.score ?? 0,
       correctAnswer: cIdx.toString(),
+      multiplierApplied,
+      activeBuffs: player?.activeBuffs,
     });
 
     // Broadcast live question submitted tally and updated distribution to room/host

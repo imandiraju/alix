@@ -12,6 +12,17 @@ export interface ISessionParticipant {
   score: number;
   streak: number;
   joinedAt: Date;
+  activeBuffs?: {
+    activeShields: number;
+    activeStreakSavers: number;
+    activeMultiplier?: {
+      multiplier: number;
+      remainingUses: number;
+      rewardType: string;
+    };
+  };
+  vaultPointsEarned?: number;
+  vaultPointsDeducted?: number;
 }
 
 export interface ISessionResponse {
@@ -40,6 +51,9 @@ export interface IGameSessionDoc extends Document {
   isLocked: boolean;
   requireRoster: boolean;
   rollingToken?: string;
+  mysteryVaultSettings?: any;
+  vaultRounds?: any[];
+  vaultTransactions?: any[];
   participants: ISessionParticipant[];
   responses: ISessionResponse[];
   createdAt: Date;
@@ -58,6 +72,9 @@ const ParticipantSchema = new Schema<ISessionParticipant>(
     score: { type: Number, default: 0 },
     streak: { type: Number, default: 0 },
     joinedAt: { type: Date, default: Date.now },
+    activeBuffs: { type: Schema.Types.Mixed, default: { activeShields: 0, activeStreakSavers: 0 } },
+    vaultPointsEarned: { type: Number, default: 0 },
+    vaultPointsDeducted: { type: Number, default: 0 },
   },
   { _id: false }
 );
@@ -92,6 +109,9 @@ const GameSessionDocSchema = new Schema<IGameSessionDoc>(
     isLocked: { type: Boolean, default: false },
     requireRoster: { type: Boolean, default: false },
     rollingToken: { type: String, default: '' },
+    mysteryVaultSettings: { type: Schema.Types.Mixed },
+    vaultRounds: { type: [Schema.Types.Mixed], default: [] },
+    vaultTransactions: { type: [Schema.Types.Mixed], default: [] },
     participants: { type: [ParticipantSchema], default: [] },
     responses: { type: [ResponseSchema], default: [] },
     createdAt: { type: Date, default: Date.now },

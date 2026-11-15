@@ -1,9 +1,26 @@
 // ─── Game Session Manager ───────────────────────────────────────────────────
 
 import { v4 as uuidv4 } from 'uuid';
-import type { Player, PlayerAnswer, Quiz, Team, TeamLeaderboardEntry } from '@alix/shared';
-import { SESSION_CONSTANTS, SessionStatus } from '@alix/shared';
-import type { LeaderboardEntry } from '@alix/shared';
+import type {
+  Player,
+  PlayerAnswer,
+  Quiz,
+  Team,
+  TeamLeaderboardEntry,
+  LeaderboardEntry,
+  MysteryVaultRewardType,
+  MysteryVaultSettings,
+  VaultRoundState,
+  VaultTransaction,
+  VaultAggregateSummaryPayload,
+  VaultRewardOutcome,
+} from '@alix/shared';
+import {
+  SESSION_CONSTANTS,
+  SessionStatus,
+  DEFAULT_MYSTERY_VAULT_SETTINGS,
+} from '@alix/shared';
+import { MysteryVaultEngine } from './MysteryVaultEngine.js';
 
 export const DEFAULT_TEAMS: Team[] = [
   { id: 'team-red', name: 'Red Dragons', color: '#E21B3C', icon: '🐉', score: 0, memberCount: 0 },
@@ -37,6 +54,10 @@ interface InternalSession {
     teamCount?: number;
     maxMembersPerTeam?: number;
   };
+  mysteryVault: MysteryVaultSettings;
+  vaultRound: VaultRoundState | null;
+  vaultTransactions: VaultTransaction[];
+  vaultRoundCounter: number;
   startedAt?: string;
   finishedAt?: string;
   previousRanks: Map<string, number>;
@@ -70,6 +91,10 @@ export class GameSessionManager {
         showLeaderboardAfterEach: true,
         allowLateJoin: true,
       },
+      mysteryVault: { ...DEFAULT_MYSTERY_VAULT_SETTINGS },
+      vaultRound: null,
+      vaultTransactions: [],
+      vaultRoundCounter: 0,
       previousRanks: new Map(),
     };
 
@@ -223,6 +248,12 @@ export class GameSessionManager {
         existingPlayer.teamColor = assignedTeamColor;
       }
 
+      if (!existingPlayer.activeBuffs) {
+        existingPlayer.activeBuffs = { activeShields: 0, activeStreakSavers: 0 };
+      }
+      if (typeof existingPlayer.vaultPointsEarned !== 'number') existingPlayer.vaultPointsEarned = 0;
+      if (typeof existingPlayer.vaultPointsDeducted !== 'number') existingPlayer.vaultPointsDeducted = 0;
+
       if (oldId && session.previousRanks.has(oldId)) {
         const prev = session.previousRanks.get(oldId);
         session.previousRanks.delete(oldId);
@@ -243,6 +274,12 @@ export class GameSessionManager {
       teamId: assignedTeamId,
       teamName: assignedTeamName,
       teamColor: assignedTeamColor,
+      activeBuffs: {
+        activeShields: 0,
+        activeStreakSavers: 0,
+      },
+      vaultPointsEarned: 0,
+      vaultPointsDeducted: 0,
       ...(cleanRoll ? { rollNo: cleanRoll } : {}),
     } as any;
 
@@ -408,6 +445,365 @@ export class GameSessionManager {
       rank: idx + 1,
       memberCount: t.memberCount,
     }));
+  }
+
+  // ─── Mystery Vault Engine ──────────────────────────────────────────
+
+  configureMysteryVault(
+    sessionId: string,
+    settings: Partial<MysteryVaultSettings>
+  ): MysteryVaultSettings | null {
+    const session = this.sessions.get(sessionId);
+    if (!session) return null;
+
+    session.mysteryVault = {
+      ...session.mysteryVault,
+      ...settings,
+    };
+
+    return session.mysteryVault;
+  }
+
+  getMysteryVaultSettings(sessionId: string): MysteryVaultSettings | null {
+    const session = this.sessions.get(sessionId);
+    return session ? session.mysteryVault : null;
+  }
+
+  startMysteryVaultRound(sessionId: string, questionIndex: number): VaultRoundState | null {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.mysteryVault.enabled) return null;
+
+    session.vaultRoundCounter = (session.vaultRoundCounter || 0) + 1;
+    const roundIndex = session.vaultRoundCounter;
+    const roundId = `vault-${session.code}-${roundIndex}`;
+    const durationSeconds = session.mysteryVault.durationSeconds || session.mysteryVault.timeLimitSeconds || 15;
+
+    const roundState: VaultRoundState = {
+      roundIndex,
+      roundId,
+      questionIndex,
+      status: 'selecting',
+      startedAt: new Date().toISOString(),
+      durationSeconds,
+      timeLimitSeconds: durationSeconds,
+      eligiblePlayerIds: session.players.filter((p) => p.isConnected).map((p) => p.id),
+      selections: {},
+      summary: {
+        totalSelected: 0,
+        totalEligible: session.players.filter((p) => p.isConnected).length,
+        totalBonusAwarded: 0,
+        totalDeducted: 0,
+        shieldsConsumed: 0,
+        multipliersGranted: 0,
+        rewardCounts: {
+          double_points: 0,
+          bonus_treasure: 0,
+          point_trap: 0,
+          shield: 0,
+          lucky_escape: 0,
+          triple_boost: 0,
+          streak_saver: 0,
+        },
+      },
+    };
+
+    session.vaultRound = roundState;
+    return roundState;
+  }
+
+  recordVaultSelection(
+    sessionId: string,
+    playerId: string,
+    vaultIndex: number,
+    rng: () => number = Math.random
+  ): {
+    outcome: VaultRewardOutcome;
+    isNew: boolean;
+    round: VaultRoundState;
+    transaction?: VaultTransaction;
+  } | null {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.vaultRound || session.vaultRound.status !== 'selecting') {
+      return null;
+    }
+
+    const player = session.players.find((p) => p.id === playerId);
+    if (!player) return null;
+
+    if (!player.activeBuffs) {
+      player.activeBuffs = { activeShields: 0, activeStreakSavers: 0 };
+    }
+
+    const round = session.vaultRound;
+
+    // Idempotency: If player already made a selection in this round, return existing outcome
+    if (round.selections[playerId]) {
+      return {
+        outcome: round.selections[playerId].outcome,
+        isNew: false,
+        round,
+      };
+    }
+
+    // Deterministically roll reward based on session probabilities & intensity
+    const rewardType = MysteryVaultEngine.rollReward(session.mysteryVault, rng);
+    const { outcome, shieldConsumed } = MysteryVaultEngine.generateOutcome(
+      rewardType,
+      session.mysteryVault,
+      player.activeBuffs
+    );
+
+    // Apply buffs / consumables
+    if (shieldConsumed) {
+      player.activeBuffs.activeShields = Math.max(0, (player.activeBuffs.activeShields || 1) - 1);
+    }
+    if (outcome.shieldGranted) {
+      player.activeBuffs.activeShields = (player.activeBuffs.activeShields || 0) + 1;
+    }
+    if (outcome.streakSaverGranted) {
+      player.activeBuffs.activeStreakSavers = (player.activeBuffs.activeStreakSavers || 0) + 1;
+    }
+    if (outcome.multiplierGranted) {
+      player.activeBuffs.activeMultiplier = {
+        multiplier: outcome.multiplierGranted,
+        remainingUses: 1,
+        sourceRound: round.roundIndex,
+        rewardType: outcome.rewardType as 'double_points' | 'triple_boost',
+      };
+    }
+
+    // Apply immediate score modifications (Bonus Treasure or Point Trap)
+    const prevScore = player.score;
+    if (outcome.pointsDelta !== 0) {
+      player.score = MysteryVaultEngine.applyScoreDelta(player.score, outcome.pointsDelta);
+      if (outcome.pointsDelta > 0) {
+        player.vaultPointsEarned = (player.vaultPointsEarned || 0) + outcome.pointsDelta;
+      } else {
+        const actualDeduction = prevScore - player.score;
+        player.vaultPointsDeducted = (player.vaultPointsDeducted || 0) + actualDeduction;
+      }
+    }
+
+    // Create auditable immutable transaction
+    const transaction: VaultTransaction = {
+      id: `tx-${round.roundIndex}-${playerId}`,
+      transactionId: `tx-${round.roundIndex}-${playerId}`,
+      sessionId: session.id,
+      roundIndex: round.roundIndex,
+      roundId: round.roundId,
+      playerId,
+      playerName: player.name,
+      vaultBoxIndex: vaultIndex,
+      rewardType: outcome.rewardType,
+      pointsDelta: outcome.pointsDelta,
+      scoreBefore: prevScore,
+      scoreAfter: player.score,
+      shieldConsumed,
+      activeBuffsAfter: {
+        activeShields: player.activeBuffs.activeShields,
+        activeStreakSavers: player.activeBuffs.activeStreakSavers,
+        ...(player.activeBuffs.activeMultiplier
+          ? { activeMultiplier: { ...player.activeBuffs.activeMultiplier } }
+          : {}),
+      },
+      timestamp: new Date().toISOString(),
+      reason: `Mystery Vault selection (Chest #${vaultIndex + 1})`,
+      idempotencyKey: `vault-claim-${round.roundIndex}-${playerId}`,
+    };
+
+    session.vaultTransactions.push(transaction);
+
+    // Record selection in round
+    round.selections[playerId] = {
+      playerId,
+      vaultIndex,
+      outcome,
+      timestamp: new Date().toISOString(),
+      selectedAt: new Date().toISOString(),
+      idempotencyKey: transaction.idempotencyKey,
+    };
+
+    return {
+      outcome,
+      isNew: true,
+      round,
+      transaction,
+    };
+  }
+
+  closeVaultSelection(sessionId: string): {
+    summary: VaultAggregateSummaryPayload;
+    round: VaultRoundState;
+  } | null {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.vaultRound) return null;
+
+    const round = session.vaultRound;
+    round.status = 'revealed';
+    round.closedAt = new Date().toISOString();
+
+    // Any eligible connected player who did not pick gets a default safe escape
+    for (const pid of round.eligiblePlayerIds) {
+      if (!round.selections[pid]) {
+        const fallbackOutcome = MysteryVaultEngine.generateOutcome(
+          'lucky_escape',
+          session.mysteryVault,
+          { activeShields: 0, activeStreakSavers: 0 }
+        ).outcome;
+        round.selections[pid] = {
+          playerId: pid,
+          vaultIndex: 0,
+          outcome: fallbackOutcome,
+          timestamp: new Date().toISOString(),
+          selectedAt: new Date().toISOString(),
+          idempotencyKey: `auto-${round.roundIndex}-${pid}`,
+        };
+      }
+    }
+
+    const selectionsList = Object.values(round.selections);
+    const rewardDistribution: Record<any, number> = {
+      double_points: 0,
+      bonus_treasure: 0,
+      point_trap: 0,
+      shield: 0,
+      lucky_escape: 0,
+      triple_boost: 0,
+      streak_saver: 0,
+    };
+
+    let totalPointsAwarded = 0;
+    let totalPointsDeducted = 0;
+
+    for (const sel of selectionsList) {
+      const type = sel.outcome.rewardType;
+      rewardDistribution[type] = (rewardDistribution[type] || 0) + 1;
+      if (sel.outcome.pointsDelta > 0) {
+        totalPointsAwarded += sel.outcome.pointsDelta;
+      } else if (sel.outcome.pointsDelta < 0) {
+        totalPointsDeducted += Math.abs(sel.outcome.pointsDelta);
+      }
+    }
+
+    const shieldsActive = session.players.reduce(
+      (acc, p) => acc + (p.activeBuffs?.activeShields || 0),
+      0
+    );
+
+    round.summary = {
+      totalSelected: selectionsList.length,
+      totalEligible: round.eligiblePlayerIds.length,
+      totalBonusAwarded: totalPointsAwarded,
+      totalDeducted: totalPointsDeducted,
+      shieldsConsumed: 0,
+      multipliersGranted: (rewardDistribution.double_points || 0) + (rewardDistribution.triple_boost || 0),
+      rewardCounts: rewardDistribution as any,
+    };
+
+    const summaryPayload: VaultAggregateSummaryPayload = {
+      roundIndex: round.roundIndex,
+      roundId: round.roundId,
+      questionIndex: round.questionIndex,
+      totalParticipants: round.eligiblePlayerIds.length,
+      totalSelected: selectionsList.length,
+      rewardDistribution,
+      totalPointsAwarded,
+      totalPointsDeducted,
+      shieldsActive,
+      summary: round.summary,
+      leaderboard: this.getLeaderboard(sessionId),
+      teamLeaderboard: this.getTeamLeaderboard(sessionId),
+    };
+
+    return { summary: summaryPayload, round };
+  }
+
+  skipVaultRound(sessionId: string): boolean {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.vaultRound) return false;
+    session.vaultRound.status = 'skipped';
+    session.vaultRound = null;
+    return true;
+  }
+
+  completeVaultRound(sessionId: string): boolean {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.vaultRound) return false;
+    session.vaultRound.status = 'completed';
+    session.vaultRound = null;
+    return true;
+  }
+
+  applyMultiplierToAnswer(
+    sessionId: string,
+    playerId: string,
+    basePoints: number,
+    questionId: string
+  ): {
+    finalPoints: number;
+    multiplierApplied: number;
+    bonusPoints: number;
+    transaction?: VaultTransaction;
+  } {
+    const session = this.sessions.get(sessionId);
+    if (!session) return { finalPoints: basePoints, multiplierApplied: 1, bonusPoints: 0 };
+
+    const player = session.players.find((p) => p.id === playerId);
+    if (!player || !player.activeBuffs?.activeMultiplier || player.activeBuffs.activeMultiplier.remainingUses <= 0) {
+      return { finalPoints: basePoints, multiplierApplied: 1, bonusPoints: 0 };
+    }
+
+    const buff = player.activeBuffs.activeMultiplier;
+    const maxMultiplier = session.mysteryVault.maxBonusMultiplier || 3;
+    const effectiveMultiplier = Math.min(buff.multiplier, maxMultiplier);
+    const calculated = Math.round(basePoints * effectiveMultiplier);
+    const bonus = calculated - basePoints;
+
+    // Consume multiplier
+    delete player.activeBuffs.activeMultiplier;
+
+    // Log transaction
+    const transaction: VaultTransaction = {
+      id: `tx-mult-${session.id}-${questionId}-${playerId}`,
+      transactionId: `tx-mult-${session.id}-${questionId}-${playerId}`,
+      sessionId: session.id,
+      roundIndex: session.vaultRoundCounter,
+      playerId,
+      playerName: player.name,
+      vaultBoxIndex: 0,
+      rewardType: (buff.rewardType || 'double_points') as MysteryVaultRewardType,
+      pointsDelta: bonus,
+      scoreBefore: player.score,
+      scoreAfter: player.score + bonus,
+      shieldConsumed: false,
+      multiplierApplied: effectiveMultiplier,
+      activeBuffsAfter: { ...player.activeBuffs },
+      timestamp: new Date().toISOString(),
+      reason: `${effectiveMultiplier}x Multiplier applied on correct answer for question ${questionId}`,
+      idempotencyKey: `mult-apply-${questionId}-${playerId}`,
+    };
+    session.vaultTransactions.push(transaction);
+
+    return {
+      finalPoints: calculated,
+      multiplierApplied: effectiveMultiplier,
+      bonusPoints: bonus,
+      transaction,
+    };
+  }
+
+  applyStreakSaver(sessionId: string, playerId: string): boolean {
+    const session = this.sessions.get(sessionId);
+    if (!session) return false;
+
+    const player = session.players.find((p) => p.id === playerId);
+    if (!player || !player.activeBuffs || (player.activeBuffs.activeStreakSavers || 0) <= 0) {
+      return false;
+    }
+
+    // Consume 1 streak saver
+    player.activeBuffs.activeStreakSavers = Math.max(0, player.activeBuffs.activeStreakSavers - 1);
+    return true;
   }
 
   // ─── Cleanup ────────────────────────────────────────────────────────

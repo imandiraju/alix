@@ -217,13 +217,13 @@ export const JoinPage: React.FC = () => {
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             to="/"
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/25 backdrop-blur-md text-xs font-heading font-black text-white tracking-wide transition-all shadow-sm group active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-[#5926A3] hover:bg-[#682BC2] border-b-4 border-[#3A1470] shadow-[0_3px_0_#2B0C54] active:translate-y-0.5 active:border-b-2 active:shadow-none text-xs font-heading font-black text-white tracking-wide transition-all group"
           >
             <span className="flex items-center">
               <span>ALIX</span>
               <span className="text-[#00D2D3] animate-bounce font-black ml-0.5">!</span>
             </span>
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-[#00D2D3] text-[#0A1A2F] tracking-wider ml-0.5">
+            <span className="px-1.5 py-0.5 rounded-lg text-[10px] font-black bg-[#00D2D3] text-[#0A1A2F] tracking-wider ml-0.5 shadow-xs">
               GO
             </span>
           </Link>
@@ -232,7 +232,7 @@ export const JoinPage: React.FC = () => {
           <nav className="hidden md:flex items-center gap-2">
             <Link
               to="/dashboard"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-heading font-black bg-[#26890C] hover:bg-[#20740A] border-b-2 border-[#175407] active:border-b-0 active:translate-y-0.5 text-white transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-heading font-black bg-[#26890C] hover:bg-[#20740A] border-b-4 border-[#175407] shadow-[0_3px_0_#0f3d04] active:translate-y-0.5 active:border-b-2 active:shadow-none text-white transition-all"
             >
               <Compass className="w-3.5 h-3.5" />
               <span>Activities</span>
@@ -240,7 +240,7 @@ export const JoinPage: React.FC = () => {
 
             <Link
               to="/dashboard?view=rosters"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-heading font-black bg-[#E66C1C] hover:bg-[#D45E12] border-b-2 border-[#A84507] active:border-b-0 active:translate-y-0.5 text-white transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-heading font-black bg-[#E66C1C] hover:bg-[#D45E12] border-b-4 border-[#A84507] shadow-[0_3px_0_#7c3305] active:translate-y-0.5 active:border-b-2 active:shadow-none text-white transition-all"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-amber-200" />
               <span>Rosters</span>
@@ -248,7 +248,7 @@ export const JoinPage: React.FC = () => {
 
             <Link
               to="/dashboard"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-heading font-black bg-[#1368CE] hover:bg-[#0E58B3] border-b-2 border-[#093D7E] active:border-b-0 active:translate-y-0.5 text-white transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-heading font-black bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] shadow-[0_3px_0_#062b59] active:translate-y-0.5 active:border-b-2 active:shadow-none text-white transition-all"
             >
               <Play className="w-3 h-3 fill-current" />
               <span>Present</span>
@@ -256,14 +256,14 @@ export const JoinPage: React.FC = () => {
 
             <Link
               to="/create"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-heading font-black bg-[#E21B3C] hover:bg-[#C21632] border-b-2 border-[#941126] active:border-b-0 active:translate-y-0.5 text-white transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-heading font-black bg-[#E21B3C] hover:bg-[#C21632] border-b-4 border-[#941126] shadow-[0_3px_0_#6b0c1b] active:translate-y-0.5 active:border-b-2 active:shadow-none text-white transition-all"
             >
               <PenTool className="w-3.5 h-3.5" />
               <span>Make</span>
             </Link>
 
             <div
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-heading font-black bg-white/20 border border-white/30 text-white shadow-sm backdrop-blur-sm"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-heading font-black bg-[#531B94] border-b-4 border-[#350F6E] shadow-[0_3px_0_#220847] border border-white/20 text-white"
             >
               <span className="flex items-center gap-0.5 text-[10px] font-mono">
                 <span className="text-[#E21B5A]">▲</span>
@@ -281,7 +281,7 @@ export const JoinPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsScannerOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/25 backdrop-blur-md text-xs font-heading font-bold text-white transition-all cursor-pointer shadow-sm active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 border-b-4 border-white/25 shadow-[0_3px_0_rgba(0,0,0,0.3)] backdrop-blur-md text-xs font-heading font-black text-white transition-all cursor-pointer active:translate-y-0.5 active:border-b-2 active:shadow-none"
             title="Scan Projector QR Code"
           >
             <Camera className="w-3.5 h-3.5 text-[#00D2D3]" />
@@ -290,7 +290,7 @@ export const JoinPage: React.FC = () => {
 
           <Link
             to="/login"
-            className="px-4 py-1.5 rounded-full bg-white hover:bg-slate-100 text-[#46178F] font-heading font-black text-xs shadow-md transition-all active:scale-95"
+            className="px-4 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-[#46178F] font-heading font-black text-xs border-b-4 border-slate-300 shadow-[0_3px_0_#cbd5e1] transition-all active:translate-y-0.5 active:border-b-2 active:shadow-none"
           >
             Teacher Login
           </Link>
@@ -478,11 +478,11 @@ export const JoinPage: React.FC = () => {
               </div>
             )}
 
-            {/* Tactile Kahoot-style Join Button */}
+            {/* Tactile 3D Join Button */}
             <button
               type="submit"
               disabled={isSubmitting || isLocked || pinValue.length < 6}
-              className="w-full py-3.5 px-4 bg-[#1368CE] hover:bg-[#0E58B3] border-b-4 border-[#093D7E] active:border-b-0 active:translate-y-1 disabled:bg-slate-300 disabled:border-none disabled:translate-y-0 text-white font-heading font-black text-base uppercase tracking-wider rounded-xl shadow-md transition-all duration-100 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+              className="w-full py-3.5 px-4 bg-[#0B63E5] hover:bg-[#0952c4] border-b-4 border-[#063b8d] shadow-[0_4px_0_#04265c] active:translate-y-1 active:border-b-2 active:shadow-none disabled:bg-slate-200 disabled:border-slate-300 disabled:shadow-none disabled:translate-y-0 text-white font-heading font-black text-base uppercase tracking-wider rounded-xl transition-all duration-100 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
             >
               <span>{isSubmitting ? 'Entering Room...' : 'Join'}</span>
               {!isSubmitting && <ArrowRight className="w-4 h-4 stroke-[3]" />}

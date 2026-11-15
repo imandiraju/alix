@@ -2,6 +2,12 @@
 
 import type { Player, SessionStatus } from './session.js';
 import type { Question } from './quiz.js';
+import type {
+  MysteryVaultSettings,
+  PlayerActiveBuffs,
+  VaultRewardOutcome,
+  VaultRoundSummary,
+} from './mysteryVault.js';
 
 // ─── Event Payloads ─────────────────────────────────────────────────────────
 
@@ -68,6 +74,8 @@ export interface AnswerResultPayload {
   deferred?: boolean;
   pendingPoints?: number;
   pendingCorrect?: boolean;
+  multiplierApplied?: number;
+  activeBuffs?: PlayerActiveBuffs;
 }
 
 export interface LeaderboardEntry {
@@ -132,6 +140,53 @@ export interface SessionStatusPayload {
   status: SessionStatus;
 }
 
+// ─── Mystery Vault Event Payloads ──────────────────────────────────────────
+
+export interface MysteryVaultStartedPayload {
+  roundIndex: number;
+  roundId?: string;
+  questionIndex: number;
+  durationSeconds: number;
+  timeLimitSeconds?: number;
+  vaultCount: number;
+  eligible: boolean;
+  settings: MysteryVaultSettings;
+}
+
+export interface VaultSelectionUpdatePayload {
+  roundIndex: number;
+  roundId?: string;
+  totalSelected: number;
+  selectedCount?: number;
+  eligibleCount: number;
+  totalEligible?: number;
+}
+
+export interface VaultRewardRevealedPayload {
+  roundIndex: number;
+  roundId?: string;
+  vaultIndex: number;
+  outcome: VaultRewardOutcome;
+  currentScore: number;
+  totalScore?: number;
+  activeBuffs: PlayerActiveBuffs;
+}
+
+export interface VaultAggregateSummaryPayload {
+  roundIndex: number;
+  roundId?: string;
+  questionIndex?: number;
+  totalParticipants?: number;
+  totalSelected?: number;
+  rewardDistribution?: Record<any, number>;
+  totalPointsAwarded?: number;
+  totalPointsDeducted?: number;
+  shieldsActive?: number;
+  summary: VaultRoundSummary;
+  leaderboard: LeaderboardEntry[];
+  teamLeaderboard?: TeamLeaderboardEntry[];
+}
+
 // ─── Typed Event Maps ──────────────────────────────────────────────────────
 
 export interface ClientToServerEvents {
@@ -139,6 +194,12 @@ export interface ClientToServerEvents {
   'join-session': (payload: JoinSessionPayload) => void;
   'select-team': (payload: { sessionId?: string; code?: string; teamId: string }) => void;
   'configure-teams': (payload: { sessionId?: string; code?: string; teamCount: number; maxMembersPerTeam?: number; teams?: any[] }) => void;
+  'configure-mystery-vault': (payload: { sessionId?: string; code?: string; settings: Partial<MysteryVaultSettings> }) => void;
+  'host-start-vault': (payload: { sessionId?: string; code?: string; questionIndex?: number }) => void;
+  'select-vault': (payload: { sessionId?: string; code?: string; roundIndex?: number; vaultIndex: number; idempotencyKey?: string }) => void;
+  'host-reveal-vault': (payload: { sessionId?: string; code?: string; roundIndex?: number }) => void;
+  'host-skip-vault': (payload: { sessionId?: string; code?: string; roundIndex?: number }) => void;
+  'host-complete-vault': (payload: { sessionId?: string; code?: string; roundIndex?: number }) => void;
   'trigger-peer-instruction': (payload: { sessionId?: string; code?: string; duration?: number; questionIndex?: number }) => void;
   'broadcast-concept-card': (payload: { sessionId?: string; code?: string; concept: { title: string; trap: string; takeaway: string; formula?: string } }) => void;
   'start-game': (payload: StartGamePayload) => void;
@@ -158,8 +219,16 @@ export interface ServerToClientEvents {
   'question-started': (payload: QuestionStartedPayload) => void;
   'timer-tick': (payload: TimerTickPayload) => void;
   'answer-result': (payload: AnswerResultPayload) => void;
+  'answers-revealed': (payload: any) => void;
   'leaderboard-update': (payload: LeaderboardUpdatePayload) => void;
   'show-leaderboard': (payload: { leaderboard: LeaderboardEntry[]; sessionId?: string; code?: string }) => void;
+  'mystery-vault-started': (payload: MysteryVaultStartedPayload) => void;
+  'vault-selection-update': (payload: VaultSelectionUpdatePayload) => void;
+  'vault-selection-closed': (payload: { roundIndex: number }) => void;
+  'vault-reward-revealed': (payload: VaultRewardRevealedPayload) => void;
+  'vault-aggregate-summary': (payload: VaultAggregateSummaryPayload) => void;
+  'vault-round-completed': (payload: { roundIndex: number; skipped?: boolean }) => void;
+  'vault-buffs-updated': (payload: { playerId: string; activeBuffs: PlayerActiveBuffs }) => void;
   'game-ended': (payload: GameEndedPayload) => void;
   'session-status': (payload: SessionStatusPayload) => void;
   error: (payload: { message: string; code: string }) => void;

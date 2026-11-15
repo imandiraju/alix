@@ -34,7 +34,10 @@ import {
   X,
   MessageSquare,
   Eye,
+  Gift,
+  Shield,
 } from 'lucide-react';
+import type { VaultRewardOutcome, PlayerActiveBuffs } from '@alix/shared';
 
 interface ActiveQuestion {
   id?: string;
@@ -91,11 +94,21 @@ export const PlayPage: React.FC = () => {
     formula?: string;
   } | null>(null);
 
-  // Game Phases: 'waiting' | 'answering' | 'submitted' | 'score' | 'leaderboard' | 'ended'
-  const [phase, setPhase] = useState<'waiting' | 'answering' | 'submitted' | 'score' | 'leaderboard' | 'ended'>('waiting');
+  // Game Phases: 'waiting' | 'answering' | 'submitted' | 'score' | 'vault' | 'leaderboard' | 'ended'
+  const [phase, setPhase] = useState<'waiting' | 'answering' | 'submitted' | 'score' | 'vault' | 'leaderboard' | 'ended'>('waiting');
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
   const [secondsRemaining, setSecondsRemaining] = useState(30);
+
+  // Mystery Vault Student State
+  const [vaultRoundIndex, setVaultRoundIndex] = useState<number>(0);
+  const [selectedVaultIndex, setSelectedVaultIndex] = useState<number | null>(null);
+  const [vaultOutcome, setVaultOutcome] = useState<VaultRewardOutcome | null>(null);
+  const [activeBuffs, setActiveBuffs] = useState<PlayerActiveBuffs>({
+    activeShields: 0,
+    activeStreakSavers: 0,
+  });
+  const [isOpeningVault, setIsOpeningVault] = useState<boolean>(false);
   const [score, setScore] = useState(() => {
     return Number(sessionStorage.getItem(`alix_score_${sessionId}`)) || 0;
   });
@@ -399,6 +412,10 @@ export const PlayPage: React.FC = () => {
         setIsLastAnswerCorrect(correct);
         setLastPointsAwarded(data.points || 0);
 
+        if (data.activeBuffs) {
+          setActiveBuffs(data.activeBuffs);
+        }
+
         if (typeof data.totalScore === 'number') {
           setScore(data.totalScore);
           try { sessionStorage.setItem(`alix_score_${sessionId}`, data.totalScore.toString()); } catch {}
@@ -481,6 +498,33 @@ export const PlayPage: React.FC = () => {
         if (data?.concept) setReceivedConcept(data.concept);
       });
 
+      // Listen for ALIX Mystery Vault round started
+      socket.on('mystery-vault-started', (data: any) => {
+        setPhase('vault');
+        setVaultRoundIndex(data?.roundIndex ?? 0);
+        setSelectedVaultIndex(null);
+        setVaultOutcome(null);
+        setIsOpeningVault(false);
+      });
+
+      // Listen for individual vault reward reveal
+      socket.on('vault-reward-revealed', (data: any) => {
+        setSelectedVaultIndex(data.vaultIndex);
+        setVaultOutcome(data.outcome);
+        setIsOpeningVault(false);
+        if (data.activeBuffs) setActiveBuffs(data.activeBuffs);
+        if (typeof data.currentScore === 'number') setScore(data.currentScore);
+        else if (typeof data.totalScore === 'number') setScore(data.totalScore);
+      });
+
+      socket.on('vault-buffs-updated', (data: any) => {
+        if (data?.activeBuffs) setActiveBuffs(data.activeBuffs);
+      });
+
+      socket.on('vault-round-completed', () => {
+        setPhase((prev) => (prev === 'vault' ? 'score' : prev));
+      });
+
       return () => {
         socket.off('connect', onConnect);
         socket.off('disconnect', onDisconnect);
@@ -493,12 +537,34 @@ export const PlayPage: React.FC = () => {
         socket.off('show-leaderboard');
         socket.off('leaderboard-update');
         socket.off('game-ended');
+        socket.off('mystery-vault-started');
+        socket.off('vault-reward-revealed');
+        socket.off('vault-buffs-updated');
+        socket.off('vault-round-completed');
         socket.off('error');
       };
     } catch {
       // fallback
     }
   }, [sessionId, studentName, rollNo, avatar.id]);
+
+  const handleSelectVault = (vaultIdx: number) => {
+    if (selectedVaultIndex !== null || isOpeningVault) return;
+    setIsOpeningVault(true);
+    setSelectedVaultIndex(vaultIdx);
+    try {
+      const socket = getSocket();
+      socket.emit('select-vault', {
+        sessionId,
+        code: sessionId,
+        roundIndex: vaultRoundIndex,
+        vaultIndex: vaultIdx,
+        idempotencyKey: `vault-pick-${vaultRoundIndex}-${socket.id || Date.now()}`,
+      });
+    } catch (err) {
+      console.warn('Could not emit select-vault:', err);
+    }
+  };
 
   // Real-time countdown timer when answering or submitted
   useEffect(() => {
@@ -713,8 +779,29 @@ export const PlayPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Live Score Counter Pill */}
-        <div className="flex items-center gap-2.5">
+        {/* Live Active Buffs & Score Counter Pill */}
+        <div className="flex items-center gap-2">
+          {activeBuffs?.activeMultiplier && activeBuffs.activeMultiplier.remainingUses > 0 && (
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-400 text-slate-950 text-xs font-black shadow-md animate-pulse">
+              <Zap className="w-3.5 h-3.5 fill-current" />
+              <span>{activeBuffs.activeMultiplier.multiplier}x Next</span>
+            </div>
+          )}
+
+          {activeBuffs?.activeShields > 0 && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500 text-white text-xs font-black shadow-md">
+              <Shield className="w-3.5 h-3.5 fill-current" />
+              <span>{activeBuffs.activeShields > 1 ? `${activeBuffs.activeShields}x` : ''} Shield</span>
+            </div>
+          )}
+
+          {activeBuffs?.activeStreakSavers > 0 && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500 text-slate-950 text-xs font-black shadow-md">
+              <Flame className="w-3.5 h-3.5 fill-current" />
+              <span>{activeBuffs.activeStreakSavers > 1 ? `${activeBuffs.activeStreakSavers}x` : ''} Saver</span>
+            </div>
+          )}
+
           {streak > 1 && (
             <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-rose-500 text-white text-xs font-black shadow-md animate-bounce">
               <Flame className="w-3.5 h-3.5 fill-current" />
@@ -1229,6 +1316,99 @@ export const PlayPage: React.FC = () => {
             </div>
           );
         })()}
+
+        {/* Phase: ALIX Mystery Vault Surprise Selection */}
+        {phase === 'vault' && (
+          <div className="w-full max-w-md mx-auto space-y-5 animate-scale-in text-center my-auto">
+            {/* Header / Announcement */}
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-300/40 text-amber-300 text-xs font-black uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>Mystery Vault Round</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-heading font-black text-white drop-shadow-md">
+                {vaultOutcome ? 'Vault Unlocked!' : 'Pick 1 Mystery Vault!'}
+              </h2>
+              <p className="text-xs sm:text-sm text-white/80">
+                {vaultOutcome
+                  ? 'Your surprise reward has been applied authoritatively.'
+                  : 'Choose one of three chests for surprise multipliers, shields, or bonus points!'}
+              </p>
+            </div>
+
+            {/* If outcome is not yet revealed: show 3 3D selectable chests */}
+            {!vaultOutcome ? (
+              <div className="grid grid-cols-3 gap-3 sm:gap-4 pt-2">
+                {[0, 1, 2].map((idx) => {
+                  const isChosen = selectedVaultIndex === idx;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      disabled={selectedVaultIndex !== null || isOpeningVault}
+                      onClick={() => handleSelectVault(idx)}
+                      className={`p-4 sm:p-6 rounded-2xl flex flex-col items-center justify-center gap-2 border-2 transition-all cursor-pointer ${
+                        isChosen
+                          ? 'bg-amber-400 border-white shadow-[0_6px_0_#92400e] -translate-y-2 scale-105'
+                          : 'bg-gradient-to-b from-amber-300 via-amber-400 to-yellow-600 border-amber-200 shadow-[0_6px_0_#92400e] hover:-translate-y-1 active:translate-y-1 active:shadow-[0_2px_0_#92400e]'
+                      }`}
+                    >
+                      <div className="text-4xl sm:text-5xl animate-bounce">
+                        {isOpeningVault && isChosen ? '✨' : '🎁'}
+                      </div>
+                      <span className="text-xs sm:text-sm font-heading font-black text-amber-950">
+                        Vault #{idx + 1}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Outcome Reveal Card */
+              <div className="p-6 sm:p-8 rounded-3xl bg-white text-slate-900 shadow-2xl border-4 border-amber-300 space-y-4 animate-scale-in">
+                <div className="w-20 h-20 rounded-2xl bg-amber-100 flex items-center justify-center text-4xl mx-auto shadow-inner border border-amber-200 animate-bounce">
+                  {vaultOutcome.icon || '🎁'}
+                </div>
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-heading font-black text-slate-900">
+                    {vaultOutcome.title}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 mt-1 font-medium">
+                    {vaultOutcome.description}
+                  </p>
+                </div>
+
+                {/* Score change badge */}
+                {vaultOutcome.pointsDelta !== 0 ? (
+                  <div className={`p-3 rounded-xl font-heading font-black text-sm flex items-center justify-center gap-2 ${
+                    vaultOutcome.pointsDelta > 0
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : 'bg-rose-50 text-rose-700 border border-rose-200'
+                  }`}>
+                    <span>
+                      {vaultOutcome.pointsDelta > 0
+                        ? `+${vaultOutcome.pointsDelta} Game Points Awarded!`
+                        : `${vaultOutcome.pointsDelta} Points Deducted!`}
+                    </span>
+                  </div>
+                ) : vaultOutcome.isBlockedByShield ? (
+                  <div className="p-3 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 font-heading font-black text-xs flex items-center justify-center gap-2">
+                    <Shield className="w-4 h-4 text-blue-600" />
+                    <span>Point Trap Deflected by Aegis Shield! 0 pts lost.</span>
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 font-heading font-black text-xs">
+                    <span>Reward Active & Stored in Profile!</span>
+                  </div>
+                )}
+
+                <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider pt-2">
+                  Waiting for host to continue...
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Phase: Live Round Leaderboard */}
         {phase === 'leaderboard' && (
