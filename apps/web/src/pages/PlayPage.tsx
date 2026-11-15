@@ -544,7 +544,12 @@ export const PlayPage: React.FC = () => {
           setPhase((prev) => (prev === 'vault' ? 'score' : prev));
           return;
         }
-        if (data?.concept) setReceivedConcept(data.concept);
+        if (data?.concept?.__alix_vault_picked) {
+          return; // Ignore internal vault selection relay on student clients
+        }
+        if (data?.concept && data.concept.takeaway && !data.concept.__alix_vault_round) {
+          setReceivedConcept(data.concept);
+        }
       });
 
       // Listen for ALIX Mystery Vault round started
