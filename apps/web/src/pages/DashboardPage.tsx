@@ -302,7 +302,7 @@ export const DashboardPage: React.FC = () => {
       return;
     }
 
-    if (!rawRosterText.trim()) {
+    if (!rawRosterText.trim() && parsedStudents.length === 0) {
       setRosterMessage('Please select a file or paste at least one student record (Roll No, Name).');
       return;
     }
@@ -319,6 +319,9 @@ export const DashboardPage: React.FC = () => {
           courseName: courseName.trim(),
           section: section.trim() || 'Section A',
           rawText: rawRosterText,
+          rawCsv: rawRosterText,
+          studentsList: parsedStudents,
+          students: parsedStudents,
         }),
       });
 

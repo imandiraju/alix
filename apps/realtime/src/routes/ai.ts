@@ -138,6 +138,33 @@ function generateHeuristicQuiz(topic: string, subject: string, materialText?: st
   };
 }
 
+// ─── GET /api/ai/entitlement ────────────────────────────────────────────────
+// Real-time entitlement check for educator AI Studio access
+router.get('/entitlement', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authorization token required' });
+    }
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role?: string };
+    const teacher = await Teacher.findById(decoded.id).select('-passwordHash');
+    if (!teacher) {
+      return res.status(404).json({ error: 'Teacher not found' });
+    }
+    const aiEnabled = teacher.role === 'admin' ? true : Boolean(teacher.aiEnabled);
+    return res.json({
+      success: true,
+      role: teacher.role,
+      aiEnabled,
+      email: teacher.email,
+      name: teacher.name,
+    });
+  } catch (err: any) {
+    return res.status(401).json({ error: 'Invalid or expired session token' });
+  }
+});
+
 // ─── POST /api/ai/generate ──────────────────────────────────────────────────
 
 router.post('/generate', async (req: Request, res: Response) => {

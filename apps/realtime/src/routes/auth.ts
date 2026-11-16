@@ -143,7 +143,7 @@ router.post('/register', async (req: Request, res: Response) => {
         department: teacher.department,
         subjects: teacher.subjects,
         role: teacher.role,
-        aiEnabled: false,
+        aiEnabled: teacher.role === 'admin' ? true : Boolean(teacher.aiEnabled),
         avatarInitials: teacher.name
           .split(' ')
           .map((n: string) => n[0])
@@ -243,7 +243,7 @@ router.post('/login', async (req: Request, res: Response) => {
         department: teacher.department,
         subjects: teacher.subjects,
         role: teacher.role,
-        aiEnabled: false,
+        aiEnabled: teacher.role === 'admin' ? true : Boolean(teacher.aiEnabled),
         avatarInitials: teacher.name
           .split(' ')
           .map((n: string) => n[0])
@@ -285,7 +285,7 @@ router.get('/me', async (req: Request, res: Response) => {
         department: teacher.department,
         subjects: teacher.subjects,
         role: teacher.role,
-        aiEnabled: false,
+        aiEnabled: teacher.role === 'admin' ? true : Boolean(teacher.aiEnabled),
         avatarInitials: teacher.name
           .split(' ')
           .map((n: string) => n[0])

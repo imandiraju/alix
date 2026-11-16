@@ -53,9 +53,45 @@ export const AiQuizStudioModal: React.FC<AiQuizStudioModalProps> = ({
   const [generatedQuiz, setGeneratedQuiz] = useState<any | null>(null);
   const [modelUsed, setModelUsed] = useState<string | null>(null);
 
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
+  const [liveAiLicensed, setLiveAiLicensed] = useState<boolean | null>(null);
+
+  // Sync latest educator entitlement directly from server on open
+  useEffect(() => {
+    if (!isOpen) return;
+    const token = localStorage.getItem('alix_auth_token');
+    if (!token) return;
+
+    fetch(`${REALTIME_URL}/api/ai/entitlement`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && typeof data.aiEnabled === 'boolean') {
+          setLiveAiLicensed(data.aiEnabled);
+          if (user && user.aiEnabled !== data.aiEnabled) {
+            updateUser({ ...user, aiEnabled: data.aiEnabled });
+          }
+        }
+      })
+      .catch(() => {
+        // Fallback check against /api/auth/me
+        fetch(`${REALTIME_URL}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => res.json())
+          .then((d) => {
+            if (d?.user?.aiEnabled) {
+              setLiveAiLicensed(true);
+              if (user) updateUser({ ...user, aiEnabled: true });
+            }
+          })
+          .catch(() => {});
+      });
+  }, [isOpen, user]);
+
   // Strictly enforce admin or licensed educator (no personal key bypass)
-  const hasAiLicense = user?.role === 'admin' || user?.aiEnabled === true;
+  const hasAiLicense = user?.role === 'admin' || user?.aiEnabled === true || liveAiLicensed === true;
 
   // Close modal on Escape key press
   useEffect(() => {

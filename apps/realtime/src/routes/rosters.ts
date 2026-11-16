@@ -19,6 +19,19 @@ export function parseStudentRosterText(rawText: string, defaultSection = ''): IR
     // Split by comma, tab, or semicolon
     const parts = line.split(/[,;\t]+/).map((p) => p.trim());
     if (parts.length >= 2) {
+      // Check if Column 0 is a serial number (e.g. 1, 2, 3) and Column 1 is the Roll Number
+      const isFirstPartNumeric = /^\d{1,4}$/.test(parts[0]);
+      if (isFirstPartNumeric && parts.length >= 3 && /[A-Z0-9]{4,}/i.test(parts[1])) {
+        const rollNo = parts[1].toUpperCase();
+        const name = parts[2];
+        const email = parts[3] || `${rollNo.toLowerCase()}@srmap.edu.in`;
+        const section = parts[4] || defaultSection;
+        if (rollNo && name) {
+          students.push({ rollNo, name, email, section });
+          continue;
+        }
+      }
+
       const rollNo = parts[0].toUpperCase();
       const name = parts[1];
       const email = parts[2] || `${rollNo.toLowerCase()}@srmap.edu.in`;
@@ -67,7 +80,17 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { teacherId, courseCode, courseName, section, academicYear, rawCsv, studentsList } = req.body;
+    const {
+      teacherId,
+      courseCode,
+      courseName,
+      section,
+      academicYear,
+      rawCsv,
+      rawText,
+      studentsList,
+      students: reqStudents,
+    } = req.body;
 
     if (!courseCode || !courseName || !section) {
       return res.status(400).json({ error: 'Course Code, Course Name, and Section are required.' });
@@ -75,15 +98,29 @@ router.post('/', async (req: Request, res: Response) => {
 
     let students: IRosterStudent[] = [];
 
-    if (Array.isArray(studentsList) && studentsList.length > 0) {
-      students = studentsList.map((s: any) => ({
-        rollNo: String(s.rollNo || '').trim().toUpperCase(),
-        name: String(s.name || '').trim(),
-        email: String(s.email || '').trim().toLowerCase(),
-        section: String(s.section || section).trim(),
-      })).filter((s: IRosterStudent) => s.rollNo && s.name);
-    } else if (typeof rawCsv === 'string' && rawCsv.trim()) {
-      students = parseStudentRosterText(rawCsv, section);
+    const candidateList =
+      Array.isArray(studentsList) && studentsList.length > 0
+        ? studentsList
+        : Array.isArray(reqStudents) && reqStudents.length > 0
+        ? reqStudents
+        : null;
+
+    if (candidateList) {
+      students = candidateList
+        .map((s: any) => ({
+          rollNo: String(s.rollNo || s.roll_no || s.roll || s.studentId || '').trim().toUpperCase(),
+          name: String(s.name || s.studentName || s.fullName || '').trim(),
+          email:
+            String(s.email || '').trim().toLowerCase() ||
+            `${String(s.rollNo || s.roll_no || s.roll || s.studentId || '').trim().toLowerCase()}@srmap.edu.in`,
+          section: String(s.section || section).trim(),
+        }))
+        .filter((s: IRosterStudent) => s.rollNo && s.name);
+    } else {
+      const csvData = rawCsv || rawText || req.body.text || '';
+      if (typeof csvData === 'string' && csvData.trim()) {
+        students = parseStudentRosterText(csvData, section);
+      }
     }
 
     if (students.length === 0) {
